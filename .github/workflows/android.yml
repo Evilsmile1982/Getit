@@ -29,7 +29,9 @@ jobs:
           packages: ''
 
       - name: Gradle bauen
-        run: ./gradlew assembleDebug --stacktrace
+        run: |
+         chmod +x ./gradlew
+         ./gradlew assembleDebug --stacktrace
 
       - name: APK hochladen
         uses: actions/upload-artifact@v4
