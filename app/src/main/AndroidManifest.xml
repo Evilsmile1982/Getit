@@ -2,6 +2,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/bild_2"
@@ -24,6 +26,10 @@
             </intent-filter>
 
         </activity>
+
+        <receiver
+            android:name=".PickerlReceiver"
+            android:exported="false" />
 
     </application>
 
