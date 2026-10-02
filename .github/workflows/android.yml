@@ -29,9 +29,9 @@ jobs:
           packages: ''
 
       - name: Gradle einrichten
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '9.6'
+          gradle-version: '9.6.1'
 
       - name: Gradle bauen
         run: gradle assembleDebug --stacktrace
