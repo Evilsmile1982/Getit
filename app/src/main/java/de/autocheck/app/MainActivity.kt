@@ -2845,24 +2845,26 @@ private fun VehicleImage(
 
                 try {
 
-                    val input =
-                        LocalContext.current
-                            .contentResolver
-                            .openInputStream(
-                                Uri.parse(uri)
-                            )
+                    val context = LocalContext.current
 
-                    input.use {
-                        BitmapFactory
-                            .decodeStream(it)
-                            ?.asImageBitmap()
-                    }
+val bitmap by produceState(
+    initialValue = null,
+    key1 = uri
+) {
+    value = withContext(Dispatchers.IO) {
+        try {
+            val input = context.contentResolver.openInputStream(
+                Uri.parse(uri)
+            )
 
-                } catch (_: Exception) {
-                    null
-                }
+            input?.use {
+                BitmapFactory.decodeStream(it)?.asImageBitmap()
             }
+        } catch (_: Exception) {
+            null
+        }
     }
+}
 
     if (bitmap != null) {
 
