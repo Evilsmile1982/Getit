@@ -28,10 +28,13 @@ jobs:
         with:
           packages: ''
 
-      - name: Gradle bauen
-        run: |
-         chmod +x ./gradlew
-         ./gradlew assembleDebug --stacktrace
+      - name: Gradle einrichten
+  uses: gradle/actions/setup-gradle@v4
+  with:
+    gradle-version: '9.6'
+
+- name: Gradle bauen
+  run: gradle assembleDebug --stacktrace
 
       - name: APK hochladen
         uses: actions/upload-artifact@v4
