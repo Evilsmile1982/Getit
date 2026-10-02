@@ -14,10 +14,14 @@ jobs:
       - name: Repository laden
         uses: actions/checkout@v4
 
-      - name: ZIP aus Git holen
+      - name: AutoCheck ZIP herunterladen
         run: |
-          git show HEAD:AutoCheck-Projekt.zip > AutoCheck-Projekt.zip
+          curl -L \
+            -H "Accept: application/vnd.github.raw+json" \
+            -o AutoCheck-Projekt.zip \
+            https://api.github.com/repos/Evilsmile1982/Getit/git/blobs/928923d810ed26311c046a915bf2b12551007453
           ls -lh AutoCheck-Projekt.zip
+          file AutoCheck-Projekt.zip
 
       - name: AutoCheck ZIP entpacken
         run: |
