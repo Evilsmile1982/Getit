@@ -2835,18 +2835,6 @@ private fun VehicleImage(
         return
     }
 
-    val bitmap by produceState(
-        initialValue = null,
-        key1 = uri
-    ) {
-
-        value =
-            withContext(Dispatchers.IO) {
-
-                try {
-
-                    val context = LocalContext.current
-
 val bitmap by produceState(
     initialValue = null,
     key1 = uri
