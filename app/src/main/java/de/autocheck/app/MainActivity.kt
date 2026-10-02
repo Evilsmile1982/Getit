@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
-import de.autocheck.app.ui.theme.AutoCheckTheme
+import de.autocheck.app.ui.AutoCheckTheme
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -327,6 +327,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AutoCheckApp() {
 
@@ -1219,7 +1220,7 @@ fun PickerlScreen(
     store: Store,
     activeVehicle: Vehicle?
 ) {
-
+    val context = LocalContext.current
     if (activeVehicle == null) {
         EmptyVehicleMessage()
         return
