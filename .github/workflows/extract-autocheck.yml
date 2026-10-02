@@ -14,11 +14,14 @@ jobs:
       - name: Repository laden
         uses: actions/checkout@v4
 
-      - name: ZIP prüfen und entpacken
+      - name: ZIP aus Git holen
         run: |
-          file AutoCheck-Projekt.zip
-          unzip -t AutoCheck-Projekt.zip
-          mkdir extracted
+          git show HEAD:AutoCheck-Projekt.zip > AutoCheck-Projekt.zip
+          ls -lh AutoCheck-Projekt.zip
+
+      - name: AutoCheck ZIP entpacken
+        run: |
+          mkdir -p extracted
           unzip -o AutoCheck-Projekt.zip -d extracted
           cp -R extracted/. .
           rm -rf extracted AutoCheck-Projekt.zip
