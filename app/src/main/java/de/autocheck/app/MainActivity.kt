@@ -1297,7 +1297,7 @@ fun PickerlScreen(
                 onClick = {
                     if (reminder && nextDate.isNotBlank()) {
                         schedulePickerReminder(
-                            context = LocalContext.current,
+                            context = context,
                             dateText = nextDate,
                             vehicleId = activeVehicle.id
                         )
