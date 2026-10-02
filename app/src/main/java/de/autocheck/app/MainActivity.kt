@@ -29,15 +29,14 @@ import androidx.compose.material.icons.filled.CarRepair
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TireRepair
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -120,7 +119,11 @@ private data class MenuItemData(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { AutoCheckTheme { AutoCheckApp() } }
+        setContent {
+            AutoCheckTheme {
+                AutoCheckApp()
+            }
+        }
     }
 }
 
@@ -128,7 +131,12 @@ class MainActivity : ComponentActivity() {
 private fun AutoCheckApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val store = remember { VehicleStore(context) }
-    val vehicles = remember { mutableStateListOf<Vehicle>().apply { addAll(store.load()) } }
+    val vehicles = remember {
+        mutableStateListOf<Vehicle>().apply {
+            addAll(store.load())
+        }
+    }
+
     var screen by remember { mutableStateOf(Screen.HOME) }
     var homeReady by remember { mutableStateOf(false) }
 
@@ -169,26 +177,32 @@ private fun AutoCheckApp() {
                         store.save(vehicles)
                     }
                 )
+
                 Screen.REPARATUREN -> InfoScreen(
                     "Reparaturen",
                     "Hier werden Reparaturen, Kosten, Datum und Kilometerstand gesammelt."
                 )
+
                 Screen.PICKERL -> InfoScreen(
                     "Pickerl / TÜV",
                     "Fristen und Termine für die nächste §57a-Überprüfung bzw. TÜV-Prüfung."
                 )
+
                 Screen.WARTUNGEN -> InfoScreen(
                     "Wartungen",
                     "Öl, Filter, Bremsen und weitere Wartungsarbeiten übersichtlich erfassen."
                 )
+
                 Screen.GESAMTBLICK -> InfoScreen(
                     "Gesamtblick",
                     "Eine kompakte Übersicht der wichtigsten Fahrzeugdaten und offenen Punkte."
                 )
+
                 Screen.REIFEN -> InfoScreen(
                     "Reifen",
                     "Reifengröße, Dimensionen, Alter und saisonale Informationen verwalten."
                 )
+
                 else -> Unit
             }
         }
@@ -201,12 +215,42 @@ private fun HomeScreen(
     onSelect: (Screen) -> Unit
 ) {
     val items = listOf(
-        MenuItemData("Mein Auto", "Fahrzeug & Details", Icons.Filled.DirectionsCar, Screen.AUTO),
-        MenuItemData("Reparaturen", "Reparaturen verwalten", Icons.Filled.CarRepair, Screen.REPARATUREN),
-        MenuItemData("Pickerl/TÜV", "Termine & Fristen", Icons.Filled.Event, Screen.PICKERL),
-        MenuItemData("Wartungen", "Verschiedenes", Icons.Filled.Build, Screen.WARTUNGEN),
-        MenuItemData("Gesamtblick", "Die wichtigsten Infos", Icons.Filled.Visibility, Screen.GESAMTBLICK),
-        MenuItemData("Reifen", "Größen, Dimensionen und Alter", Icons.Filled.TireRepair, Screen.REIFEN)
+        MenuItemData(
+            "Mein Auto",
+            "Fahrzeug & Details",
+            Icons.Filled.DirectionsCar,
+            Screen.AUTO
+        ),
+        MenuItemData(
+            "Reparaturen",
+            "Reparaturen verwalten",
+            Icons.Filled.CarRepair,
+            Screen.REPARATUREN
+        ),
+        MenuItemData(
+            "Pickerl/TÜV",
+            "Termine & Fristen",
+            Icons.Filled.Event,
+            Screen.PICKERL
+        ),
+        MenuItemData(
+            "Wartungen",
+            "Verschiedenes",
+            Icons.Filled.Build,
+            Screen.WARTUNGEN
+        ),
+        MenuItemData(
+            "Gesamtblick",
+            "Die wichtigsten Infos",
+            Icons.Filled.Visibility,
+            Screen.GESAMTBLICK
+        ),
+        MenuItemData(
+            "Reifen",
+            "Größen, Dimensionen und Alter",
+            Icons.Filled.TireRepair,
+            Screen.REIFEN
+        )
     )
 
     Box(
@@ -220,12 +264,14 @@ private fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(28.dp))
+
             Text(
                 "AutoCheck",
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
+
             Spacer(Modifier.height(8.dp))
 
             Image(
@@ -250,23 +296,29 @@ private fun HomeScreen(
                     ) {
                         for (col in 0..1) {
                             val item = items[row * 2 + col]
+
                             AnimatedVisibility(
                                 visible = visible,
                                 enter = slideInHorizontally(
                                     animationSpec = tween(2500),
-                                    initialOffsetX = { if (col == 0) -it else it }
+                                    initialOffsetX = {
+                                        if (col == 0) -it else it
+                                    }
                                 )
                             ) {
                                 MenuCard(
                                     item = item,
                                     modifier = Modifier.weight(1f),
-                                    onClick = { onSelect(item.screen) }
+                                    onClick = {
+                                        onSelect(item.screen)
+                                    }
                                 )
                             }
                         }
                     }
                 }
             }
+
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -282,7 +334,9 @@ private fun MenuCard(
         modifier = modifier,
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF11141A))
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11141A)
+        )
     ) {
         Row(
             modifier = Modifier.padding(13.dp),
@@ -295,11 +349,22 @@ private fun MenuCard(
                     .background(Color(0xFFE21D32)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(item.icon, item.title, tint = Color.White)
+                Icon(
+                    item.icon,
+                    item.title,
+                    tint = Color.White
+                )
             }
+
             Spacer(Modifier.width(10.dp))
+
             Column {
-                Text(item.title, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    item.title,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
                 Text(
                     item.subtitle,
                     fontSize = 11.sp,
@@ -311,6 +376,7 @@ private fun MenuCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetailScaffold(
     title: String,
@@ -321,10 +387,15 @@ private fun DetailScaffold(
         containerColor = Color(0xFF050608),
         topBar = {
             TopAppBar(
-                title = { Text(title) },
+                title = {
+                    Text(title)
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.Menu, "Zurück")
+                        Icon(
+                            Icons.Filled.Menu,
+                            "Zurück"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -358,7 +429,9 @@ private fun VehicleScreen(
     var model by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
         Text(
             "${vehicles.size}/5 Fahrzeuge",
             color = Color(0xFFB8BEC8),
@@ -372,6 +445,7 @@ private fun VehicleScreen(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
+
             Spacer(Modifier.height(8.dp))
         }
 
@@ -381,17 +455,33 @@ private fun VehicleScreen(
         ) {
             items(vehicles) { vehicle ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF11141A)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF11141A)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(vehicle.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Column(
+                        Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            vehicle.name,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+
                         Text(
                             "${vehicle.make} ${vehicle.model} ${vehicle.year}".trim(),
                             color = Color(0xFFB8BEC8)
                         )
+
                         Spacer(Modifier.height(8.dp))
-                        OutlinedButton(onClick = { onDelete(vehicle) }) {
+
+                        OutlinedButton(
+                            onClick = {
+                                onDelete(vehicle)
+                            }
+                        ) {
                             Text("Fahrzeug entfernen")
                         }
                     }
@@ -401,28 +491,85 @@ private fun VehicleScreen(
             if (adding) {
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF11141A)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF11141A)
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Fahrzeug hinzufügen", color = Color.White, fontWeight = FontWeight.Bold)
-                            OutlinedTextField(name, { name = it }, label = { Text("Bezeichnung") })
-                            OutlinedTextField(make, { make = it }, label = { Text("Marke") })
-                            OutlinedTextField(model, { model = it }, label = { Text("Modell") })
-                            OutlinedTextField(year, { year = it }, label = { Text("Baujahr") })
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "Fahrzeug hinzufügen",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            OutlinedTextField(
+                                name,
+                                { name = it },
+                                label = {
+                                    Text("Bezeichnung")
+                                }
+                            )
+
+                            OutlinedTextField(
+                                make,
+                                { make = it },
+                                label = {
+                                    Text("Marke")
+                                }
+                            )
+
+                            OutlinedTextField(
+                                model,
+                                { model = it },
+                                label = {
+                                    Text("Modell")
+                                }
+                            )
+
+                            OutlinedTextField(
+                                year,
+                                { year = it },
+                                label = {
+                                    Text("Baujahr")
+                                }
+                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 Button(
                                     enabled = name.isNotBlank(),
                                     onClick = {
-                                        onAdd(Vehicle(name.trim(), make.trim(), model.trim(), year.trim()))
-                                        name = ""; make = ""; model = ""; year = ""
+                                        onAdd(
+                                            Vehicle(
+                                                name.trim(),
+                                                make.trim(),
+                                                model.trim(),
+                                                year.trim()
+                                            )
+                                        )
+
+                                        name = ""
+                                        make = ""
+                                        model = ""
+                                        year = ""
                                         adding = false
                                     }
-                                ) { Text("Speichern") }
-                                OutlinedButton(onClick = { adding = false }) { Text("Abbrechen") }
+                                ) {
+                                    Text("Speichern")
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        adding = false
+                                    }
+                                ) {
+                                    Text("Abbrechen")
+                                }
                             }
                         }
                     }
@@ -433,7 +580,9 @@ private fun VehicleScreen(
         if (!adding && vehicles.size < 5) {
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { adding = true }
+                onClick = {
+                    adding = true
+                }
             ) {
                 Text("Fahrzeug hinzufügen")
             }
@@ -442,20 +591,40 @@ private fun VehicleScreen(
 }
 
 @Composable
-private fun InfoScreen(title: String, text: String) {
+private fun InfoScreen(
+    title: String,
+    text: String
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Top
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF11141A)),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF11141A)
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(Modifier.padding(20.dp)) {
-                Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Column(
+                Modifier.padding(20.dp)
+            ) {
+                Text(
+                    title,
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
                 Spacer(Modifier.height(10.dp))
-                Text(text, color = Color(0xFFB8BEC8), fontSize = 16.sp)
+
+                Text(
+                    text,
+                    color = Color(0xFFB8BEC8),
+                    fontSize = 16.sp
+                )
+
                 Spacer(Modifier.height(18.dp))
+
                 Text(
                     "Dieser Bereich ist vorbereitet und kann im nächsten Entwicklungsschritt mit den gewünschten Eingabefeldern und Erinnerungen ausgebaut werden.",
                     color = Color.White
