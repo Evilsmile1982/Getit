@@ -14,15 +14,11 @@ jobs:
       - name: Repository laden
         uses: actions/checkout@v4
 
-      - name: AutoCheck ZIP herunterladen
+      - name: ZIP prüfen und entpacken
         run: |
-          curl -L \
-            -o AutoCheck-Projekt.zip \
-            https://github.com/Evilsmile1982/Getit/raw/refs/heads/main/AutoCheck-Projekt.zip
-
-      - name: AutoCheck ZIP entpacken
-        run: |
-          mkdir -p extracted
+          file AutoCheck-Projekt.zip
+          unzip -t AutoCheck-Projekt.zip
+          mkdir extracted
           unzip -o AutoCheck-Projekt.zip -d extracted
           cp -R extracted/. .
           rm -rf extracted AutoCheck-Projekt.zip
