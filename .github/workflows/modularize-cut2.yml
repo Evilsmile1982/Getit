@@ -45,10 +45,6 @@ jobs:
           source = source_path.read_text(encoding="utf-8")
 
           file_map = {
-              "Background": "components/UiConstants.kt",
-              "Surface": "components/UiConstants.kt",
-              "Muted": "components/UiConstants.kt",
-
               "Vehicle": "data/Vehicle.kt",
               "Repair": "data/Repair.kt",
               "Maintenance": "data/Maintenance.kt",
@@ -126,6 +122,7 @@ jobs:
           declarations = []
 
           for index, match in enumerate(matches):
+
               start = match.start()
 
               if index + 1 < len(matches):
@@ -150,12 +147,15 @@ jobs:
           )
 
           if missing:
+
               print(
                   "FEHLER: Erwartete Deklarationen fehlen:"
               )
 
               for name in missing:
-                  print(f"  - {name}")
+                  print(
+                      f"  - {name}"
+                  )
 
               sys.exit(1)
 
@@ -164,12 +164,15 @@ jobs:
           )
 
           if unknown:
+
               print(
                   "FEHLER: Unbekannte Top-Level-Deklarationen:"
               )
 
               for name in unknown:
-                  print(f"  - {name}")
+                  print(
+                      f"  - {name}"
+                  )
 
               sys.exit(1)
 
@@ -179,9 +182,11 @@ jobs:
           )
 
           if not package_match:
+
               print(
                   "FEHLER: package-Deklaration fehlt."
               )
+
               sys.exit(1)
 
           package_line = package_match.group(0)
@@ -191,9 +196,13 @@ jobs:
               source
           )
 
-          header = package_line + "\n\n"
+          header = (
+              package_line
+              + "\n\n"
+          )
 
           if imports:
+
               header += (
                   "\n".join(imports)
                   + "\n\n"
@@ -210,6 +219,7 @@ jobs:
               "components",
               "utils",
           ):
+
               (
                   root / folder
               ).mkdir(
@@ -218,11 +228,16 @@ jobs:
               )
 
           generated_files = sorted(
-              set(file_map.values())
+              set(
+                  file_map.values()
+              )
           )
 
           for relative in generated_files:
-              path = root / relative
+
+              path = (
+                  root / relative
+              )
 
               if path.exists():
                   path.unlink()
@@ -235,11 +250,22 @@ jobs:
               # nur innerhalb derselben Datei sichtbar.
               # Nach der Aufteilung müssen die betroffenen
               # Deklarationen aus anderen Dateien erreichbar sein.
+
               text = re.sub(
                   r"^((?:@[^\n]+\n)*)private\s+",
                   r"\1",
                   text
               )
+
+              # DetailScaffold benötigt ExperimentalMaterial3Api.
+              if name == "DetailScaffold":
+
+                  if "@OptIn" not in text:
+
+                      text = (
+                          "@OptIn(ExperimentalMaterial3Api::class)\n"
+                          + text
+                      )
 
               relative = file_map[name]
 
@@ -250,7 +276,9 @@ jobs:
 
           for relative, parts in grouped.items():
 
-              path = root / relative
+              path = (
+                  root / relative
+              )
 
               path.parent.mkdir(
                   parents=True,
@@ -272,8 +300,10 @@ jobs:
               root / "MainActivity.kt"
           )
 
-          main_text = main_path.read_text(
-              encoding="utf-8"
+          main_text = (
+              main_path.read_text(
+                  encoding="utf-8"
+              )
           )
 
           main_names = [
@@ -286,11 +316,16 @@ jobs:
           if main_names != [
               "MainActivity"
           ]:
+
               print(
                   "FEHLER: MainActivity.kt enthält "
                   "nicht ausschließlich MainActivity."
               )
-              print(main_names)
+
+              print(
+                  main_names
+              )
+
               sys.exit(1)
 
           print("")
@@ -304,7 +339,10 @@ jobs:
               "========================================"
           )
 
-          for relative in sorted(grouped):
+          for relative in sorted(
+              grouped
+          ):
+
               print(
                   f"erstellt: {relative}"
               )
@@ -350,12 +388,17 @@ jobs:
           gradle assembleDebug --stacktrace
 
       - name: Originale App-Konfiguration wiederherstellen
+        if: always()
         run: |
-          cp /tmp/build.gradle.kts.original app/build.gradle.kts
-
-          echo "Originale app/build.gradle.kts wiederhergestellt."
+          if [ -f /tmp/build.gradle.kts.original ]; then
+            cp /tmp/build.gradle.kts.original app/build.gradle.kts
+            echo "Originale app/build.gradle.kts wiederhergestellt."
+          else
+            echo "Keine temporäre Sicherung vorhanden."
+          fi
 
       - name: Modularisierung nach erfolgreichem Build speichern
+        if: success()
         run: |
           git status --short
 
@@ -369,6 +412,7 @@ jobs:
           git push origin main
 
       - name: APK hochladen
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: AutoCheck-CUT2-modular
