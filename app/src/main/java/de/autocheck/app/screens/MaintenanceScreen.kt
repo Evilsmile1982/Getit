@@ -1,6 +1,7 @@
 package de.autocheck.app
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,15 +30,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
+import org.json.JSONArray
+import org.json.JSONObject
 
-private val maintenanceDisplayFormatter =
-    DateTimeFormatter.ofPattern("dd.MM.yyyy")
+private const val MAINTENANCE_V2_PREFIX =
+    "[WARTUNGSPLAN_V2]"
 
-private val maintenanceIsoFormatter =
-    DateTimeFormatter.ofPattern("yyyy-MM-dd")
+private const val OLD_MAINTENANCE_PREFIX =
+    "[WARTUNGEN]"
+
+private const val OLD_MAINTENANCE_SEPARATOR =
+    "||"
 
 private val standardMaintenanceItems =
     listOf(
@@ -48,94 +53,81 @@ private val standardMaintenanceItems =
         "BATTERIE"
     )
 
-private const val MAINTENANCE_ITEMS_PREFIX =
-    "[WARTUNGEN]"
-
-private const val MAINTENANCE_ITEMS_SEPARATOR =
-    "||"
-
-private fun normalizeMaintenanceDate(
-    value: String
-): String {
-
-    val trimmed =
-        value.trim()
-
-    if (trimmed.isBlank()) {
-        return ""
+private val maintenanceMonths =
+    (1..12).map {
+        it.toString()
     }
 
-    return try {
+private data class MaintenanceDraftItem(
+    val name: String,
+    val selected: Boolean = false,
+    val month: String = "",
+    val year: String = "",
+    val mileage: String = "",
+    val custom: Boolean = false
+)
 
-        LocalDate
-            .parse(
-                trimmed,
-                maintenanceDisplayFormatter
-            )
-            .format(
-                maintenanceDisplayFormatter
-            )
-
-    } catch (
-        _: DateTimeParseException
-    ) {
-
-        try {
-
-            LocalDate
-                .parse(
-                    trimmed,
-                    maintenanceIsoFormatter
-                )
-                .format(
-                    maintenanceDisplayFormatter
-                )
-
-        } catch (
-            _: DateTimeParseException
-        ) {
-
-            trimmed
-        }
-    }
-}
+private data class DecodedMaintenance(
+    val items: List<MaintenanceDraftItem>,
+    val notes: String
+)
 
 private fun encodeMaintenanceNotes(
-    selectedItems: List<String>,
-    customItem: String,
+    items: List<MaintenanceDraftItem>,
     notes: String
 ): String {
 
-    val allItems =
-        buildList {
+    val array =
+        JSONArray()
 
-            addAll(
-                selectedItems
+    items
+        .filter {
+            it.selected &&
+                it.name.isNotBlank()
+        }
+        .forEach { item ->
+
+            val json =
+                JSONObject()
+
+            json.put(
+                "name",
+                item.name.trim()
             )
 
-            if (
-                customItem.isNotBlank()
-            ) {
+            json.put(
+                "month",
+                item.month.trim()
+            )
 
-                add(
-                    customItem.trim()
-                )
-            }
+            json.put(
+                "year",
+                item.year.trim()
+            )
+
+            json.put(
+                "mileage",
+                item.mileage.trim()
+            )
+
+            json.put(
+                "custom",
+                item.custom
+            )
+
+            array.put(
+                json
+            )
         }
-
-    val itemText =
-        allItems.joinToString(
-            MAINTENANCE_ITEMS_SEPARATOR
-        )
 
     return buildString {
 
         append(
-            MAINTENANCE_ITEMS_PREFIX
+            MAINTENANCE_V2_PREFIX
         )
 
         append(
-            itemText
+            array.toString()
         )
 
         append(
@@ -148,76 +140,372 @@ private fun encodeMaintenanceNotes(
     }
 }
 
-private fun decodeMaintenanceItems(
-    storedNotes: String
-): Pair<List<String>, String> {
+private fun decodeMaintenanceNotes(
+    storedNotes: String,
+    legacyDate: String,
+    legacyMileage: String
+): DecodedMaintenance {
 
     if (
-        !storedNotes.startsWith(
-            MAINTENANCE_ITEMS_PREFIX
+        storedNotes.startsWith(
+            MAINTENANCE_V2_PREFIX
         )
     ) {
 
-        return Pair(
-            emptyList(),
-            storedNotes
+        val rest =
+            storedNotes.removePrefix(
+                MAINTENANCE_V2_PREFIX
+            )
+
+        val parts =
+            rest.split(
+                "\n",
+                limit = 2
+            )
+
+        val jsonText =
+            parts
+                .firstOrNull()
+                ?.trim()
+                ?: ""
+
+        val notes =
+            if (
+                parts.size > 1
+            ) {
+                parts[1].trim()
+            } else {
+                ""
+            }
+
+        val result =
+            mutableListOf<MaintenanceDraftItem>()
+
+        try {
+
+            val array =
+                JSONArray(
+                    jsonText
+                )
+
+            for (
+                index in
+                0 until array.length()
+            ) {
+
+                val json =
+                    array.getJSONObject(
+                        index
+                    )
+
+                val name =
+                    json.optString(
+                        "name",
+                        ""
+                    )
+
+                if (
+                    name.isBlank()
+                ) {
+                    continue
+                }
+
+                result.add(
+                    MaintenanceDraftItem(
+                        name =
+                            name,
+                        selected =
+                            true,
+                        month =
+                            json.optString(
+                                "month",
+                                ""
+                            ),
+                        year =
+                            json.optString(
+                                "year",
+                                ""
+                            ),
+                        mileage =
+                            json.optString(
+                                "mileage",
+                                ""
+                            ),
+                        custom =
+                            json.optBoolean(
+                                "custom",
+                                false
+                            )
+                    )
+                )
+            }
+
+        } catch (
+            _: Exception
+        ) {
+
+            return DecodedMaintenance(
+                items =
+                    emptyList(),
+                notes =
+                    notes
+            )
+        }
+
+        return DecodedMaintenance(
+            items =
+                result,
+            notes =
+                notes
         )
     }
 
-    val rest =
-        storedNotes.removePrefix(
-            MAINTENANCE_ITEMS_PREFIX
+    if (
+        storedNotes.startsWith(
+            OLD_MAINTENANCE_PREFIX
         )
+    ) {
+
+        val rest =
+            storedNotes.removePrefix(
+                OLD_MAINTENANCE_PREFIX
+            )
+
+        val parts =
+            rest.split(
+                "\n",
+                limit = 2
+            )
+
+        val itemPart =
+            parts
+                .firstOrNull()
+                ?.trim()
+                ?: ""
+
+        val notes =
+            if (
+                parts.size > 1
+            ) {
+                parts[1].trim()
+            } else {
+                ""
+            }
+
+        val oldItems =
+            if (
+                itemPart.isBlank()
+            ) {
+                emptyList()
+            } else {
+                itemPart
+                    .split(
+                        OLD_MAINTENANCE_SEPARATOR
+                    )
+                    .map {
+                        it.trim()
+                    }
+                    .filter {
+                        it.isNotBlank()
+                    }
+            }
+
+        val result =
+            oldItems.map { itemName ->
+
+                MaintenanceDraftItem(
+                    name =
+                        itemName,
+                    selected =
+                        true,
+                    month =
+                        legacyMonth(
+                            legacyDate
+                        ),
+                    year =
+                        legacyYear(
+                            legacyDate
+                        ),
+                    mileage =
+                        legacyMileage,
+                    custom =
+                        !standardMaintenanceItems.contains(
+                            itemName
+                        )
+                )
+            }
+
+        return DecodedMaintenance(
+            items =
+                result,
+            notes =
+                notes
+        )
+    }
+
+    if (
+        storedNotes.isNotBlank()
+    ) {
+
+        return DecodedMaintenance(
+            items =
+                listOf(
+                    MaintenanceDraftItem(
+                        name =
+                            "Wartung",
+                        selected =
+                            true,
+                        month =
+                            legacyMonth(
+                                legacyDate
+                            ),
+                        year =
+                            legacyYear(
+                                legacyDate
+                            ),
+                        mileage =
+                            legacyMileage,
+                        custom =
+                            true
+                    )
+                ),
+            notes =
+                storedNotes.trim()
+        )
+    }
+
+    if (
+        legacyDate.isNotBlank() ||
+        legacyMileage.isNotBlank()
+    ) {
+
+        return DecodedMaintenance(
+            items =
+                listOf(
+                    MaintenanceDraftItem(
+                        name =
+                            "Wartung",
+                        selected =
+                            true,
+                        month =
+                            legacyMonth(
+                                legacyDate
+                            ),
+                        year =
+                            legacyYear(
+                                legacyDate
+                            ),
+                        mileage =
+                            legacyMileage,
+                        custom =
+                            true
+                    )
+                ),
+            notes =
+                ""
+        )
+    }
+
+    return DecodedMaintenance(
+        items =
+            emptyList(),
+        notes =
+            ""
+    )
+}
+
+private fun legacyMonth(
+    date: String
+): String {
+
+    val value =
+        date.trim()
+
+    if (
+        value.isBlank()
+    ) {
+        return ""
+    }
 
     val parts =
-        rest.split(
-            "\n",
-            limit = 2
-        )
+        when {
+            value.contains(".") ->
+                value.split(".")
 
-    val itemPart =
-        parts
-            .firstOrNull()
-            ?.trim()
-            ?: ""
+            value.contains("-") ->
+                value.split("-")
 
-    val notes =
-        if (
-            parts.size > 1
-        ) {
+            else ->
+                emptyList()
+        }
 
-            parts[1].trim()
+    if (
+        parts.size != 3
+    ) {
+        return ""
+    }
 
-        } else {
+    return when {
 
+        parts[0].length == 4 ->
+            parts[1]
+                .toIntOrNull()
+                ?.toString()
+                ?: ""
+
+        parts[2].length == 4 ->
+            parts[1]
+                .toIntOrNull()
+                ?.toString()
+                ?: ""
+
+        else ->
             ""
+    }
+}
+
+private fun legacyYear(
+    date: String
+): String {
+
+    val value =
+        date.trim()
+
+    if (
+        value.isBlank()
+    ) {
+        return ""
+    }
+
+    val parts =
+        when {
+            value.contains(".") ->
+                value.split(".")
+
+            value.contains("-") ->
+                value.split("-")
+
+            else ->
+                emptyList()
         }
 
-    val items =
-        if (
-            itemPart.isBlank()
-        ) {
+    if (
+        parts.size != 3
+    ) {
+        return ""
+    }
 
-            emptyList()
+    return when {
 
-        } else {
+        parts[0].length == 4 ->
+            parts[0]
 
-            itemPart
-                .split(
-                    MAINTENANCE_ITEMS_SEPARATOR
-                )
-                .map {
-                    it.trim()
-                }
-                .filter {
-                    it.isNotBlank()
-                }
-        }
+        parts[2].length == 4 ->
+            parts[2]
 
-    return Pair(
-        items,
-        notes
-    )
+        else ->
+            ""
+    }
 }
 
 @Composable
@@ -232,7 +520,6 @@ fun MaintenanceScreen(
     LaunchedEffect(
         Unit
     ) {
-
         onVisited()
     }
 
@@ -248,13 +535,28 @@ fun MaintenanceScreen(
         )
     }
 
-    var date by remember {
+    var draftItems by remember {
+        mutableStateOf(
+            standardMaintenanceItems.map {
+                MaintenanceDraftItem(
+                    name =
+                        it,
+                    selected =
+                        false,
+                    custom =
+                        false
+                )
+            }
+        )
+    }
+
+    var customItemName by remember {
         mutableStateOf(
             ""
         )
     }
 
-    var mileage by remember {
+    var notes by remember {
         mutableStateOf(
             ""
         )
@@ -272,24 +574,6 @@ fun MaintenanceScreen(
         )
     }
 
-    var notes by remember {
-        mutableStateOf(
-            ""
-        )
-    }
-
-    var selectedItems by remember {
-        mutableStateOf(
-            emptyList<String>()
-        )
-    }
-
-    var customItem by remember {
-        mutableStateOf(
-            ""
-        )
-    }
-
     var entries by remember {
         mutableStateOf(
             store.loadMaintenance()
@@ -298,7 +582,8 @@ fun MaintenanceScreen(
 
     val vehicleEntries =
         entries.filter {
-            it.vehicle == activeVehicle
+            it.vehicle ==
+                activeVehicle
         }
 
     fun resetForm() {
@@ -306,10 +591,22 @@ fun MaintenanceScreen(
         editingId =
             null
 
-        date =
+        draftItems =
+            standardMaintenanceItems.map {
+                MaintenanceDraftItem(
+                    name =
+                        it,
+                    selected =
+                        false,
+                    custom =
+                        false
+                )
+            }
+
+        customItemName =
             ""
 
-        mileage =
+        notes =
             ""
 
         cost =
@@ -318,17 +615,41 @@ fun MaintenanceScreen(
         workshop =
             ""
 
+        showForm =
+            false
+    }
+
+    fun startNewEntry() {
+
+        editingId =
+            null
+
+        draftItems =
+            standardMaintenanceItems.map {
+                MaintenanceDraftItem(
+                    name =
+                        it,
+                    selected =
+                        false,
+                    custom =
+                        false
+                )
+            }
+
+        customItemName =
+            ""
+
         notes =
             ""
 
-        selectedItems =
-            emptyList()
+        cost =
+            ""
 
-        customItem =
+        workshop =
             ""
 
         showForm =
-            false
+            true
     }
 
     fun editEntry(
@@ -336,44 +657,62 @@ fun MaintenanceScreen(
     ) {
 
         val decoded =
-            decodeMaintenanceItems(
-                entry.notes
+            decodeMaintenanceNotes(
+                storedNotes =
+                    entry.notes,
+                legacyDate =
+                    entry.date,
+                legacyMileage =
+                    entry.mileage
             )
 
-        selectedItems =
-            decoded.first.filter {
+        val savedStandard =
+            decoded.items.filter {
                 standardMaintenanceItems.contains(
-                    it
+                    it.name
                 )
             }
 
-        customItem =
-            decoded.first
-                .filterNot {
-                    standardMaintenanceItems.contains(
-                        it
-                    )
-                }
-                .joinToString(
-                    ", "
+        val customItems =
+            decoded.items.filter {
+                !standardMaintenanceItems.contains(
+                    it.name
                 )
+            }
 
-        date =
-            normalizeMaintenanceDate(
-                entry.date
-            )
+        val rebuiltStandard =
+            standardMaintenanceItems.map {
+                standardName ->
 
-        mileage =
-            entry.mileage
+                savedStandard.firstOrNull {
+                    it.name ==
+                        standardName
+                }
+                    ?: MaintenanceDraftItem(
+                        name =
+                            standardName,
+                        selected =
+                            false,
+                        custom =
+                            false
+                    )
+            }
+
+        draftItems =
+            rebuiltStandard +
+                customItems
+
+        customItemName =
+            ""
+
+        notes =
+            decoded.notes
 
         cost =
             entry.cost
 
         workshop =
             entry.workshop
-
-        notes =
-            decoded.second
 
         editingId =
             entry.id
@@ -415,6 +754,7 @@ fun MaintenanceScreen(
                 Modifier.weight(
                     1f
                 ),
+
             verticalArrangement =
                 Arrangement.spacedBy(
                     10.dp
@@ -439,36 +779,59 @@ fun MaintenanceScreen(
                 item {
 
                     MaintenanceFormCard(
-                        selectedItems =
-                            selectedItems,
+                        draftItems =
+                            draftItems,
 
-                        onSelectedItemsChanged = {
-                            selectedItems =
+                        onDraftItemsChanged = {
+                            draftItems =
                                 it
                         },
 
-                        customItem =
-                            customItem,
+                        customItemName =
+                            customItemName,
 
-                        onCustomItemChanged = {
-                            customItem =
+                        onCustomItemNameChanged = {
+                            customItemName =
                                 it
                         },
 
-                        date =
-                            date,
+                        onAddCustomItem = {
 
-                        onDateChanged = {
-                            date =
-                                it
-                        },
+                            val name =
+                                customItemName.trim()
 
-                        mileage =
-                            mileage,
+                            if (
+                                name.isNotBlank()
+                            ) {
 
-                        onMileageChanged = {
-                            mileage =
-                                it
+                                val alreadyExists =
+                                    draftItems.any {
+                                        it.name.equals(
+                                            name,
+                                            ignoreCase =
+                                                true
+                                        )
+                                    }
+
+                                if (
+                                    !alreadyExists
+                                ) {
+
+                                    draftItems =
+                                        draftItems +
+                                            MaintenanceDraftItem(
+                                                name =
+                                                    name,
+                                                selected =
+                                                    true,
+                                                custom =
+                                                    true
+                                            )
+                                }
+
+                                customItemName =
+                                    ""
+                            }
                         },
 
                         cost =
@@ -500,79 +863,96 @@ fun MaintenanceScreen(
 
                         onSave = {
 
-                            val newEntry =
-                                Maintenance(
-
-                                    id =
-                                        editingId
-                                            ?: System
-                                                .currentTimeMillis(),
-
-                                    vehicle =
-                                        activeVehicle,
-
-                                    date =
-                                        normalizeMaintenanceDate(
-                                            date
-                                        ),
-
-                                    mileage =
-                                        mileage.trim(),
-
-                                    cost =
-                                        cost.trim(),
-
-                                    workshop =
-                                        workshop.trim(),
-
-                                    notes =
-                                        encodeMaintenanceNotes(
-                                            selectedItems,
-                                            customItem,
-                                            notes
-                                        )
-                                )
-
-                            val updatedEntries =
-                                if (
-                                    editingId != null
-                                ) {
-
-                                    entries.map {
-
-                                        if (
-                                            it.id ==
-                                            editingId
-                                        ) {
-
-                                            newEntry
-
-                                        } else {
-
-                                            it
-                                        }
-                                    }
-
-                                } else {
-
-                                    entries +
-                                        newEntry
+                            val selected =
+                                draftItems.filter {
+                                    it.selected &&
+                                        it.name.isNotBlank()
                                 }
 
-                            entries =
-                                updatedEntries
+                            if (
+                                selected.isNotEmpty()
+                            ) {
 
-                            store.saveMaintenance(
-                                updatedEntries
-                            )
+                                val newEntry =
+                                    Maintenance(
+                                        id =
+                                            editingId
+                                                ?: System
+                                                    .currentTimeMillis(),
 
+                                        vehicle =
+                                            activeVehicle,
+
+                                        date =
+                                            "",
+
+                                        mileage =
+                                            "",
+
+                                        cost =
+                                            cost.trim(),
+
+                                        workshop =
+                                            workshop.trim(),
+
+                                        notes =
+                                            encodeMaintenanceNotes(
+                                                items =
+                                                    selected,
+                                                notes =
+                                                    notes
+                                            )
+                                    )
+
+                                val updatedEntries =
+                                    if (
+                                        editingId != null
+                                    ) {
+
+                                        entries.map {
+                                            current ->
+
+                                            if (
+                                                current.id ==
+                                                    editingId
+                                            ) {
+                                                newEntry
+                                            } else {
+                                                current
+                                            }
+                                        }
+
+                                    } else {
+
+                                        entries +
+                                            newEntry
+                                    }
+
+                                entries =
+                                    updatedEntries
+
+                                store.saveMaintenance(
+                                    updatedEntries
+                                )
+
+                                resetForm()
+                            }
+                        },
+
+                        onCancel = {
                             resetForm()
                         },
 
-                        onCancel =
-                            {
-                                resetForm()
-                            }
+                        onRemoveCustomItem = {
+                            itemToRemove ->
+
+                            draftItems =
+                                draftItems.filterNot {
+                                    it.name ==
+                                        itemToRemove.name &&
+                                        it.custom
+                                }
+                        }
                     )
                 }
 
@@ -586,12 +966,11 @@ fun MaintenanceScreen(
                         entry =
                             entry,
 
-                        onEdit =
-                            {
-                                editEntry(
-                                    entry
-                                )
-                            },
+                        onEdit = {
+                            editEntry(
+                                entry
+                            )
+                        },
 
                         onDelete = {
 
@@ -626,9 +1005,7 @@ fun MaintenanceScreen(
                         ),
 
                 onClick = {
-
-                    showForm =
-                        true
+                    startNewEntry()
                 }
             ) {
 
@@ -642,31 +1019,56 @@ fun MaintenanceScreen(
 
 @Composable
 private fun MaintenanceFormCard(
-    selectedItems: List<String>,
-    onSelectedItemsChanged:
-        (List<String>) -> Unit,
-    customItem: String,
-    onCustomItemChanged:
+    draftItems:
+        List<MaintenanceDraftItem>,
+
+    onDraftItemsChanged:
+        (List<MaintenanceDraftItem>) -> Unit,
+
+    customItemName:
+        String,
+
+    onCustomItemNameChanged:
         (String) -> Unit,
-    date: String,
-    onDateChanged:
-        (String) -> Unit,
-    mileage: String,
-    onMileageChanged:
-        (String) -> Unit,
-    cost: String,
+
+    onAddCustomItem:
+        () -> Unit,
+
+    cost:
+        String,
+
     onCostChanged:
         (String) -> Unit,
-    workshop: String,
+
+    workshop:
+        String,
+
     onWorkshopChanged:
         (String) -> Unit,
-    notes: String,
+
+    notes:
+        String,
+
     onNotesChanged:
         (String) -> Unit,
-    isEditing: Boolean,
-    onSave: () -> Unit,
-    onCancel: () -> Unit
+
+    isEditing:
+        Boolean,
+
+    onSave:
+        () -> Unit,
+
+    onCancel:
+        () -> Unit,
+
+    onRemoveCustomItem:
+        (MaintenanceDraftItem) -> Unit
 ) {
+
+    val selectedCount =
+        draftItems.count {
+            it.selected
+        }
 
     Card(
         modifier =
@@ -689,7 +1091,7 @@ private fun MaintenanceFormCard(
 
             verticalArrangement =
                 Arrangement.spacedBy(
-                    8.dp
+                    10.dp
                 )
         ) {
 
@@ -707,124 +1109,119 @@ private fun MaintenanceFormCard(
                 "Wartungsarbeiten"
             )
 
-            standardMaintenanceItems.forEach {
+            Text(
+                "Jede Wartung bekommt ihren eigenen Monat, ihr eigenes Jahr und optional den Kilometerstand."
+            )
+
+            draftItems.forEachIndexed {
+                index,
                 item ->
 
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
+                MaintenanceItemEditor(
+                    item =
+                        item,
 
-                    verticalAlignment =
-                        Alignment.CenterVertically
-                ) {
+                    onItemChanged = {
+                        changedItem ->
 
-                    Checkbox(
-                        checked =
-                            selectedItems.contains(
-                                item
-                            ),
+                        val updated =
+                            draftItems.toMutableList()
 
-                        onCheckedChange = {
-                            checked ->
+                        updated[index] =
+                            changedItem
 
-                            onSelectedItemsChanged(
+                        onDraftItemsChanged(
+                            updated
+                        )
+                    },
 
-                                if (
-                                    checked
-                                ) {
-
-                                    (
-                                        selectedItems +
-                                            item
-                                    ).distinct()
-
-                                } else {
-
-                                    selectedItems
-                                        .filterNot {
-                                            it == item
-                                        }
-                                }
-                            )
+                    onRemove =
+                        if (
+                            item.custom
+                        ) {
+                            {
+                                onRemoveCustomItem(
+                                    item
+                                )
+                            }
+                        } else {
+                            null
                         }
-                    )
-
-                    Text(
-                        item
-                    )
-                }
+                )
             }
 
-            OutlinedTextField(
-                value =
-                    customItem,
-
-                onValueChange =
-                    onCustomItemChanged,
-
+            Card(
                 modifier =
                     Modifier.fillMaxWidth(),
 
-                label = {
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            Color(
+                                0xFF191D24
+                            )
+                    )
+            ) {
+
+                Column(
+                    modifier =
+                        Modifier.padding(
+                            12.dp
+                        ),
+
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+
                     Text(
                         "Eigene Wartung"
                     )
-                },
 
-                placeholder = {
-                    Text(
-                        "z. B. Bremsflüssigkeit"
+                    OutlinedTextField(
+                        value =
+                            customItemName,
+
+                        onValueChange =
+                            onCustomItemNameChanged,
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        label = {
+                            Text(
+                                "Bezeichnung"
+                            )
+                        },
+
+                        placeholder = {
+                            Text(
+                                "z. B. Bremsflüssigkeit"
+                            )
+                        },
+
+                        singleLine =
+                            true
                     )
-                },
 
-                singleLine =
-                    true
-            )
+                    Button(
+                        modifier =
+                            Modifier.fillMaxWidth(),
 
-            OutlinedTextField(
-                value =
-                    date,
+                        onClick =
+                            onAddCustomItem
+                    ) {
 
-                onValueChange =
-                    onDateChanged,
+                        Text(
+                            "Eigene Wartung hinzufügen"
+                        )
+                    }
+                }
+            }
 
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text(
-                        "Datum"
-                    )
-                },
-
-                placeholder = {
-                    Text(
-                        "TT.MM.JJJJ"
-                    )
-                },
-
-                singleLine =
-                    true
-            )
-
-            OutlinedTextField(
-                value =
-                    mileage,
-
-                onValueChange =
-                    onMileageChanged,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text(
-                        "Kilometerstand"
-                    )
-                },
-
-                singleLine =
-                    true
+            Text(
+                "Allgemeine Angaben"
             )
 
             OutlinedTextField(
@@ -884,6 +1281,10 @@ private fun MaintenanceFormCard(
                 }
             )
 
+            Text(
+                "Ausgewählte Wartungen: $selectedCount"
+            )
+
             Row(
                 modifier =
                     Modifier.fillMaxWidth(),
@@ -915,18 +1316,15 @@ private fun MaintenanceFormCard(
                             1f
                         ),
 
+                    enabled =
+                        selectedCount > 0,
+
                     onClick =
                         onSave
                 ) {
 
                     Text(
-                        if (
-                            isEditing
-                        ) {
-                            "Änderung speichern"
-                        } else {
-                            "Wartung speichern"
-                        }
+                        "Alles speichern"
                     )
                 }
             }
@@ -935,22 +1333,333 @@ private fun MaintenanceFormCard(
 }
 
 @Composable
+private fun MaintenanceItemEditor(
+    item:
+        MaintenanceDraftItem,
+
+    onItemChanged:
+        (MaintenanceDraftItem) -> Unit,
+
+    onRemove:
+        (() -> Unit)?
+) {
+
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (
+                        item.selected
+                    ) {
+                        Color(
+                            0xFF191D24
+                        )
+                    } else {
+                        Color(
+                            0xFF11141A
+                        )
+                    }
+            )
+    ) {
+
+        Column(
+            modifier =
+                Modifier.padding(
+                    10.dp
+                ),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Checkbox(
+                    checked =
+                        item.selected,
+
+                    onCheckedChange = {
+                        checked ->
+
+                        onItemChanged(
+                            item.copy(
+                                selected =
+                                    checked
+                            )
+                        )
+                    }
+                )
+
+                Text(
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    text =
+                        item.name
+                )
+
+                if (
+                    onRemove != null
+                ) {
+
+                    OutlinedButton(
+                        onClick =
+                            onRemove
+                    ) {
+
+                        Text(
+                            "Entfernen"
+                        )
+                    }
+                }
+            }
+
+            if (
+                item.selected
+            ) {
+
+                Text(
+                    "Monat, Jahr und Kilometerstand"
+                )
+
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        ),
+
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    MonthDropdown(
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
+
+                        month =
+                            item.month,
+
+                        onMonthChanged = {
+                            newMonth ->
+
+                            onItemChanged(
+                                item.copy(
+                                    month =
+                                        newMonth
+                                )
+                            )
+                        }
+                    )
+
+                    OutlinedTextField(
+                        value =
+                            item.year,
+
+                        onValueChange = {
+                            value ->
+
+                            val filtered =
+                                value
+                                    .filter {
+                                        it.isDigit()
+                                    }
+                                    .take(
+                                        4
+                                    )
+
+                            onItemChanged(
+                                item.copy(
+                                    year =
+                                        filtered
+                                )
+                            )
+                        },
+
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
+
+                        label = {
+                            Text(
+                                "Jahr"
+                            )
+                        },
+
+                        placeholder = {
+                            Text(
+                                "2025"
+                            )
+                        },
+
+                        singleLine =
+                            true
+                    )
+                }
+
+                OutlinedTextField(
+                    value =
+                        item.mileage,
+
+                    onValueChange = {
+                        value ->
+
+                        val filtered =
+                            value.filter {
+                                it.isDigit()
+                            }
+
+                        onItemChanged(
+                            item.copy(
+                                mileage =
+                                    filtered
+                            )
+                        )
+                    },
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    label = {
+                        Text(
+                            "Kilometerstand (optional)"
+                        )
+                    },
+
+                    placeholder = {
+                        Text(
+                            "225000"
+                        )
+                    },
+
+                    singleLine =
+                        true
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthDropdown(
+    modifier:
+        Modifier,
+
+    month:
+        String,
+
+    onMonthChanged:
+        (String) -> Unit
+) {
+
+    var expanded by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    Box(
+        modifier =
+            modifier
+    ) {
+
+        OutlinedButton(
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            onClick = {
+                expanded =
+                    true
+            }
+        ) {
+
+            Text(
+                if (
+                    month.isBlank()
+                ) {
+                    "Monat"
+                } else {
+                    month
+                }
+            )
+        }
+
+        DropdownMenu(
+            expanded =
+                expanded,
+
+            onDismissRequest = {
+                expanded =
+                    false
+            }
+        ) {
+
+            maintenanceMonths.forEach {
+                option ->
+
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            option
+                        )
+                    },
+
+                    onClick = {
+
+                        onMonthChanged(
+                            option
+                        )
+
+                        expanded =
+                            false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MaintenanceSummaryCard(
-    entry: Maintenance,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    entry:
+        Maintenance,
+
+    onEdit:
+        () -> Unit,
+
+    onDelete:
+        () -> Unit
 ) {
 
     val decoded =
-        decodeMaintenanceItems(
-            entry.notes
+        decodeMaintenanceNotes(
+            storedNotes =
+                entry.notes,
+
+            legacyDate =
+                entry.date,
+
+            legacyMileage =
+                entry.mileage
         )
-
-    val items =
-        decoded.first
-
-    val savedNotes =
-        decoded.second
 
     Card(
         modifier =
@@ -973,12 +1682,12 @@ private fun MaintenanceSummaryCard(
 
             verticalArrangement =
                 Arrangement.spacedBy(
-                    7.dp
+                    8.dp
                 )
         ) {
 
             Text(
-                "Gespeichert"
+                "Gesamtbild"
             )
 
             Text(
@@ -986,41 +1695,25 @@ private fun MaintenanceSummaryCard(
             )
 
             if (
-                items.isNotEmpty()
+                decoded.items.isNotEmpty()
             ) {
 
-                Text(
-                    "Wartungsarbeiten:"
-                )
+                decoded.items
+                    .filter {
+                        it.selected
+                    }
+                    .forEach { item ->
 
-                items.forEach {
-                    item ->
-
-                    Text(
-                        "✓ $item"
-                    )
-                }
-            }
-
-            if (
-                entry.date.isNotBlank()
-            ) {
-
-                Text(
-                    "Datum: ${
-                        normalizeMaintenanceDate(
-                            entry.date
+                        MaintenanceSummaryRow(
+                            item =
+                                item
                         )
-                    }"
-                )
-            }
+                    }
 
-            if (
-                entry.mileage.isNotBlank()
-            ) {
+            } else {
 
                 Text(
-                    "Kilometerstand: ${entry.mileage}"
+                    "Keine einzelnen Wartungspunkte eingetragen."
                 )
             }
 
@@ -1043,11 +1736,11 @@ private fun MaintenanceSummaryCard(
             }
 
             if (
-                savedNotes.isNotBlank()
+                decoded.notes.isNotBlank()
             ) {
 
                 Text(
-                    "Notizen: $savedNotes"
+                    "Notizen: ${decoded.notes}"
                 )
             }
 
@@ -1093,6 +1786,43 @@ private fun MaintenanceSummaryCard(
             }
         }
     }
+}
+
+@Composable
+private fun MaintenanceSummaryRow(
+    item:
+        MaintenanceDraftItem
+) {
+
+    val dateText =
+        when {
+
+            item.month.isNotBlank() &&
+                item.year.isNotBlank() ->
+                "${item.month}/${item.year}"
+
+            item.year.isNotBlank() ->
+                item.year
+
+            item.month.isNotBlank() ->
+                "Monat ${item.month}"
+
+            else ->
+                "Datum nicht eingetragen"
+        }
+
+    val mileageText =
+        if (
+            item.mileage.isNotBlank()
+        ) {
+            " · ${item.mileage} km"
+        } else {
+            ""
+        }
+
+    Text(
+        "• ${item.name}: $dateText$mileageText"
+    )
 }
 
 @Composable
