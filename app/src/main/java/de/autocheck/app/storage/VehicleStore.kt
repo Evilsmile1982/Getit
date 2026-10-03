@@ -39,26 +39,32 @@ class VehicleStore(
                             o.optString(
                                 "name"
                             ),
+
                         make =
                             o.optString(
                                 "make"
                             ),
+
                         model =
                             o.optString(
                                 "model"
                             ),
+
                         year =
                             o.optString(
                                 "year"
                             ),
+
                         plate =
                             o.optString(
                                 "plate"
                             ),
+
                         vin =
                             o.optString(
                                 "vin"
                             ),
+
                         imageUri =
                             o.optString(
                                 "imageUri"
@@ -170,26 +176,32 @@ class VehicleStore(
                             o.optLong(
                                 "id"
                             ),
+
                         vehicle =
                             o.optString(
                                 "vehicle"
                             ),
+
                         date =
                             o.optString(
                                 "date"
                             ),
+
                         mileage =
                             o.optString(
                                 "mileage"
                             ),
+
                         description =
                             o.optString(
                                 "description"
                             ),
+
                         cost =
                             o.optString(
                                 "cost"
                             ),
+
                         workshop =
                             o.optString(
                                 "workshop"
@@ -283,26 +295,32 @@ class VehicleStore(
                             o.optLong(
                                 "id"
                             ),
+
                         vehicle =
                             o.optString(
                                 "vehicle"
                             ),
+
                         date =
                             o.optString(
                                 "date"
                             ),
+
                         mileage =
                             o.optString(
                                 "mileage"
                             ),
+
                         cost =
                             o.optString(
                                 "cost"
                             ),
+
                         workshop =
                             o.optString(
                                 "workshop"
                             ),
+
                         notes =
                             o.optString(
                                 "notes"
@@ -563,6 +581,36 @@ class VehicleStore(
                         storage =
                             o.optString(
                                 "storage"
+                            ),
+
+                        boltPattern =
+                            o.optString(
+                                "boltPattern",
+                                ""
+                            ),
+
+                        offset =
+                            o.optString(
+                                "offset",
+                                ""
+                            ),
+
+                        purchaseMonth =
+                            o.optString(
+                                "purchaseMonth",
+                                ""
+                            ),
+
+                        purchaseYear =
+                            o.optString(
+                                "purchaseYear",
+                                ""
+                            ),
+
+                        price =
+                            o.optString(
+                                "price",
+                                ""
                             )
                     )
                 )
@@ -625,6 +673,31 @@ class VehicleStore(
                     put(
                         "storage",
                         it.storage
+                    )
+
+                    put(
+                        "boltPattern",
+                        it.boltPattern
+                    )
+
+                    put(
+                        "offset",
+                        it.offset
+                    )
+
+                    put(
+                        "purchaseMonth",
+                        it.purchaseMonth
+                    )
+
+                    put(
+                        "purchaseYear",
+                        it.purchaseYear
+                    )
+
+                    put(
+                        "price",
+                        it.price
                     )
                 }
             )
