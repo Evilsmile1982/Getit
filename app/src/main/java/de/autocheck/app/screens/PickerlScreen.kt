@@ -75,26 +75,6 @@ private val pickerlMonths =
         "DEZEMBER"
     )
 
-private fun monthNumber(
-    monthName: String
-): Int {
-
-    val index =
-        pickerlMonths.indexOf(
-            monthName.uppercase(
-                Locale.GERMAN
-            )
-        )
-
-    return if (
-        index >= 0
-    ) {
-        index + 1
-    } else {
-        1
-    }
-}
-
 private fun monthName(
     monthNumber: Int
 ): String {
@@ -332,15 +312,15 @@ fun PickerlScreen(
         mutableStateOf("")
     }
 
-    var saved by remember {
+    var reminderMenuExpanded by remember {
         mutableStateOf(false)
     }
 
-    var savedPickerl by remember {
-        mutableStateOf<Pickerl?>(null)
+    var hasSavedPickerl by remember {
+        mutableStateOf(false)
     }
 
-    var reminderMenuExpanded by remember {
+    var editMode by remember {
         mutableStateOf(false)
     }
 
@@ -471,11 +451,11 @@ fun PickerlScreen(
             photoUri =
                 ""
 
-            saved =
+            hasSavedPickerl =
                 false
 
-            savedPickerl =
-                null
+            editMode =
+                true
 
             return@LaunchedEffect
         }
@@ -528,11 +508,11 @@ fun PickerlScreen(
         photoUri =
             entry.photoUri
 
-        saved =
+        hasSavedPickerl =
             true
 
-        savedPickerl =
-            entry
+        editMode =
+            false
     }
 
     Column(
@@ -575,799 +555,14 @@ fun PickerlScreen(
                 )
         ) {
 
-            item {
-
-                CardForm {
-
-                    Text(
-
-                        text =
-                            "Pickerl / TÜV",
-
-                        color =
-                            Color.White,
-
-                        fontWeight =
-                            FontWeight.Bold,
-
-                        fontSize =
-                            20.sp
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            8.dp
-                        )
-                    )
-
-                    Text(
-
-                        text =
-                            "Letzter Termin",
-
-                        color =
-                            Color.White,
-
-                        fontWeight =
-                            FontWeight.Bold,
-
-                        fontSize =
-                            16.sp
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            6.dp
-                        )
-                    )
-
-                    Row(
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                8.dp
-                            ),
-
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
-
-                        Box(
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                )
-                        ) {
-
-                            OutlinedButton(
-
-                                modifier =
-                                    Modifier.fillMaxWidth(),
-
-                                onClick = {
-
-                                    lastMonthMenuExpanded =
-                                        true
-                                }
-
-                            ) {
-
-                                Text(
-                                    monthName(
-                                        lastMonth
-                                    )
-                                )
-                            }
-
-                            DropdownMenu(
-
-                                expanded =
-                                    lastMonthMenuExpanded,
-
-                                onDismissRequest = {
-
-                                    lastMonthMenuExpanded =
-                                        false
-                                }
-
-                            ) {
-
-                                pickerlMonths.forEachIndexed {
-                                        index,
-                                        month ->
-
-                                    DropdownMenuItem(
-
-                                        text = {
-
-                                            Text(
-                                                month
-                                            )
-                                        },
-
-                                        onClick = {
-
-                                            lastMonth =
-                                                index + 1
-
-                                            lastMonthMenuExpanded =
-                                                false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-
-                            value =
-                                lastYear,
-
-                            onValueChange = {
-
-                                if (
-                                    it.length <= 4 &&
-                                    it.all {
-                                        char ->
-                                        char.isDigit()
-                                    }
-                                ) {
-
-                                    lastYear =
-                                        it
-                                }
-                            },
-
-                            label = {
-                                Text(
-                                    "Jahr"
-                                )
-                            },
-
-                            singleLine =
-                                true,
-
-                            keyboardOptions =
-                                KeyboardOptions(
-                                    keyboardType =
-                                        KeyboardType.Number
-                                ),
-
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                )
-                        )
-                    }
-
-                    Spacer(
-                        Modifier.height(
-                            14.dp
-                        )
-                    )
-
-                    Text(
-
-                        text =
-                            "Nächster Termin",
-
-                        color =
-                            Color.White,
-
-                        fontWeight =
-                            FontWeight.Bold,
-
-                        fontSize =
-                            16.sp
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            6.dp
-                        )
-                    )
-
-                    Row(
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                8.dp
-                            ),
-
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
-
-                        Box(
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                )
-                        ) {
-
-                            OutlinedButton(
-
-                                modifier =
-                                    Modifier.fillMaxWidth(),
-
-                                onClick = {
-
-                                    nextMonthMenuExpanded =
-                                        true
-                                }
-
-                            ) {
-
-                                Text(
-                                    monthName(
-                                        nextMonth
-                                    )
-                                )
-                            }
-
-                            DropdownMenu(
-
-                                expanded =
-                                    nextMonthMenuExpanded,
-
-                                onDismissRequest = {
-
-                                    nextMonthMenuExpanded =
-                                        false
-                                }
-
-                            ) {
-
-                                pickerlMonths.forEachIndexed {
-                                        index,
-                                        month ->
-
-                                    DropdownMenuItem(
-
-                                        text = {
-
-                                            Text(
-                                                month
-                                            )
-                                        },
-
-                                        onClick = {
-
-                                            nextMonth =
-                                                index + 1
-
-                                            nextMonthMenuExpanded =
-                                                false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-
-                            value =
-                                nextYear,
-
-                            onValueChange = {
-
-                                if (
-                                    it.length <= 4 &&
-                                    it.all {
-                                        char ->
-                                        char.isDigit()
-                                    }
-                                ) {
-
-                                    nextYear =
-                                        it
-                                }
-                            },
-
-                            label = {
-                                Text(
-                                    "Jahr"
-                                )
-                            },
-
-                            singleLine =
-                                true,
-
-                            keyboardOptions =
-                                KeyboardOptions(
-                                    keyboardType =
-                                        KeyboardType.Number
-                                ),
-
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                )
-                        )
-                    }
-
-                    Spacer(
-                        Modifier.height(
-                            6.dp
-                        )
-                    )
-
-                    Text(
-
-                        text =
-                            "Nächster Termin: ${
-                                displayPickerlMonthYear(
-                                    nextMonth,
-                                    nextYear
-                                )
-                            }",
-
-                        color =
-                            Color.White,
-
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            10.dp
-                        )
-                    )
-
-                    Text(
-
-                        text =
-                            "Pickerl-Foto",
-
-                        color =
-                            Color.White,
-
-                        fontWeight =
-                            FontWeight.Bold,
-
-                        fontSize =
-                            16.sp
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            6.dp
-                        )
-                    )
-
-                    Row(
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                8.dp
-                            )
-                    ) {
-
-                        OutlinedButton(
-
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                ),
-
-                            onClick = {
-
-                                galleryLauncher.launch(
-                                    "image/*"
-                                )
-                            }
-
-                        ) {
-
-                            Icon(
-
-                                imageVector =
-                                    Icons.Default.PhotoLibrary,
-
-                                contentDescription =
-                                    "Galerie"
-                            )
-
-                            Spacer(
-                                Modifier.size(
-                                    6.dp
-                                )
-                            )
-
-                            Text(
-                                "Galerie"
-                            )
-                        }
-
-                        OutlinedButton(
-
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                ),
-
-                            onClick = {
-
-                                cameraLauncher.launch(
-                                    null
-                                )
-                            }
-
-                        ) {
-
-                            Icon(
-
-                                imageVector =
-                                    Icons.Default.PhotoCamera,
-
-                                contentDescription =
-                                    "Kamera"
-                            )
-
-                            Spacer(
-                                Modifier.size(
-                                    6.dp
-                                )
-                            )
-
-                            Text(
-                                "Kamera"
-                            )
-                        }
-                    }
-
-                    if (
-                        photoBitmap != null
-                    ) {
-
-                        Spacer(
-                            Modifier.height(
-                                10.dp
-                            )
-                        )
-
-                        Card(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                        ) {
-
-                            Image(
-
-                                bitmap =
-                                    photoBitmap!!
-                                        .asImageBitmap(),
-
-                                contentDescription =
-                                    "Pickerl Foto",
-
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(
-                                            220.dp
-                                        ),
-
-                                contentScale =
-                                    ContentScale.Crop
-                            )
-                        }
-
-                        Spacer(
-                            Modifier.height(
-                                4.dp
-                            )
-                        )
-
-                        TextButton(
-
-                            modifier =
-                                Modifier.align(
-                                    Alignment.End
-                                ),
-
-                            onClick = {
-
-                                photoUri =
-                                    ""
-
-                                photoBitmap =
-                                    null
-                            }
-
-                        ) {
-
-                            Text(
-                                "Foto entfernen"
-                            )
-                        }
-                    }
-
-                    FormField(
-
-                        "Notizen",
-
-                        notes
-
-                    ) {
-
-                        notes =
-                            it
-                    }
-
-                    Spacer(
-                        Modifier.height(
-                            6.dp
-                        )
-                    )
-
-                    Row(
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        verticalAlignment =
-                            Alignment.CenterVertically,
-
-                        horizontalArrangement =
-                            Arrangement.SpaceBetween
-                    ) {
-
-                        Text(
-
-                            text =
-                                "Erinnerung",
-
-                            color =
-                                Color.White,
-
-                            fontWeight =
-                                FontWeight.Bold
-                        )
-
-                        Switch(
-
-                            checked =
-                                reminder,
-
-                            onCheckedChange = {
-
-                                reminder =
-                                    it
-                            }
-                        )
-                    }
-
-                    if (
-                        reminder
-                    ) {
-
-                        Spacer(
-                            Modifier.height(
-                                6.dp
-                            )
-                        )
-
-                        Text(
-
-                            text =
-                                "Erinnerung vor Ablauf",
-
-                            color =
-                                Color.White
-                        )
-
-                        Spacer(
-                            Modifier.height(
-                                4.dp
-                            )
-                        )
-
-                        Box {
-
-                            OutlinedButton(
-
-                                onClick = {
-
-                                    reminderMenuExpanded =
-                                        true
-                                }
-
-                            ) {
-
-                                Text(
-
-                                    "$reminderMonths " +
-                                        if (
-                                            reminderMonths == 1
-                                        ) {
-                                            "Monat vorher"
-                                        } else {
-                                            "Monate vorher"
-                                        }
-                                )
-                            }
-
-                            DropdownMenu(
-
-                                expanded =
-                                    reminderMenuExpanded,
-
-                                onDismissRequest = {
-
-                                    reminderMenuExpanded =
-                                        false
-                                }
-
-                            ) {
-
-                                (1..5).forEach {
-                                        months ->
-
-                                    DropdownMenuItem(
-
-                                        text = {
-
-                                            Text(
-
-                                                "$months " +
-                                                    if (
-                                                        months == 1
-                                                    ) {
-                                                        "Monat vorher"
-                                                    } else {
-                                                        "Monate vorher"
-                                                    }
-                                            )
-                                        },
-
-                                        onClick = {
-
-                                            reminderMonths =
-                                                months
-
-                                            reminderMenuExpanded =
-                                                false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(
-                        Modifier.height(
-                            12.dp
-                        )
-                    )
-
-                    Button(
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        onClick = {
-
-                            val storageLastDate =
-                                createPickerlStorageDate(
-                                    lastMonth,
-                                    lastYear
-                                )
-
-                            val storageNextDate =
-                                createPickerlStorageDate(
-                                    nextMonth,
-                                    nextYear
-                                )
-
-                            if (
-                                storageLastDate.isBlank() ||
-                                storageNextDate.isBlank()
-                            ) {
-
-                                return@Button
-                            }
-
-                            val selectedMonths =
-                                reminderMonths
-                                    .coerceIn(
-                                        1,
-                                        5
-                                    )
-
-                            val entry =
-                                Pickerl(
-
-                                    vehicle =
-                                        activeVehicle,
-
-                                    lastDate =
-                                        storageLastDate,
-
-                                    nextDate =
-                                        storageNextDate,
-
-                                    notes =
-                                        notes.trim(),
-
-                                    reminder =
-                                        reminder,
-
-                                    photoUri =
-                                        photoUri,
-
-                                    reminderMonths =
-                                        selectedMonths
-                                )
-
-                            val updated =
-                                all.value
-                                    .filterNot {
-                                        it.vehicle ==
-                                            activeVehicle
-                                    } +
-                                    entry
-
-                            all.value =
-                                updated
-
-                            store.savePickerl(
-                                updated
-                            )
-
-                            savedPickerl =
-                                entry
-
-                            saved =
-                                true
-
-                            if (
-                                reminder
-                            ) {
-
-                                schedulePickerlReminder(
-
-                                    context,
-
-                                    activeVehicle,
-
-                                    storageNextDate,
-
-                                    selectedMonths
-                                )
-
-                            } else {
-
-                                cancelPickerlReminder(
-
-                                    context,
-
-                                    activeVehicle
-                                )
-                            }
-                        }
-
-                    ) {
-
-                        Text(
-                            "Pickerl speichern"
-                        )
-                    }
-                }
-            }
-
+            /*
+             * NEUES PICKERL
+             * oder
+             * PICKERL ÄNDERN
+             */
             if (
-                saved &&
-                savedPickerl != null
+                !hasSavedPickerl ||
+                editMode
             ) {
 
                 item {
@@ -1377,7 +572,13 @@ fun PickerlScreen(
                         Text(
 
                             text =
-                                "Gespeichert",
+                                if (
+                                    hasSavedPickerl
+                                ) {
+                                    "Pickerl / TÜV ändern"
+                                } else {
+                                    "Pickerl / TÜV"
+                                },
 
                             color =
                                 Color.White,
@@ -1398,30 +599,299 @@ fun PickerlScreen(
                         Text(
 
                             text =
-                                "Fahrzeug: $activeVehicle",
+                                "Letzter Termin",
 
                             color =
-                                Color.White
+                                Color.White,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            fontSize =
+                                16.sp
                         )
 
                         Spacer(
                             Modifier.height(
-                                4.dp
+                                6.dp
+                            )
+                        )
+
+                        Row(
+
+                            modifier =
+                                Modifier.fillMaxWidth(),
+
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    8.dp
+                                ),
+
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+
+                            Box(
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    )
+                            ) {
+
+                                OutlinedButton(
+
+                                    modifier =
+                                        Modifier.fillMaxWidth(),
+
+                                    onClick = {
+
+                                        lastMonthMenuExpanded =
+                                            true
+                                    }
+
+                                ) {
+
+                                    Text(
+                                        monthName(
+                                            lastMonth
+                                        )
+                                    )
+                                }
+
+                                DropdownMenu(
+
+                                    expanded =
+                                        lastMonthMenuExpanded,
+
+                                    onDismissRequest = {
+
+                                        lastMonthMenuExpanded =
+                                            false
+                                    }
+
+                                ) {
+
+                                    pickerlMonths.forEachIndexed {
+                                            index,
+                                            month ->
+
+                                        DropdownMenuItem(
+
+                                            text = {
+
+                                                Text(
+                                                    month
+                                                )
+                                            },
+
+                                            onClick = {
+
+                                                lastMonth =
+                                                    index + 1
+
+                                                lastMonthMenuExpanded =
+                                                    false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedTextField(
+
+                                value =
+                                    lastYear,
+
+                                onValueChange = {
+
+                                    if (
+                                        it.length <= 4 &&
+                                        it.all {
+                                            char ->
+                                            char.isDigit()
+                                        }
+                                    ) {
+
+                                        lastYear =
+                                            it
+                                    }
+                                },
+
+                                label = {
+                                    Text(
+                                        "Jahr"
+                                    )
+                                },
+
+                                singleLine =
+                                    true,
+
+                                keyboardOptions =
+                                    KeyboardOptions(
+                                        keyboardType =
+                                            KeyboardType.Number
+                                    ),
+
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    )
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.height(
+                                14.dp
                             )
                         )
 
                         Text(
 
                             text =
-                                "Letzter Termin: ${
-                                    displayPickerlMonthYear(
-                                        lastMonth,
-                                        lastYear
-                                    )
-                                }",
+                                "Nächster Termin",
 
                             color =
-                                Color.White
+                                Color.White,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            fontSize =
+                                16.sp
+                        )
+
+                        Spacer(
+                            Modifier.height(
+                                6.dp
+                            )
+                        )
+
+                        Row(
+
+                            modifier =
+                                Modifier.fillMaxWidth(),
+
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    8.dp
+                                ),
+
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+
+                            Box(
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    )
+                            ) {
+
+                                OutlinedButton(
+
+                                    modifier =
+                                        Modifier.fillMaxWidth(),
+
+                                    onClick = {
+
+                                        nextMonthMenuExpanded =
+                                            true
+                                    }
+
+                                ) {
+
+                                    Text(
+                                        monthName(
+                                            nextMonth
+                                        )
+                                    )
+                                }
+
+                                DropdownMenu(
+
+                                    expanded =
+                                        nextMonthMenuExpanded,
+
+                                    onDismissRequest = {
+
+                                        nextMonthMenuExpanded =
+                                            false
+                                    }
+
+                                ) {
+
+                                    pickerlMonths.forEachIndexed {
+                                            index,
+                                            month ->
+
+                                        DropdownMenuItem(
+
+                                            text = {
+
+                                                Text(
+                                                    month
+                                                )
+                                            },
+
+                                            onClick = {
+
+                                                nextMonth =
+                                                    index + 1
+
+                                                nextMonthMenuExpanded =
+                                                    false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedTextField(
+
+                                value =
+                                    nextYear,
+
+                                onValueChange = {
+
+                                    if (
+                                        it.length <= 4 &&
+                                        it.all {
+                                            char ->
+                                            char.isDigit()
+                                        }
+                                    ) {
+
+                                        nextYear =
+                                            it
+                                    }
+                                },
+
+                                label = {
+                                    Text(
+                                        "Jahr"
+                                    )
+                                },
+
+                                singleLine =
+                                    true,
+
+                                keyboardOptions =
+                                    KeyboardOptions(
+                                        keyboardType =
+                                            KeyboardType.Number
+                                    ),
+
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    )
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.height(
+                                6.dp
+                            )
                         )
 
                         Text(
@@ -1441,111 +911,146 @@ fun PickerlScreen(
                                 FontWeight.Bold
                         )
 
-                        Text(
-
-                            text =
-                                if (
-                                    photoUri.isNotBlank()
-                                ) {
-                                    "Pickerl-Foto: gespeichert"
-                                } else {
-                                    "Pickerl-Foto: kein Foto"
-                                },
-
-                            color =
-                                Color.White
-                        )
-
-                        Text(
-
-                            text =
-                                if (
-                                    reminder
-                                ) {
-                                    "Erinnerung: $reminderMonths " +
-                                        if (
-                                            reminderMonths == 1
-                                        ) {
-                                            "Monat vorher"
-                                        } else {
-                                            "Monate vorher"
-                                        }
-                                } else {
-                                    "Erinnerung: ausgeschaltet"
-                                },
-
-                            color =
-                                Color.White
-                        )
-
-                        if (
-                            notes.isNotBlank()
-                        ) {
-
-                            Spacer(
-                                Modifier.height(
-                                    6.dp
-                                )
-                            )
-
-                            Text(
-
-                                text =
-                                    "Notizen: $notes",
-
-                                color =
-                                    Color.White
-                            )
-                        }
-
                         Spacer(
                             Modifier.height(
                                 10.dp
                             )
                         )
 
+                        Text(
+
+                            text =
+                                "Pickerl-Foto",
+
+                            color =
+                                Color.White,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            fontSize =
+                                16.sp
+                        )
+
+                        Spacer(
+                            Modifier.height(
+                                6.dp
+                            )
+                        )
+
+                        Row(
+
+                            modifier =
+                                Modifier.fillMaxWidth(),
+
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    8.dp
+                                )
+                        ) {
+
+                            OutlinedButton(
+
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    ),
+
+                                onClick = {
+
+                                    galleryLauncher.launch(
+                                        "image/*"
+                                    )
+                                }
+
+                            ) {
+
+                                Icon(
+
+                                    imageVector =
+                                        Icons.Default.PhotoLibrary,
+
+                                    contentDescription =
+                                        "Galerie"
+                                )
+
+                                Spacer(
+                                    Modifier.size(
+                                        6.dp
+                                    )
+                                )
+
+                                Text(
+                                    "Galerie"
+                                )
+                            }
+
+                            OutlinedButton(
+
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    ),
+
+                                onClick = {
+
+                                    cameraLauncher.launch(
+                                        null
+                                    )
+                                }
+
+                            ) {
+
+                                Icon(
+
+                                    imageVector =
+                                        Icons.Default.PhotoCamera,
+
+                                    contentDescription =
+                                        "Kamera"
+                                )
+
+                                Spacer(
+                                    Modifier.size(
+                                        6.dp
+                                    )
+                                )
+
+                                Text(
+                                    "Kamera"
+                                )
+                            }
+                        }
+
                         if (
                             photoBitmap != null
                         ) {
 
-                            Image(
+                            Spacer(
+                                Modifier.height(
+                                    10.dp
+                                )
+                            )
 
-                                bitmap =
-                                    photoBitmap!!
-                                        .asImageBitmap(),
-
-                                contentDescription =
-                                    "Gespeichertes Pickerl-Foto",
-
+                            Card(
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(
-                                            180.dp
-                                        ),
+                                    Modifier.fillMaxWidth()
+                            ) {
 
-                                contentScale =
-                                    ContentScale.Crop
-                            )
-                        }
+                                Image(
 
-                        Spacer(
-                            Modifier.height(
-                                8.dp
-                            )
-                        )
+                                    bitmap =
+                                        photoBitmap!!
+                                            .asImageBitmap(),
 
-                        Text(
+                                    contentDescription =
+                                        "Pickerl Foto",
 
-                            text =
-                                "Die Daten wurden lokal auf diesem Gerät gespeichert.",
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(
+                                                220.dp
+                                            ),
 
-                            color =
-                                Muted
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+                                    contentScale
