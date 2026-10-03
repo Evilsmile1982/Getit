@@ -36,8 +36,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CarRepair
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -69,14 +72,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autocheck.app.ui.AutoCheckTheme
@@ -142,105 +144,54 @@ data class TireSet(
 class VehicleStore(context: Context) {
 
     private val prefs =
-        context.getSharedPreferences(
-            "autocheck",
-            Context.MODE_PRIVATE
-        )
+        context.getSharedPreferences("autocheck", Context.MODE_PRIVATE)
 
     fun load(): List<Vehicle> {
-
         val array =
             JSONArray(
-                prefs.getString(
-                    "vehicles",
-                    "[]"
-                ) ?: "[]"
+                prefs.getString("vehicles", "[]") ?: "[]"
             )
 
         return buildList {
-
             for (i in 0 until array.length()) {
-
-                val o =
-                    array.getJSONObject(i)
+                val o = array.getJSONObject(i)
 
                 add(
                     Vehicle(
-                        name =
-                            o.optString("name"),
-                        make =
-                            o.optString("make"),
-                        model =
-                            o.optString("model"),
-                        year =
-                            o.optString("year"),
-                        plate =
-                            o.optString("plate"),
-                        vin =
-                            o.optString("vin"),
-                        imageUri =
-                            o.optString("imageUri")
+                        name = o.optString("name"),
+                        make = o.optString("make"),
+                        model = o.optString("model"),
+                        year = o.optString("year"),
+                        plate = o.optString("plate"),
+                        vin = o.optString("vin"),
+                        imageUri = o.optString("imageUri")
                     )
                 )
             }
         }
     }
 
-    fun save(
-        list: List<Vehicle>
-    ) {
+    fun save(list: List<Vehicle>) {
 
-        val array =
-            JSONArray()
+        val array = JSONArray()
 
         list.forEach { vehicle ->
 
             array.put(
                 JSONObject().apply {
-
-                    put(
-                        "name",
-                        vehicle.name
-                    )
-
-                    put(
-                        "make",
-                        vehicle.make
-                    )
-
-                    put(
-                        "model",
-                        vehicle.model
-                    )
-
-                    put(
-                        "year",
-                        vehicle.year
-                    )
-
-                    put(
-                        "plate",
-                        vehicle.plate
-                    )
-
-                    put(
-                        "vin",
-                        vehicle.vin
-                    )
-
-                    put(
-                        "imageUri",
-                        vehicle.imageUri
-                    )
+                    put("name", vehicle.name)
+                    put("make", vehicle.make)
+                    put("model", vehicle.model)
+                    put("year", vehicle.year)
+                    put("plate", vehicle.plate)
+                    put("vin", vehicle.vin)
+                    put("imageUri", vehicle.imageUri)
                 }
             )
         }
 
         prefs.edit()
-            .putString(
-                "vehicles",
-                array.toString()
-            )
+            .putString("vehicles", array.toString())
             .apply()
     }
 
@@ -253,7 +204,6 @@ class VehicleStore(context: Context) {
     fun setActiveVehicle(
         name: String
     ) {
-
         prefs.edit()
             .putString(
                 "activeVehicle",
@@ -281,20 +231,13 @@ class VehicleStore(context: Context) {
 
                 add(
                     Repair(
-                        id =
-                            o.optLong("id"),
-                        vehicle =
-                            o.optString("vehicle"),
-                        date =
-                            o.optString("date"),
-                        mileage =
-                            o.optString("mileage"),
-                        description =
-                            o.optString("description"),
-                        cost =
-                            o.optString("cost"),
-                        workshop =
-                            o.optString("workshop")
+                        id = o.optLong("id"),
+                        vehicle = o.optString("vehicle"),
+                        date = o.optString("date"),
+                        mileage = o.optString("mileage"),
+                        description = o.optString("description"),
+                        cost = o.optString("cost"),
+                        workshop = o.optString("workshop")
                     )
                 )
             }
@@ -305,48 +248,19 @@ class VehicleStore(context: Context) {
         list: List<Repair>
     ) {
 
-        val array =
-            JSONArray()
+        val array = JSONArray()
 
         list.forEach {
 
             array.put(
                 JSONObject().apply {
-
-                    put(
-                        "id",
-                        it.id
-                    )
-
-                    put(
-                        "vehicle",
-                        it.vehicle
-                    )
-
-                    put(
-                        "date",
-                        it.date
-                    )
-
-                    put(
-                        "mileage",
-                        it.mileage
-                    )
-
-                    put(
-                        "description",
-                        it.description
-                    )
-
-                    put(
-                        "cost",
-                        it.cost
-                    )
-
-                    put(
-                        "workshop",
-                        it.workshop
-                    )
+                    put("id", it.id)
+                    put("vehicle", it.vehicle)
+                    put("date", it.date)
+                    put("mileage", it.mileage)
+                    put("description", it.description)
+                    put("cost", it.cost)
+                    put("workshop", it.workshop)
                 }
             )
         }
@@ -378,20 +292,13 @@ class VehicleStore(context: Context) {
 
                 add(
                     Maintenance(
-                        id =
-                            o.optLong("id"),
-                        vehicle =
-                            o.optString("vehicle"),
-                        date =
-                            o.optString("date"),
-                        mileage =
-                            o.optString("mileage"),
-                        cost =
-                            o.optString("cost"),
-                        workshop =
-                            o.optString("workshop"),
-                        notes =
-                            o.optString("notes")
+                        id = o.optLong("id"),
+                        vehicle = o.optString("vehicle"),
+                        date = o.optString("date"),
+                        mileage = o.optString("mileage"),
+                        cost = o.optString("cost"),
+                        workshop = o.optString("workshop"),
+                        notes = o.optString("notes")
                     )
                 )
             }
@@ -402,48 +309,19 @@ class VehicleStore(context: Context) {
         list: List<Maintenance>
     ) {
 
-        val array =
-            JSONArray()
+        val array = JSONArray()
 
         list.forEach {
 
             array.put(
                 JSONObject().apply {
-
-                    put(
-                        "id",
-                        it.id
-                    )
-
-                    put(
-                        "vehicle",
-                        it.vehicle
-                    )
-
-                    put(
-                        "date",
-                        it.date
-                    )
-
-                    put(
-                        "mileage",
-                        it.mileage
-                    )
-
-                    put(
-                        "cost",
-                        it.cost
-                    )
-
-                    put(
-                        "workshop",
-                        it.workshop
-                    )
-
-                    put(
-                        "notes",
-                        it.notes
-                    )
+                    put("id", it.id)
+                    put("vehicle", it.vehicle)
+                    put("date", it.date)
+                    put("mileage", it.mileage)
+                    put("cost", it.cost)
+                    put("workshop", it.workshop)
+                    put("notes", it.notes)
                 }
             )
         }
@@ -505,38 +383,17 @@ class VehicleStore(context: Context) {
         list: List<Pickerl>
     ) {
 
-        val array =
-            JSONArray()
+        val array = JSONArray()
 
         list.forEach {
 
             array.put(
                 JSONObject().apply {
-
-                    put(
-                        "vehicle",
-                        it.vehicle
-                    )
-
-                    put(
-                        "lastDate",
-                        it.lastDate
-                    )
-
-                    put(
-                        "nextDate",
-                        it.nextDate
-                    )
-
-                    put(
-                        "notes",
-                        it.notes
-                    )
-
-                    put(
-                        "reminder",
-                        it.reminder
-                    )
+                    put("vehicle", it.vehicle)
+                    put("lastDate", it.lastDate)
+                    put("nextDate", it.nextDate)
+                    put("notes", it.notes)
+                    put("reminder", it.reminder)
                 }
             )
         }
@@ -569,23 +426,41 @@ class VehicleStore(context: Context) {
                 add(
                     TireSet(
                         id =
-                            o.optLong("id"),
+                            o.optLong(
+                                "id"
+                            ),
                         vehicle =
-                            o.optString("vehicle"),
+                            o.optString(
+                                "vehicle"
+                            ),
                         season =
-                            o.optString("season"),
+                            o.optString(
+                                "season"
+                            ),
                         dimension =
-                            o.optString("dimension"),
+                            o.optString(
+                                "dimension"
+                            ),
                         brand =
-                            o.optString("brand"),
+                            o.optString(
+                                "brand"
+                            ),
                         dot =
-                            o.optString("dot"),
+                            o.optString(
+                                "dot"
+                            ),
                         tread =
-                            o.optString("tread"),
+                            o.optString(
+                                "tread"
+                            ),
                         condition =
-                            o.optString("condition"),
+                            o.optString(
+                                "condition"
+                            ),
                         storage =
-                            o.optString("storage")
+                            o.optString(
+                                "storage"
+                            )
                     )
                 )
             }
@@ -596,58 +471,21 @@ class VehicleStore(context: Context) {
         list: List<TireSet>
     ) {
 
-        val array =
-            JSONArray()
+        val array = JSONArray()
 
         list.forEach {
 
             array.put(
                 JSONObject().apply {
-
-                    put(
-                        "id",
-                        it.id
-                    )
-
-                    put(
-                        "vehicle",
-                        it.vehicle
-                    )
-
-                    put(
-                        "season",
-                        it.season
-                    )
-
-                    put(
-                        "dimension",
-                        it.dimension
-                    )
-
-                    put(
-                        "brand",
-                        it.brand
-                    )
-
-                    put(
-                        "dot",
-                        it.dot
-                    )
-
-                    put(
-                        "tread",
-                        it.tread
-                    )
-
-                    put(
-                        "condition",
-                        it.condition
-                    )
-
-                    put(
-                        "storage",
-                        it.storage
-                    )
+                    put("id", it.id)
+                    put("vehicle", it.vehicle)
+                    put("season", it.season)
+                    put("dimension", it.dimension)
+                    put("brand", it.brand)
+                    put("dot", it.dot)
+                    put("tread", it.tread)
+                    put("condition", it.condition)
+                    put("storage", it.storage)
                 }
             )
         }
@@ -694,6 +532,37 @@ class VehicleStore(context: Context) {
     }
 }
 
+private class VisitedStore(
+    context: Context
+) {
+
+    private val prefs =
+        context.getSharedPreferences(
+            "autocheck_visited",
+            Context.MODE_PRIVATE
+        )
+
+    fun isVisited(
+        screen: Screen
+    ): Boolean =
+        prefs.getBoolean(
+            screen.name,
+            false
+        )
+
+    fun markVisited(
+        screen: Screen
+    ) {
+
+        prefs.edit()
+            .putBoolean(
+                screen.name,
+                true
+            )
+            .apply()
+    }
+}
+
 private enum class Screen {
     HOME,
     AUTO,
@@ -709,9 +578,8 @@ private data class MenuItemData(
     val subtitle: String,
     val icon:
         androidx.compose.ui.graphics.vector.ImageVector,
-    val screen: Screen,
     val accent: Color,
-    val start: Color
+    val screen: Screen
 )
 
 class MainActivity :
@@ -742,7 +610,6 @@ class MainActivity :
         setContent {
 
             AutoCheckTheme {
-
                 AutoCheckApp()
             }
         }
@@ -765,9 +632,10 @@ class MainActivity :
 
             getSystemService(
                 NotificationManager::class.java
-            ).createNotificationChannel(
-                channel
             )
+                .createNotificationChannel(
+                    channel
+                )
         }
     }
 }
@@ -831,7 +699,9 @@ class PickerlReceiver :
             @Suppress("DEPRECATION")
             val notification =
                 android.app.Notification
-                    .Builder(context)
+                    .Builder(
+                        context
+                    )
                     .setSmallIcon(
                         android.R.drawable
                             .ic_dialog_info
@@ -868,15 +738,12 @@ private fun schedulePickerlReminder(
 
     val expiry =
         try {
-
             LocalDate.parse(
                 nextDate
             )
-
         } catch (
             _: Exception
         ) {
-
             return
         }
 
@@ -914,13 +781,10 @@ private fun schedulePickerlReminder(
             )
         }
 
-    val requestCode =
-        vehicle.hashCode()
-
     val pending =
         PendingIntent.getBroadcast(
             context,
-            requestCode,
+            vehicle.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or
                 PendingIntent.FLAG_IMMUTABLE
@@ -996,12 +860,18 @@ private fun AutoCheckApp() {
             )
         }
 
+    val visitedStore =
+        remember {
+            VisitedStore(
+                context
+            )
+        }
+
     val vehicles =
         remember {
 
             mutableStateListOf<Vehicle>()
                 .apply {
-
                     addAll(
                         store.load()
                     )
@@ -1016,14 +886,12 @@ private fun AutoCheckApp() {
     }
 
     var screen by remember {
-
         mutableStateOf(
             Screen.HOME
         )
     }
 
     var homeReady by remember {
-
         mutableStateOf(
             false
         )
@@ -1033,7 +901,7 @@ private fun AutoCheckApp() {
 
         kotlinx.coroutines
             .delay(
-                2500
+                300
             )
 
         homeReady = true
@@ -1060,6 +928,8 @@ private fun AutoCheckApp() {
         HomeScreen(
             visible =
                 homeReady,
+            visitedStore =
+                visitedStore,
             onSelect = {
                 screen = it
             }
@@ -1067,32 +937,35 @@ private fun AutoCheckApp() {
 
     } else {
 
+        val title =
+            when (screen) {
+
+                Screen.AUTO ->
+                    "Mein Auto"
+
+                Screen.REPARATUREN ->
+                    "Reparaturen"
+
+                Screen.PICKERL ->
+                    "Pickerl / TÜV"
+
+                Screen.WARTUNGEN ->
+                    "Wartungen"
+
+                Screen.GESAMTBLICK ->
+                    "Gesamtblick"
+
+                Screen.REIFEN ->
+                    "Reifen"
+
+                Screen.HOME ->
+                    "AutoCheck"
+            }
+
         DetailScaffold(
 
             title =
-                when (screen) {
-
-                    Screen.AUTO ->
-                        "Mein Auto"
-
-                    Screen.REPARATUREN ->
-                        "Reparaturen"
-
-                    Screen.PICKERL ->
-                        "Pickerl / TÜV"
-
-                    Screen.WARTUNGEN ->
-                        "Wartungen"
-
-                    Screen.GESAMTBLICK ->
-                        "Gesamtblick"
-
-                    Screen.REIFEN ->
-                        "Reifen"
-
-                    else ->
-                        "AutoCheck"
-                },
+                title,
 
             onBack = {
                 screen =
@@ -1106,12 +979,14 @@ private fun AutoCheckApp() {
                 Screen.AUTO ->
 
                     VehicleScreen(
+
                         vehicles =
                             vehicles,
+
                         activeVehicle =
                             activeVehicle,
-                        onActiveVehicle = {
 
+                        onActiveVehicle = {
                             activeVehicle =
                                 it
 
@@ -1119,6 +994,7 @@ private fun AutoCheckApp() {
                                 it
                             )
                         },
+
                         onSave = {
                                 vehicle,
                                 oldName ->
@@ -1133,9 +1009,7 @@ private fun AutoCheckApp() {
                                 index >= 0
                             ) {
 
-                                vehicles[
-                                    index
-                                ] =
+                                vehicles[index] =
                                     vehicle
 
                                 if (
@@ -1170,14 +1044,20 @@ private fun AutoCheckApp() {
                                 activeVehicle
                             )
                         },
+
                         onDelete = {
-                            vehicle ->
+                                vehicle ->
 
                             vehicles.remove(
                                 vehicle
                             )
 
                             store.deleteVehicleData(
+                                vehicle.name
+                            )
+
+                            cancelPickerlReminder(
+                                context,
                                 vehicle.name
                             )
 
@@ -1202,12 +1082,16 @@ private fun AutoCheckApp() {
                 Screen.REPARATUREN ->
 
                     RepairScreen(
+
                         store =
                             store,
+
                         vehicles =
                             vehicles,
+
                         activeVehicle =
                             activeVehicle,
+
                         onActiveVehicle = {
 
                             activeVehicle =
@@ -1215,6 +1099,13 @@ private fun AutoCheckApp() {
 
                             store.setActiveVehicle(
                                 it
+                            )
+                        },
+
+                        onVisited = {
+
+                            visitedStore.markVisited(
+                                Screen.REPARATUREN
                             )
                         }
                     )
@@ -1222,12 +1113,16 @@ private fun AutoCheckApp() {
                 Screen.PICKERL ->
 
                     PickerlScreen(
+
                         store =
                             store,
+
                         vehicles =
                             vehicles,
+
                         activeVehicle =
                             activeVehicle,
+
                         onActiveVehicle = {
 
                             activeVehicle =
@@ -1235,6 +1130,13 @@ private fun AutoCheckApp() {
 
                             store.setActiveVehicle(
                                 it
+                            )
+                        },
+
+                        onVisited = {
+
+                            visitedStore.markVisited(
+                                Screen.PICKERL
                             )
                         }
                     )
@@ -1242,12 +1144,16 @@ private fun AutoCheckApp() {
                 Screen.WARTUNGEN ->
 
                     MaintenanceScreen(
+
                         store =
                             store,
+
                         vehicles =
                             vehicles,
+
                         activeVehicle =
                             activeVehicle,
+
                         onActiveVehicle = {
 
                             activeVehicle =
@@ -1255,6 +1161,13 @@ private fun AutoCheckApp() {
 
                             store.setActiveVehicle(
                                 it
+                            )
+                        },
+
+                        onVisited = {
+
+                            visitedStore.markVisited(
+                                Screen.WARTUNGEN
                             )
                         }
                     )
@@ -1262,12 +1175,16 @@ private fun AutoCheckApp() {
                 Screen.GESAMTBLICK ->
 
                     OverviewScreen(
+
                         store =
                             store,
+
                         vehicles =
                             vehicles,
+
                         activeVehicle =
                             activeVehicle,
+
                         onActiveVehicle = {
 
                             activeVehicle =
@@ -1276,18 +1193,29 @@ private fun AutoCheckApp() {
                             store.setActiveVehicle(
                                 it
                             )
+                        },
+
+                        onVisited = {
+
+                            visitedStore.markVisited(
+                                Screen.GESAMTBLICK
+                            )
                         }
                     )
 
                 Screen.REIFEN ->
 
                     TireScreen(
+
                         store =
                             store,
+
                         vehicles =
                             vehicles,
+
                         activeVehicle =
                             activeVehicle,
+
                         onActiveVehicle = {
 
                             activeVehicle =
@@ -1295,6 +1223,13 @@ private fun AutoCheckApp() {
 
                             store.setActiveVehicle(
                                 it
+                            )
+                        },
+
+                        onVisited = {
+
+                            visitedStore.markVisited(
+                                Screen.REIFEN
                             )
                         }
                     )
@@ -1318,14 +1253,11 @@ private fun migrateVehicleName(
                 it.vehicle ==
                 oldName
             ) {
-
                 it.copy(
                     vehicle =
                         newName
                 )
-
             } else {
-
                 it
             }
         }
@@ -1338,14 +1270,11 @@ private fun migrateVehicleName(
                 it.vehicle ==
                 oldName
             ) {
-
                 it.copy(
                     vehicle =
                         newName
                 )
-
             } else {
-
                 it
             }
         }
@@ -1358,14 +1287,11 @@ private fun migrateVehicleName(
                 it.vehicle ==
                 oldName
             ) {
-
                 it.copy(
                     vehicle =
                         newName
                 )
-
             } else {
-
                 it
             }
         }
@@ -1378,14 +1304,11 @@ private fun migrateVehicleName(
                 it.vehicle ==
                 oldName
             ) {
-
                 it.copy(
                     vehicle =
                         newName
                 )
-
             } else {
-
                 it
             }
         }
@@ -1395,6 +1318,7 @@ private fun migrateVehicleName(
 @Composable
 private fun HomeScreen(
     visible: Boolean,
+    visitedStore: VisitedStore,
     onSelect: (Screen) -> Unit
 ) {
 
@@ -1402,93 +1326,51 @@ private fun HomeScreen(
         listOf(
 
             MenuItemData(
-                title =
-                    "Mein Auto",
-                subtitle =
-                    "Fahrzeug & Details",
-                icon =
-                    Icons.Filled.DirectionsCar,
-                screen =
-                    Screen.AUTO,
-                accent =
-                    Color(0xFFE51B2B),
-                start =
-                    Color(0xFF34131A)
+                "Mein Auto",
+                "Fahrzeug & Details",
+                Icons.Filled.DirectionsCar,
+                Color(0xFFE51B2A),
+                Screen.AUTO
             ),
 
             MenuItemData(
-                title =
-                    "Reparaturen",
-                subtitle =
-                    "Reparaturen verwalten",
-                icon =
-                    Icons.Filled.CarRepair,
-                screen =
-                    Screen.REPARATUREN,
-                accent =
-                    Color(0xFF1689E8),
-                start =
-                    Color(0xFF102B43)
+                "Reparaturen",
+                "Reparaturen verwalten",
+                Icons.Filled.CarRepair,
+                Color(0xFF1688E8),
+                Screen.REPARATUREN
             ),
 
             MenuItemData(
-                title =
-                    "Pickerl/TÜV",
-                subtitle =
-                    "Termine & Fristen",
-                icon =
-                    Icons.Filled.Event,
-                screen =
-                    Screen.PICKERL,
-                accent =
-                    Color(0xFF20C05A),
-                start =
-                    Color(0xFF123C29)
+                "Pickerl/TÜV",
+                "Termine & Fristen",
+                Icons.Filled.Event,
+                Color(0xFF20C75A),
+                Screen.PICKERL
             ),
 
             MenuItemData(
-                title =
-                    "Wartungen",
-                subtitle =
-                    "Verschiedenes",
-                icon =
-                    Icons.Filled.Build,
-                screen =
-                    Screen.WARTUNGEN,
-                accent =
-                    Color(0xFFE59A0A),
-                start =
-                    Color(0xFF3A2C12)
+                "Wartungen",
+                "Verschiedenes",
+                Icons.Filled.Build,
+                Color(0xFFE59A18),
+                Screen.WARTUNGEN
             ),
 
             MenuItemData(
-                title =
-                    "Gesamtblick",
-                subtitle =
-                    "Die wichtigsten Infos",
-                icon =
-                    Icons.Filled.Visibility,
-                screen =
-                    Screen.GESAMTBLICK,
-                accent =
-                    Color(0xFF9348F0),
-                start =
-                    Color(0xFF29163E)
+                "Gesamtblick",
+                "Die wichtigsten Infos",
+                Icons.Filled.Visibility,
+                Color(0xFF9A4DFF),
+                Screen.GESAMTBLICK
             ),
 
             MenuItemData(
-                title =
-                    "Reifen",
-                subtitle =
-                    "Größen, Dimensionen",
-                icon =
-                    Icons.Filled.TireRepair,
-                screen =
-                    Screen.REIFEN,
-                accent =
-                    Color(0xFF18BDB5),
-                start =
-                    Color(0xFF103A3B)
+                "Reifen",
+                "Größen, Dimensionen und Alter",
+                Icons.Filled.TireRepair,
+                Color(0xFF17C8BD),
+                Screen.REIFEN
             )
         )
 
@@ -1501,25 +1383,23 @@ private fun HomeScreen(
                     Background
                 ),
 
+        horizontalAlignment =
+            Alignment.CenterHorizontally,
+
         contentPadding =
             androidx.compose.foundation
                 .layout
                 .PaddingValues(
-                    start =
-                        24.dp,
-                    end =
-                        24.dp,
-                    top =
-                        28.dp,
-                    bottom =
-                        28.dp
+                    start = 14.dp,
+                    end = 14.dp,
+                    top = 22.dp,
+                    bottom = 24.dp
                 ),
 
         verticalArrangement =
             Arrangement.spacedBy(
-                16.dp
+                14.dp
             )
-
     ) {
 
         item {
@@ -1532,13 +1412,13 @@ private fun HomeScreen(
                     ),
 
                 contentDescription =
-                    "AutoCheck Logo",
+                    "AutoCheck",
 
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .height(
-                            120.dp
+                            72.dp
                         ),
 
                 contentScale =
@@ -1548,301 +1428,132 @@ private fun HomeScreen(
 
         item {
 
-            Image(
-
-                painter =
-                    painterResource(
-                        R.drawable.bild_3
-                    ),
-
-                contentDescription =
-                    "AutoCheck Hauptbild",
+            Card(
 
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .height(
-                            438.dp
+                        .fillMaxWidth(),
+
+                shape =
+                    RoundedCornerShape(
+                        22.dp
+                    ),
+
+                colors =
+                    CardDefaults
+                        .cardColors(
+                            containerColor =
+                                Color.Black
                         )
-                        .clip(
-                            RoundedCornerShape(
-                                28.dp
-                            )
+            ) {
+
+                Image(
+
+                    painter =
+                        painterResource(
+                            R.drawable.bild_3
                         ),
 
-                contentScale =
-                    ContentScale.Crop
-            )
-        }
+                    contentDescription =
+                        "AutoCheck Fahrzeug",
 
-        item {
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                245.dp
+                            ),
 
-            Spacer(
-                Modifier.height(
-                    4.dp
+                    contentScale =
+                        ContentScale.Crop
                 )
+            }
+        }
+
+        items(
+            items.chunked(
+                2
             )
-        }
-
-        item {
+        ) { row ->
 
             Row(
 
                 modifier =
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth(),
 
                 horizontalArrangement =
                     Arrangement.spacedBy(
-                        18.dp
+                        10.dp
                     )
-
             ) {
 
-                AnimatedVisibility(
+                row.forEach { item ->
 
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
+                    AnimatedVisibility(
 
-                    visible =
-                        visible,
+                        visible =
+                            visible,
 
-                    enter =
-                        slideInHorizontally(
-
-                            animationSpec =
-                                tween(
-                                    2500
+                        modifier =
+                            Modifier
+                                .weight(
+                                    1f
                                 ),
 
-                            initialOffsetX = {
-                                -it
+                        enter =
+                            slideInHorizontally(
+
+                                animationSpec =
+                                    tween(
+                                        2500
+                                    ),
+
+                                initialOffsetX = {
+                                    fullWidth ->
+
+                                    if (
+                                        row.indexOf(
+                                            item
+                                        ) == 0
+                                    ) {
+                                        -fullWidth
+                                    } else {
+                                        fullWidth
+                                    }
+                                }
+                            )
+                    ) {
+
+                        MenuCard(
+
+                            item =
+                                item,
+
+                            visited =
+                                visitedStore
+                                    .isVisited(
+                                        item.screen
+                                    ),
+
+                            onClick = {
+                                onSelect(
+                                    item.screen
+                                )
                             }
                         )
-                ) {
-
-                    MenuCard(
-                        item =
-                            items[0],
-                        onClick = {
-                            onSelect(
-                                items[0]
-                                    .screen
-                            )
-                        }
-                    )
+                    }
                 }
 
-                AnimatedVisibility(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    visible =
-                        visible,
-
-                    enter =
-                        slideInHorizontally(
-
-                            animationSpec =
-                                tween(
-                                    2500
-                                ),
-
-                            initialOffsetX = {
-                                it
-                            }
-                        )
+                if (
+                    row.size == 1
                 ) {
 
-                    MenuCard(
-                        item =
-                            items[1],
-                        onClick = {
-                            onSelect(
-                                items[1]
-                                    .screen
+                    Spacer(
+                        Modifier
+                            .weight(
+                                1f
                             )
-                        }
-                    )
-                }
-            }
-        }
-
-        item {
-
-            Row(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        18.dp
-                    )
-
-            ) {
-
-                AnimatedVisibility(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    visible =
-                        visible,
-
-                    enter =
-                        slideInHorizontally(
-
-                            animationSpec =
-                                tween(
-                                    2500
-                                ),
-
-                            initialOffsetX = {
-                                -it
-                            }
-                        )
-                ) {
-
-                    MenuCard(
-                        item =
-                            items[2],
-                        onClick = {
-                            onSelect(
-                                items[2]
-                                    .screen
-                            )
-                        }
-                    )
-                }
-
-                AnimatedVisibility(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    visible =
-                        visible,
-
-                    enter =
-                        slideInHorizontally(
-
-                            animationSpec =
-                                tween(
-                                    2500
-                                ),
-
-                            initialOffsetX = {
-                                it
-                            }
-                        )
-                ) {
-
-                    MenuCard(
-                        item =
-                            items[3],
-                        onClick = {
-                            onSelect(
-                                items[3]
-                                    .screen
-                            )
-                        }
-                    )
-                }
-            }
-        }
-
-        item {
-
-            Row(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        18.dp
-                    )
-
-            ) {
-
-                AnimatedVisibility(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    visible =
-                        visible,
-
-                    enter =
-                        slideInHorizontally(
-
-                            animationSpec =
-                                tween(
-                                    2500
-                                ),
-
-                            initialOffsetX = {
-                                -it
-                            }
-                        )
-                ) {
-
-                    MenuCard(
-                        item =
-                            items[4],
-                        onClick = {
-                            onSelect(
-                                items[4]
-                                    .screen
-                            )
-                        }
-                    )
-                }
-
-                AnimatedVisibility(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    visible =
-                        visible,
-
-                    enter =
-                        slideInHorizontally(
-
-                            animationSpec =
-                                tween(
-                                    2500
-                                ),
-
-                            initialOffsetX = {
-                                it
-                            }
-                        )
-                ) {
-
-                    MenuCard(
-                        item =
-                            items[5],
-                        onClick = {
-                            onSelect(
-                                items[5]
-                                    .screen
-                            )
-                        }
                     )
                 }
             }
@@ -1852,27 +1563,18 @@ private fun HomeScreen(
 
             Text(
 
-                text =
-                    "AutoCheck • Verliere nicht die Übersicht",
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            top =
-                                8.dp
-                        ),
+                "AutoCheck • Verliere nicht die Übersicht",
 
                 color =
-                    Color(
-                        0xFF9BA1AE
-                    ),
+                    Muted,
 
                 fontSize =
-                    14.sp,
+                    12.sp,
 
-                textAlign =
-                    TextAlign.Center
+                modifier =
+                    Modifier.padding(
+                        top = 2.dp
+                    )
             )
         }
     }
@@ -1881,54 +1583,69 @@ private fun HomeScreen(
 @Composable
 private fun MenuCard(
     item: MenuItemData,
+    visited: Boolean,
     onClick: () -> Unit
 ) {
 
-    Box(
+    Card(
 
         modifier =
             Modifier
                 .fillMaxWidth()
                 .height(
-                    188.dp
-                )
-                .clip(
-                    RoundedCornerShape(
-                        28.dp
-                    )
-                )
-                .background(
-
-                    Brush.horizontalGradient(
-
-                        listOf(
-
-                            item.start,
-
-                            Color(
-                                0xFF101720
-                            )
-                        )
-                    )
+                    104.dp
                 )
                 .clickable(
                     onClick =
                         onClick
-                )
-                .padding(
-                    20.dp
-                )
+                ),
 
+        shape =
+            RoundedCornerShape(
+                17.dp
+            ),
+
+        colors =
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        Surface
+                ),
+
+        elevation =
+            CardDefaults
+                .cardElevation(
+                    defaultElevation =
+                        5.dp
+                )
     ) {
 
         Row(
 
             modifier =
-                Modifier.fillMaxSize(),
+                Modifier
+                    .fillMaxSize()
+                    .background(
+
+                        Brush.horizontalGradient(
+
+                            listOf(
+
+                                item.accent.copy(
+                                    alpha =
+                                        0.20f
+                                ),
+
+                                Color.Transparent
+                            )
+                        )
+                    )
+                    .padding(
+                        11.dp
+                    ),
 
             verticalAlignment =
                 Alignment.CenterVertically
-
         ) {
 
             Box(
@@ -1936,43 +1653,43 @@ private fun MenuCard(
                 modifier =
                     Modifier
                         .size(
-                            94.dp
+                            52.dp
                         )
                         .clip(
                             RoundedCornerShape(
-                                24.dp
+                                14.dp
                             )
                         )
                         .background(
-                            item.accent
+                            item.accent.copy(
+                                alpha =
+                                    0.90f
+                            )
                         ),
 
                 contentAlignment =
                     Alignment.Center
-
             ) {
 
                 Icon(
 
-                    imageVector =
-                        item.icon,
+                    item.icon,
 
-                    contentDescription =
-                        item.title,
+                    item.title,
 
                     tint =
                         Color.White,
 
                     modifier =
                         Modifier.size(
-                            52.dp
+                            29.dp
                         )
                 )
             }
 
             Spacer(
                 Modifier.width(
-                    18.dp
+                    10.dp
                 )
             )
 
@@ -1981,76 +1698,101 @@ private fun MenuCard(
                 modifier =
                     Modifier.weight(
                         1f
-                    ),
-
-                verticalArrangement =
-                    Arrangement.Center
-
+                    )
             ) {
 
                 Text(
 
-                    text =
-                        item.title,
+                    item.title,
 
                     color =
                         Color.White,
 
                     fontSize =
-                        23.sp,
-
-                    lineHeight =
-                        27.sp,
+                        15.sp,
 
                     fontWeight =
-                        FontWeight.Bold,
-
-                    maxLines =
-                        2
-                )
-
-                Spacer(
-                    Modifier.height(
-                        5.dp
-                    )
+                        FontWeight.Bold
                 )
 
                 Text(
 
-                    text =
-                        item.subtitle,
+                    item.subtitle,
 
                     color =
-                        Color(
-                            0xFF9EA5B3
-                        ),
+                        Muted,
 
                     fontSize =
-                        15.sp,
+                        10.sp,
 
                     lineHeight =
-                        19.sp,
+                        12.sp,
 
                     maxLines =
                         2
                 )
+
+                if (
+                    visited
+                ) {
+
+                    Row(
+
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+
+                            Icons.Filled
+                                .CheckCircle,
+
+                            contentDescription =
+                                null,
+
+                            tint =
+                                item.accent,
+
+                            modifier =
+                                Modifier.size(
+                                    13.dp
+                                )
+                        )
+
+                        Spacer(
+                            Modifier.width(
+                                3.dp
+                            )
+                        )
+
+                        Text(
+
+                            "Ich war hier",
+
+                            color =
+                                item.accent,
+
+                            fontSize =
+                                9.sp
+                        )
+                    }
+                }
             }
 
             Icon(
 
-                imageVector =
-                    Icons.Filled
-                        .KeyboardArrowRight,
+                Icons.Filled
+                    .KeyboardArrowRight,
 
                 contentDescription =
-                    null,
+                    "Öffnen",
 
                 tint =
                     item.accent,
 
                 modifier =
                     Modifier.size(
-                        34.dp
+                        24.dp
                     )
             )
         }
@@ -2070,7 +1812,7 @@ private fun DetailScaffold(
     Scaffold(
 
         containerColor =
-            Background,
+            Color(0xFF050608),
 
         topBar = {
 
@@ -2100,7 +1842,9 @@ private fun DetailScaffold(
                     TopAppBarDefaults
                         .topAppBarColors(
                             containerColor =
-                                Background,
+                                Color(
+                                    0xFF050608
+                                ),
                             titleContentColor =
                                 Color.White,
                             navigationIconContentColor =
@@ -2122,7 +1866,6 @@ private fun DetailScaffold(
                     .padding(
                         16.dp
                     )
-
         ) {
 
             content()
@@ -2193,16 +1936,38 @@ private fun VehicleScreen(
         )
     }
 
+    val context =
+        LocalContext.current
+
     val launcher =
         androidx.activity.compose
             .rememberLauncherForActivityResult(
+
                 ActivityResultContracts
-                    .GetContent()
+                    .OpenDocument()
+
             ) { uri ->
 
                 if (
                     uri != null
                 ) {
+
+                    try {
+
+                        context
+                            .contentResolver
+                            .takePersistableUriPermission(
+
+                                uri,
+
+                                Intent
+                                    .FLAG_GRANT_READ_URI_PERMISSION
+                            )
+
+                    } catch (
+                        _: SecurityException
+                    ) {
+                    }
 
                     imageUri =
                         uri.toString()
@@ -2215,13 +1980,15 @@ private fun VehicleScreen(
     ) {
 
         Text(
+
             "${vehicles.size}/5 Fahrzeuge",
+
             color =
                 Color(0xFFB8BEC8),
+
             modifier =
                 Modifier.padding(
-                    bottom =
-                        12.dp
+                    bottom = 12.dp
                 )
         )
 
@@ -2230,11 +1997,15 @@ private fun VehicleScreen(
         ) {
 
             Text(
+
                 "Noch kein Fahrzeug angelegt.",
+
                 color =
                     Color.White,
+
                 fontSize =
                     20.sp,
+
                 fontWeight =
                     FontWeight.Bold
             )
@@ -2257,7 +2028,6 @@ private fun VehicleScreen(
                 Arrangement.spacedBy(
                     10.dp
                 )
-
         ) {
 
             items(
@@ -2277,7 +2047,6 @@ private fun VehicleScreen(
 
                     modifier =
                         Modifier.fillMaxWidth()
-
                 ) {
 
                     Column(
@@ -2287,13 +2056,16 @@ private fun VehicleScreen(
                     ) {
 
                         Row(
+
                             verticalAlignment =
                                 Alignment.CenterVertically
                         ) {
 
                             VehicleImage(
+
                                 uri =
                                     vehicle.imageUri,
+
                                 modifier =
                                     Modifier.size(
                                         82.dp
@@ -2307,6 +2079,7 @@ private fun VehicleScreen(
                             )
 
                             Column(
+
                                 modifier =
                                     Modifier.weight(
                                         1f
@@ -2314,18 +2087,24 @@ private fun VehicleScreen(
                             ) {
 
                                 Text(
+
                                     vehicle.name,
+
                                     color =
                                         Color.White,
+
                                     fontWeight =
                                         FontWeight.Bold,
+
                                     fontSize =
                                         18.sp
                                 )
 
                                 Text(
+
                                     "${vehicle.make} ${vehicle.model} ${vehicle.year}"
                                         .trim(),
+
                                     color =
                                         Color(
                                             0xFFB8BEC8
@@ -2338,7 +2117,9 @@ private fun VehicleScreen(
                                 ) {
 
                                     Text(
+
                                         "Kennzeichen: ${vehicle.plate}",
+
                                         color =
                                             Color.White
                                     )
@@ -2350,11 +2131,14 @@ private fun VehicleScreen(
                                 ) {
 
                                     Text(
+
                                         "FIN/VIN: ${vehicle.vin}",
+
                                         color =
                                             Color(
                                                 0xFFB8BEC8
                                             ),
+
                                         maxLines =
                                             1
                                     )
@@ -2369,6 +2153,7 @@ private fun VehicleScreen(
                         )
 
                         Row(
+
                             horizontalArrangement =
                                 Arrangement.spacedBy(
                                     8.dp
@@ -2376,12 +2161,14 @@ private fun VehicleScreen(
                         ) {
 
                             Button(
+
                                 onClick = {
 
                                     onActiveVehicle(
                                         vehicle.name
                                     )
                                 }
+
                             ) {
 
                                 Text(
@@ -2398,6 +2185,7 @@ private fun VehicleScreen(
                             }
 
                             OutlinedButton(
+
                                 onClick = {
 
                                     editingName =
@@ -2427,6 +2215,7 @@ private fun VehicleScreen(
                                     adding =
                                         true
                                 }
+
                             ) {
 
                                 Text(
@@ -2442,11 +2231,14 @@ private fun VehicleScreen(
                         )
 
                         OutlinedButton(
+
                             onClick = {
+
                                 onDelete(
                                     vehicle
                                 )
                             }
+
                         ) {
 
                             Text(
@@ -2476,7 +2268,6 @@ private fun VehicleScreen(
 
                         modifier =
                             Modifier.fillMaxWidth()
-
                     ) {
 
                         Column(
@@ -2489,7 +2280,6 @@ private fun VehicleScreen(
                                 Arrangement.spacedBy(
                                     8.dp
                                 )
-
                         ) {
 
                             Text(
@@ -2526,8 +2316,7 @@ private fun VehicleScreen(
                                 },
 
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                             )
 
                             OutlinedTextField(
@@ -2546,8 +2335,7 @@ private fun VehicleScreen(
                                 },
 
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                             )
 
                             OutlinedTextField(
@@ -2566,8 +2354,7 @@ private fun VehicleScreen(
                                 },
 
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                             )
 
                             OutlinedTextField(
@@ -2586,8 +2373,7 @@ private fun VehicleScreen(
                                 },
 
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                             )
 
                             OutlinedTextField(
@@ -2606,8 +2392,7 @@ private fun VehicleScreen(
                                 },
 
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                             )
 
                             OutlinedTextField(
@@ -2626,8 +2411,7 @@ private fun VehicleScreen(
                                 },
 
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                             )
 
                             OutlinedButton(
@@ -2635,14 +2419,14 @@ private fun VehicleScreen(
                                 onClick = {
 
                                     launcher.launch(
-                                        "image/*"
+                                        arrayOf(
+                                            "image/*"
+                                        )
                                     )
                                 },
 
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-
+                                    Modifier.fillMaxWidth()
                             ) {
 
                                 Text(
@@ -2670,6 +2454,7 @@ private fun VehicleScreen(
                             }
 
                             Row(
+
                                 horizontalArrangement =
                                     Arrangement.spacedBy(
                                         8.dp
@@ -2849,12 +2634,12 @@ private fun VehicleImage(
 
             contentAlignment =
                 Alignment.Center
-
         ) {
 
             Icon(
 
-                Icons.Filled.DirectionsCar,
+                Icons.Filled
+                    .DirectionsCar,
 
                 contentDescription =
                     null,
@@ -2894,8 +2679,10 @@ private fun VehicleImage(
         bitmap =
             kotlinx.coroutines
                 .withContext(
+
                     kotlinx.coroutines
                         .Dispatchers.IO
+
                 ) {
 
                     try {
@@ -2967,12 +2754,12 @@ private fun VehicleImage(
 
             contentAlignment =
                 Alignment.Center
-
         ) {
 
             Icon(
 
-                Icons.Filled.DirectionsCar,
+                Icons.Filled
+                    .DirectionsCar,
 
                 contentDescription =
                     null,
@@ -3026,7 +2813,9 @@ private fun VehicleSelector(
                     activeVehicle
             }
             ?.name
-            ?: vehicles.first().name
+            ?: vehicles
+                .first()
+                .name
 
     Box {
 
@@ -3098,8 +2887,13 @@ private fun RepairScreen(
     store: VehicleStore,
     vehicles: List<Vehicle>,
     activeVehicle: String,
-    onActiveVehicle: (String) -> Unit
+    onActiveVehicle: (String) -> Unit,
+    onVisited: () -> Unit
 ) {
+
+    LaunchedEffect(Unit) {
+        onVisited()
+    }
 
     var showForm by remember {
         mutableStateOf(
@@ -3180,7 +2974,6 @@ private fun RepairScreen(
                 Arrangement.spacedBy(
                     10.dp
                 )
-
         ) {
 
             if (
@@ -3209,9 +3002,13 @@ private fun RepairScreen(
 
                     lines =
                         listOf(
+
                             "Datum: ${repair.date}",
+
                             "Kilometerstand: ${repair.mileage}",
+
                             "Kosten: ${repair.cost}",
+
                             "Werkstatt: ${repair.workshop}"
                         ),
 
@@ -3374,8 +3171,13 @@ private fun PickerlScreen(
     store: VehicleStore,
     vehicles: List<Vehicle>,
     activeVehicle: String,
-    onActiveVehicle: (String) -> Unit
+    onActiveVehicle: (String) -> Unit,
+    onVisited: () -> Unit
 ) {
+
+    LaunchedEffect(Unit) {
+        onVisited()
+    }
 
     var lastDate by remember {
         mutableStateOf(
@@ -3412,6 +3214,7 @@ private fun PickerlScreen(
 
     val all =
         remember {
+
             mutableStateOf(
                 store.loadPickerl()
             )
@@ -3478,7 +3281,6 @@ private fun PickerlScreen(
                 Arrangement.spacedBy(
                     10.dp
                 )
-
         ) {
 
             item {
@@ -3548,7 +3350,6 @@ private fun PickerlScreen(
 
                         horizontalArrangement =
                             Arrangement.SpaceBetween
-
                     ) {
 
                         Text(
@@ -3614,8 +3415,7 @@ private fun PickerlScreen(
 
                             if (
                                 reminder &&
-                                nextDate
-                                    .isNotBlank()
+                                nextDate.isNotBlank()
                             ) {
 
                                 schedulePickerlReminder(
@@ -3665,8 +3465,13 @@ private fun MaintenanceScreen(
     store: VehicleStore,
     vehicles: List<Vehicle>,
     activeVehicle: String,
-    onActiveVehicle: (String) -> Unit
+    onActiveVehicle: (String) -> Unit,
+    onVisited: () -> Unit
 ) {
+
+    LaunchedEffect(Unit) {
+        onVisited()
+    }
 
     var showForm by remember {
         mutableStateOf(
@@ -3747,7 +3552,6 @@ private fun MaintenanceScreen(
                 Arrangement.spacedBy(
                     10.dp
                 )
-
         ) {
 
             if (
@@ -3773,10 +3577,15 @@ private fun MaintenanceScreen(
 
                     lines =
                         listOf(
+
                             "Datum: ${entry.date}",
+
                             "Kilometerstand: ${entry.mileage}",
+
                             "Kosten: ${entry.cost}",
+
                             "Werkstatt: ${entry.workshop}",
+
                             "Notizen: ${entry.notes}"
                         ),
 
@@ -3939,8 +3748,13 @@ private fun TireScreen(
     store: VehicleStore,
     vehicles: List<Vehicle>,
     activeVehicle: String,
-    onActiveVehicle: (String) -> Unit
+    onActiveVehicle: (String) -> Unit,
+    onVisited: () -> Unit
 ) {
+
+    LaunchedEffect(Unit) {
+        onVisited()
+    }
 
     var showForm by remember {
         mutableStateOf(
@@ -4033,7 +3847,6 @@ private fun TireScreen(
                 Arrangement.spacedBy(
                     10.dp
                 )
-
         ) {
 
             if (
@@ -4059,10 +3872,15 @@ private fun TireScreen(
 
                     lines =
                         listOf(
+
                             "Marke: ${tire.brand}",
+
                             "DOT: ${tire.dot}",
+
                             "Profiltiefe: ${tire.tread}",
+
                             "Zustand: ${tire.condition}",
+
                             "Lagerung: ${tire.storage}"
                         ),
 
@@ -4250,8 +4068,13 @@ private fun OverviewScreen(
     store: VehicleStore,
     vehicles: List<Vehicle>,
     activeVehicle: String,
-    onActiveVehicle: (String) -> Unit
+    onActiveVehicle: (String) -> Unit,
+    onVisited: () -> Unit
 ) {
+
+    LaunchedEffect(Unit) {
+        onVisited()
+    }
 
     val vehicle =
         vehicles.firstOrNull {
@@ -4323,7 +4146,6 @@ private fun OverviewScreen(
                 Arrangement.spacedBy(
                     10.dp
                 )
-
         ) {
 
             item {
@@ -4467,7 +4289,6 @@ private fun CardForm(
 
         modifier =
             Modifier.fillMaxWidth()
-
     ) {
 
         Column(
@@ -4525,7 +4346,6 @@ private fun FormButtons(
             Arrangement.spacedBy(
                 8.dp
             )
-
     ) {
 
         Button(
@@ -4589,7 +4409,6 @@ private fun RecordCard(
 
         modifier =
             Modifier.fillMaxWidth()
-
     ) {
 
         Column(
@@ -4597,7 +4416,6 @@ private fun RecordCard(
             Modifier.padding(
                 16.dp
             )
-
         ) {
 
             Text(
@@ -4657,3 +4475,43 @@ private fun RecordCard(
         }
     }
 }
+2. AndroidManifest.xml
+Diesen zweiten Code bitte komplett in
+app/src/main/AndroidManifest.xml einsetzen:
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/bild_4"
+        android:roundIcon="@drawable/bild_4"
+        android:label="AutoCheck"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AutoCheck">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+
+            <intent-filter>
+
+                <action
+                    android:name="android.intent.action.MAIN" />
+
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
+
+            </intent-filter>
+
+        </activity>
+
+        <receiver
+            android:name=".PickerlReceiver"
+            android:exported="false" />
+
+    </application>
+
+</manifest>
