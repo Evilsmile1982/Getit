@@ -45,6 +45,10 @@ jobs:
           source = source_path.read_text(encoding="utf-8")
 
           file_map = {
+              "Background": "components/UiConstants.kt",
+              "Surface": "components/UiConstants.kt",
+              "Muted": "components/UiConstants.kt",
+
               "Vehicle": "data/Vehicle.kt",
               "Repair": "data/Repair.kt",
               "Maintenance": "data/Maintenance.kt",
@@ -257,7 +261,8 @@ jobs:
                   text
               )
 
-              # DetailScaffold benötigt ExperimentalMaterial3Api.
+              # DetailScaffold benötigt weiterhin
+              # die Freigabe für ExperimentalMaterial3Api.
               if name == "DetailScaffold":
 
                   if "@OptIn" not in text:
