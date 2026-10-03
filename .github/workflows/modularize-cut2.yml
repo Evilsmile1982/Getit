@@ -113,10 +113,14 @@ jobs:
               re.VERBOSE
           )
 
-          matches = list(declaration_re.finditer(source))
+          matches = list(
+              declaration_re.finditer(source)
+          )
 
           if not matches:
-              print("FEHLER: Keine Top-Level-Deklarationen gefunden.")
+              print(
+                  "FEHLER: Keine Top-Level-Deklarationen gefunden."
+              )
               sys.exit(1)
 
           declarations = []
@@ -132,24 +136,37 @@ jobs:
               name = match.group(1)
               text = source[start:end].strip()
 
-              declarations.append((name, text))
+              declarations.append(
+                  (name, text)
+              )
 
-          names = [name for name, _ in declarations]
+          names = [
+              name
+              for name, _ in declarations
+          ]
 
-          missing = sorted(set(file_map) - set(names))
+          missing = sorted(
+              set(file_map) - set(names)
+          )
 
           if missing:
-              print("FEHLER: Erwartete Deklarationen fehlen:")
+              print(
+                  "FEHLER: Erwartete Deklarationen fehlen:"
+              )
 
               for name in missing:
                   print(f"  - {name}")
 
               sys.exit(1)
 
-          unknown = sorted(set(names) - set(file_map))
+          unknown = sorted(
+              set(names) - set(file_map)
+          )
 
           if unknown:
-              print("FEHLER: Unbekannte Top-Level-Deklarationen:")
+              print(
+                  "FEHLER: Unbekannte Top-Level-Deklarationen:"
+              )
 
               for name in unknown:
                   print(f"  - {name}")
@@ -162,7 +179,9 @@ jobs:
           )
 
           if not package_match:
-              print("FEHLER: package-Deklaration fehlt.")
+              print(
+                  "FEHLER: package-Deklaration fehlt."
+              )
               sys.exit(1)
 
           package_line = package_match.group(0)
@@ -175,7 +194,10 @@ jobs:
           header = package_line + "\n\n"
 
           if imports:
-              header += "\n".join(imports) + "\n\n"
+              header += (
+                  "\n".join(imports)
+                  + "\n\n"
+              )
 
           root = Path(
               "app/src/main/java/de/autocheck/app"
@@ -188,7 +210,9 @@ jobs:
               "components",
               "utils",
           ):
-              (root / folder).mkdir(
+              (
+                  root / folder
+              ).mkdir(
                   parents=True,
                   exist_ok=True
               )
@@ -207,6 +231,10 @@ jobs:
 
           for name, text in declarations:
 
+              # Top-Level-private ist in Kotlin
+              # nur innerhalb derselben Datei sichtbar.
+              # Nach der Aufteilung müssen die betroffenen
+              # Deklarationen aus anderen Dateien erreichbar sein.
               text = re.sub(
                   r"^((?:@[^\n]+\n)*)private\s+",
                   r"\1",
@@ -240,7 +268,9 @@ jobs:
                   encoding="utf-8"
               )
 
-          main_path = root / "MainActivity.kt"
+          main_path = (
+              root / "MainActivity.kt"
+          )
 
           main_text = main_path.read_text(
               encoding="utf-8"
@@ -253,15 +283,36 @@ jobs:
               )
           ]
 
-          if main_names != ["MainActivity"]:
+          if main_names != [
+              "MainActivity"
+          ]:
               print(
                   "FEHLER: MainActivity.kt enthält "
                   "nicht ausschließlich MainActivity."
               )
+              print(main_names)
               sys.exit(1)
 
-          print("Modularisierung vorbereitet.")
-          print("Sicherheitsprüfung erfolgreich.")
+          print("")
+          print(
+              "========================================"
+          )
+          print(
+              "MODULARISIERUNG VORBEREITET"
+          )
+          print(
+              "========================================"
+          )
+
+          for relative in sorted(grouped):
+              print(
+                  f"erstellt: {relative}"
+              )
+
+          print("")
+          print(
+              "Sicherheitsprüfung erfolgreich."
+          )
           PY
 
       - name: Android SDK vorbereiten
@@ -272,9 +323,16 @@ jobs:
 
           sdkmanager --version
 
-          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36"
 
-          sdkmanager "platforms;android-37"
+          cp app/build.gradle.kts /tmp/build.gradle.kts.original
+
+          sed -i \
+            -e 's/compileSdk = 37/compileSdk = 36/' \
+            -e 's/targetSdk = 37/targetSdk = 36/' \
+            app/build.gradle.kts
+
+          echo "Temporär für den Test-Build auf Android API 36 umgestellt."
 
       - name: Java 17 einrichten
         uses: actions/setup-java@v4
@@ -290,6 +348,12 @@ jobs:
       - name: Modularisiertes Projekt bauen
         run: |
           gradle assembleDebug --stacktrace
+
+      - name: Originale App-Konfiguration wiederherstellen
+        run: |
+          cp /tmp/build.gradle.kts.original app/build.gradle.kts
+
+          echo "Originale app/build.gradle.kts wiederhergestellt."
 
       - name: Modularisierung nach erfolgreichem Build speichern
         run: |
