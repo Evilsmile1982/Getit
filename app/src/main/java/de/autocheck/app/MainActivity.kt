@@ -1,6 +1,5 @@
 package de.autocheck.app
 
-import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,24 +7,23 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,12 +37,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CarRepair
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.TireRepair
 import androidx.compose.material.icons.filled.Visibility
@@ -73,12 +69,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autocheck.app.ui.AutoCheckTheme
@@ -87,9 +85,9 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-// ============================================================
-// DATENMODELLE
-// ============================================================
+private val Background = Color(0xFF050608)
+private val Surface = Color(0xFF11151C)
+private val Muted = Color(0xFF9AA3B2)
 
 data class Vehicle(
     val name: String,
@@ -103,7 +101,7 @@ data class Vehicle(
 
 data class Repair(
     val id: Long,
-    val vehicleName: String,
+    val vehicle: String,
     val date: String,
     val mileage: String,
     val description: String,
@@ -113,7 +111,7 @@ data class Repair(
 
 data class Maintenance(
     val id: Long,
-    val vehicleName: String,
+    val vehicle: String,
     val date: String,
     val mileage: String,
     val cost: String,
@@ -122,7 +120,7 @@ data class Maintenance(
 )
 
 data class Pickerl(
-    val vehicleName: String,
+    val vehicle: String,
     val lastDate: String,
     val nextDate: String,
     val notes: String,
@@ -131,40 +129,17 @@ data class Pickerl(
 
 data class TireSet(
     val id: Long,
-    val vehicleName: String,
+    val vehicle: String,
     val season: String,
     val dimension: String,
     val brand: String,
     val dot: String,
-    val treadDepth: String,
+    val tread: String,
     val condition: String,
     val storage: String
 )
 
-private enum class Screen {
-    HOME,
-    AUTO,
-    REPARATUREN,
-    PICKERL,
-    WARTUNGEN,
-    GESAMTBLICK,
-    REIFEN
-}
-
-private data class MenuItemData(
-    val title: String,
-    val subtitle: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val screen: Screen
-)
-
-// ============================================================
-// SPEICHER
-// ============================================================
-
-class VehicleStore(
-    context: Context
-) {
+class VehicleStore(context: Context) {
 
     private val prefs =
         context.getSharedPreferences(
@@ -172,28 +147,22 @@ class VehicleStore(
             Context.MODE_PRIVATE
         )
 
-    fun loadVehicles(): List<Vehicle> {
-
-        val raw =
-            prefs.getString(
-                "vehicles",
-                "[]"
-            ) ?: "[]"
+    fun load(): List<Vehicle> {
 
         val array =
-            try {
-                JSONArray(raw)
-            } catch (_: Exception) {
-                JSONArray()
-            }
+            JSONArray(
+                prefs.getString(
+                    "vehicles",
+                    "[]"
+                ) ?: "[]"
+            )
 
         return buildList {
 
             for (i in 0 until array.length()) {
 
                 val o =
-                    array.optJSONObject(i)
-                        ?: continue
+                    array.getJSONObject(i)
 
                 add(
                     Vehicle(
@@ -217,7 +186,7 @@ class VehicleStore(
         }
     }
 
-    fun saveVehicles(
+    fun save(
         list: List<Vehicle>
     ) {
 
@@ -275,59 +244,57 @@ class VehicleStore(
             .apply()
     }
 
+    fun activeVehicle(): String =
+        prefs.getString(
+            "activeVehicle",
+            ""
+        ) ?: ""
+
+    fun setActiveVehicle(
+        name: String
+    ) {
+
+        prefs.edit()
+            .putString(
+                "activeVehicle",
+                name
+            )
+            .apply()
+    }
+
     fun loadRepairs(): List<Repair> {
 
-        val raw =
-            prefs.getString(
-                "repairs",
-                "[]"
-            ) ?: "[]"
-
         val array =
-            try {
-                JSONArray(raw)
-            } catch (_: Exception) {
-                JSONArray()
-            }
+            JSONArray(
+                prefs.getString(
+                    "repairs",
+                    "[]"
+                ) ?: "[]"
+            )
 
         return buildList {
 
             for (i in 0 until array.length()) {
 
                 val o =
-                    array.optJSONObject(i)
-                        ?: continue
+                    array.getJSONObject(i)
 
                 add(
                     Repair(
                         id =
-                            o.optLong(
-                                "id"
-                            ),
-                        vehicleName =
-                            o.optString(
-                                "vehicleName"
-                            ),
+                            o.optLong("id"),
+                        vehicle =
+                            o.optString("vehicle"),
                         date =
-                            o.optString(
-                                "date"
-                            ),
+                            o.optString("date"),
                         mileage =
-                            o.optString(
-                                "mileage"
-                            ),
+                            o.optString("mileage"),
                         description =
-                            o.optString(
-                                "description"
-                            ),
+                            o.optString("description"),
                         cost =
-                            o.optString(
-                                "cost"
-                            ),
+                            o.optString("cost"),
                         workshop =
-                            o.optString(
-                                "workshop"
-                            )
+                            o.optString("workshop")
                     )
                 )
             }
@@ -341,44 +308,44 @@ class VehicleStore(
         val array =
             JSONArray()
 
-        list.forEach { repair ->
+        list.forEach {
 
             array.put(
                 JSONObject().apply {
 
                     put(
                         "id",
-                        repair.id
+                        it.id
                     )
 
                     put(
-                        "vehicleName",
-                        repair.vehicleName
+                        "vehicle",
+                        it.vehicle
                     )
 
                     put(
                         "date",
-                        repair.date
+                        it.date
                     )
 
                     put(
                         "mileage",
-                        repair.mileage
+                        it.mileage
                     )
 
                     put(
                         "description",
-                        repair.description
+                        it.description
                     )
 
                     put(
                         "cost",
-                        repair.cost
+                        it.cost
                     )
 
                     put(
                         "workshop",
-                        repair.workshop
+                        it.workshop
                     )
                 }
             )
@@ -392,110 +359,90 @@ class VehicleStore(
             .apply()
     }
 
-    fun loadMaintenances(): List<Maintenance> {
-
-        val raw =
-            prefs.getString(
-                "maintenances",
-                "[]"
-            ) ?: "[]"
+    fun loadMaintenance(): List<Maintenance> {
 
         val array =
-            try {
-                JSONArray(raw)
-            } catch (_: Exception) {
-                JSONArray()
-            }
+            JSONArray(
+                prefs.getString(
+                    "maintenance",
+                    "[]"
+                ) ?: "[]"
+            )
 
         return buildList {
 
             for (i in 0 until array.length()) {
 
                 val o =
-                    array.optJSONObject(i)
-                        ?: continue
+                    array.getJSONObject(i)
 
                 add(
                     Maintenance(
                         id =
-                            o.optLong(
-                                "id"
-                            ),
-                        vehicleName =
-                            o.optString(
-                                "vehicleName"
-                            ),
+                            o.optLong("id"),
+                        vehicle =
+                            o.optString("vehicle"),
                         date =
-                            o.optString(
-                                "date"
-                            ),
+                            o.optString("date"),
                         mileage =
-                            o.optString(
-                                "mileage"
-                            ),
+                            o.optString("mileage"),
                         cost =
-                            o.optString(
-                                "cost"
-                            ),
+                            o.optString("cost"),
                         workshop =
-                            o.optString(
-                                "workshop"
-                            ),
+                            o.optString("workshop"),
                         notes =
-                            o.optString(
-                                "notes"
-                            )
+                            o.optString("notes")
                     )
                 )
             }
         }
     }
 
-    fun saveMaintenances(
+    fun saveMaintenance(
         list: List<Maintenance>
     ) {
 
         val array =
             JSONArray()
 
-        list.forEach { item ->
+        list.forEach {
 
             array.put(
                 JSONObject().apply {
 
                     put(
                         "id",
-                        item.id
+                        it.id
                     )
 
                     put(
-                        "vehicleName",
-                        item.vehicleName
+                        "vehicle",
+                        it.vehicle
                     )
 
                     put(
                         "date",
-                        item.date
+                        it.date
                     )
 
                     put(
                         "mileage",
-                        item.mileage
+                        it.mileage
                     )
 
                     put(
                         "cost",
-                        item.cost
+                        it.cost
                     )
 
                     put(
                         "workshop",
-                        item.workshop
+                        it.workshop
                     )
 
                     put(
                         "notes",
-                        item.notes
+                        it.notes
                     )
                 }
             )
@@ -503,40 +450,34 @@ class VehicleStore(
 
         prefs.edit()
             .putString(
-                "maintenances",
+                "maintenance",
                 array.toString()
             )
             .apply()
     }
 
-    fun loadPickerls(): List<Pickerl> {
-
-        val raw =
-            prefs.getString(
-                "pickerls",
-                "[]"
-            ) ?: "[]"
+    fun loadPickerl(): List<Pickerl> {
 
         val array =
-            try {
-                JSONArray(raw)
-            } catch (_: Exception) {
-                JSONArray()
-            }
+            JSONArray(
+                prefs.getString(
+                    "pickerl",
+                    "[]"
+                ) ?: "[]"
+            )
 
         return buildList {
 
             for (i in 0 until array.length()) {
 
                 val o =
-                    array.optJSONObject(i)
-                        ?: continue
+                    array.getJSONObject(i)
 
                 add(
                     Pickerl(
-                        vehicleName =
+                        vehicle =
                             o.optString(
-                                "vehicleName"
+                                "vehicle"
                             ),
                         lastDate =
                             o.optString(
@@ -552,8 +493,7 @@ class VehicleStore(
                             ),
                         reminder =
                             o.optBoolean(
-                                "reminder",
-                                true
+                                "reminder"
                             )
                     )
                 )
@@ -561,41 +501,41 @@ class VehicleStore(
         }
     }
 
-    fun savePickerls(
+    fun savePickerl(
         list: List<Pickerl>
     ) {
 
         val array =
             JSONArray()
 
-        list.forEach { item ->
+        list.forEach {
 
             array.put(
                 JSONObject().apply {
 
                     put(
-                        "vehicleName",
-                        item.vehicleName
+                        "vehicle",
+                        it.vehicle
                     )
 
                     put(
                         "lastDate",
-                        item.lastDate
+                        it.lastDate
                     )
 
                     put(
                         "nextDate",
-                        item.nextDate
+                        it.nextDate
                     )
 
                     put(
                         "notes",
-                        item.notes
+                        it.notes
                     )
 
                     put(
                         "reminder",
-                        item.reminder
+                        it.reminder
                     )
                 }
             )
@@ -603,7 +543,7 @@ class VehicleStore(
 
         prefs.edit()
             .putString(
-                "pickerls",
+                "pickerl",
                 array.toString()
             )
             .apply()
@@ -611,65 +551,41 @@ class VehicleStore(
 
     fun loadTires(): List<TireSet> {
 
-        val raw =
-            prefs.getString(
-                "tires",
-                "[]"
-            ) ?: "[]"
-
         val array =
-            try {
-                JSONArray(raw)
-            } catch (_: Exception) {
-                JSONArray()
-            }
+            JSONArray(
+                prefs.getString(
+                    "tires",
+                    "[]"
+                ) ?: "[]"
+            )
 
         return buildList {
 
             for (i in 0 until array.length()) {
 
                 val o =
-                    array.optJSONObject(i)
-                        ?: continue
+                    array.getJSONObject(i)
 
                 add(
                     TireSet(
                         id =
-                            o.optLong(
-                                "id"
-                            ),
-                        vehicleName =
-                            o.optString(
-                                "vehicleName"
-                            ),
+                            o.optLong("id"),
+                        vehicle =
+                            o.optString("vehicle"),
                         season =
-                            o.optString(
-                                "season"
-                            ),
+                            o.optString("season"),
                         dimension =
-                            o.optString(
-                                "dimension"
-                            ),
+                            o.optString("dimension"),
                         brand =
-                            o.optString(
-                                "brand"
-                            ),
+                            o.optString("brand"),
                         dot =
-                            o.optString(
-                                "dot"
-                            ),
-                        treadDepth =
-                            o.optString(
-                                "treadDepth"
-                            ),
+                            o.optString("dot"),
+                        tread =
+                            o.optString("tread"),
                         condition =
-                            o.optString(
-                                "condition"
-                            ),
+                            o.optString("condition"),
                         storage =
-                            o.optString(
-                                "storage"
-                            )
+                            o.optString("storage")
                     )
                 )
             }
@@ -683,54 +599,54 @@ class VehicleStore(
         val array =
             JSONArray()
 
-        list.forEach { item ->
+        list.forEach {
 
             array.put(
                 JSONObject().apply {
 
                     put(
                         "id",
-                        item.id
+                        it.id
                     )
 
                     put(
-                        "vehicleName",
-                        item.vehicleName
+                        "vehicle",
+                        it.vehicle
                     )
 
                     put(
                         "season",
-                        item.season
+                        it.season
                     )
 
                     put(
                         "dimension",
-                        item.dimension
+                        it.dimension
                     )
 
                     put(
                         "brand",
-                        item.brand
+                        it.brand
                     )
 
                     put(
                         "dot",
-                        item.dot
+                        it.dot
                     )
 
                     put(
-                        "treadDepth",
-                        item.treadDepth
+                        "tread",
+                        it.tread
                     )
 
                     put(
                         "condition",
-                        item.condition
+                        it.condition
                     )
 
                     put(
                         "storage",
-                        item.storage
+                        it.storage
                     )
                 }
             )
@@ -744,30 +660,59 @@ class VehicleStore(
             .apply()
     }
 
-    fun loadActiveVehicle(): String {
-
-        return prefs.getString(
-            "activeVehicle",
-            ""
-        ) ?: ""
-    }
-
-    fun saveActiveVehicle(
+    fun deleteVehicleData(
         name: String
     ) {
 
-        prefs.edit()
-            .putString(
-                "activeVehicle",
-                name
-            )
-            .apply()
+        saveRepairs(
+            loadRepairs()
+                .filterNot {
+                    it.vehicle == name
+                }
+        )
+
+        saveMaintenance(
+            loadMaintenance()
+                .filterNot {
+                    it.vehicle == name
+                }
+        )
+
+        savePickerl(
+            loadPickerl()
+                .filterNot {
+                    it.vehicle == name
+                }
+        )
+
+        saveTires(
+            loadTires()
+                .filterNot {
+                    it.vehicle == name
+                }
+        )
     }
 }
 
-// ============================================================
-// ACTIVITY
-// ============================================================
+private enum class Screen {
+    HOME,
+    AUTO,
+    REPARATUREN,
+    PICKERL,
+    WARTUNGEN,
+    GESAMTBLICK,
+    REIFEN
+}
+
+private data class MenuItemData(
+    val title: String,
+    val subtitle: String,
+    val icon:
+        androidx.compose.ui.graphics.vector.ImageVector,
+    val screen: Screen,
+    val accent: Color,
+    val start: Color
+)
 
 class MainActivity :
     ComponentActivity() {
@@ -783,19 +728,14 @@ class MainActivity :
         createNotificationChannel()
 
         if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.TIRAMISU &&
-            checkSelfPermission(
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
+            Build.VERSION.SDK_INT >= 33
         ) {
 
             requestPermissions(
                 arrayOf(
-                    Manifest.permission
-                        .POST_NOTIFICATIONS
+                    "android.permission.POST_NOTIFICATIONS"
                 ),
-                1001
+                5001
             )
         }
 
@@ -817,27 +757,20 @@ class MainActivity :
 
             val channel =
                 NotificationChannel(
-                    "pickerl",
+                    "pickerl_reminders",
                     "Pickerl Erinnerungen",
                     NotificationManager
                         .IMPORTANCE_DEFAULT
                 )
 
-            val manager =
-                getSystemService(
-                    NotificationManager::class.java
-                )
-
-            manager.createNotificationChannel(
+            getSystemService(
+                NotificationManager::class.java
+            ).createNotificationChannel(
                 channel
             )
         }
     }
 }
-
-// ============================================================
-// PICKERL ERINNERUNG
-// ============================================================
 
 class PickerlReceiver :
     BroadcastReceiver() {
@@ -850,41 +783,53 @@ class PickerlReceiver :
         val vehicle =
             intent?.getStringExtra(
                 "vehicle"
-            )
-                ?: "Dein Fahrzeug"
+            ) ?: "Fahrzeug"
+
+        val nextDate =
+            intent?.getStringExtra(
+                "nextDate"
+            ) ?: ""
 
         val manager =
             context.getSystemService(
                 Context.NOTIFICATION_SERVICE
             ) as NotificationManager
 
-        val notification =
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.O
-            ) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
 
+            val notification =
                 android.app.Notification
                     .Builder(
                         context,
-                        "pickerl"
+                        "pickerl_reminders"
                     )
                     .setSmallIcon(
                         android.R.drawable
                             .ic_dialog_info
                     )
                     .setContentTitle(
-                        "Pickerl-Erinnerung"
+                        "Pickerl / TÜV Erinnerung"
                     )
                     .setContentText(
-                        "Das Pickerl für $vehicle ist in 3 Monaten fällig."
+                        "$vehicle: Prüfung am $nextDate"
                     )
-                    .setAutoCancel(true)
+                    .setAutoCancel(
+                        true
+                    )
                     .build()
 
-            } else {
+            manager.notify(
+                vehicle.hashCode(),
+                notification
+            )
 
-                @Suppress("DEPRECATION")
+        } else {
+
+            @Suppress("DEPRECATION")
+            val notification =
                 android.app.Notification
                     .Builder(context)
                     .setSmallIcon(
@@ -892,25 +837,151 @@ class PickerlReceiver :
                             .ic_dialog_info
                     )
                     .setContentTitle(
-                        "Pickerl-Erinnerung"
+                        "Pickerl / TÜV Erinnerung"
                     )
                     .setContentText(
-                        "Das Pickerl für $vehicle ist in 3 Monaten fällig."
+                        "$vehicle: Prüfung am $nextDate"
                     )
-                    .setAutoCancel(true)
+                    .setAutoCancel(
+                        true
+                    )
                     .build()
-            }
 
-        manager.notify(
-            vehicle.hashCode(),
-            notification
+            @Suppress("DEPRECATION")
+            manager.notify(
+                vehicle.hashCode(),
+                notification
+            )
+        }
+    }
+}
+
+private fun schedulePickerlReminder(
+    context: Context,
+    vehicle: String,
+    nextDate: String
+) {
+
+    if (
+        nextDate.isBlank()
+    ) return
+
+    val expiry =
+        try {
+
+            LocalDate.parse(
+                nextDate
+            )
+
+        } catch (
+            _: Exception
+        ) {
+
+            return
+        }
+
+    val reminderDate =
+        expiry.minusMonths(
+            3
+        )
+
+    val trigger =
+        reminderDate
+            .atTime(
+                9,
+                0
+            )
+            .atZone(
+                ZoneId.systemDefault()
+            )
+            .toInstant()
+            .toEpochMilli()
+
+    val intent =
+        Intent(
+            context,
+            PickerlReceiver::class.java
+        ).apply {
+
+            putExtra(
+                "vehicle",
+                vehicle
+            )
+
+            putExtra(
+                "nextDate",
+                nextDate
+            )
+        }
+
+    val requestCode =
+        vehicle.hashCode()
+
+    val pending =
+        PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                PendingIntent.FLAG_IMMUTABLE
+        )
+
+    val alarmManager =
+        context.getSystemService(
+            Context.ALARM_SERVICE
+        ) as AlarmManager
+
+    if (
+        trigger <=
+        System.currentTimeMillis()
+    ) {
+
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis() +
+                5_000L,
+            pending
+        )
+
+    } else {
+
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            trigger,
+            pending
         )
     }
 }
 
-// ============================================================
-// HAUPTAPP
-// ============================================================
+private fun cancelPickerlReminder(
+    context: Context,
+    vehicle: String
+) {
+
+    val intent =
+        Intent(
+            context,
+            PickerlReceiver::class.java
+        )
+
+    val pending =
+        PendingIntent.getBroadcast(
+            context,
+            vehicle.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                PendingIntent.FLAG_IMMUTABLE
+        )
+
+    val alarmManager =
+        context.getSystemService(
+            Context.ALARM_SERVICE
+        ) as AlarmManager
+
+    alarmManager.cancel(
+        pending
+    )
+}
 
 @Composable
 private fun AutoCheckApp() {
@@ -920,55 +991,19 @@ private fun AutoCheckApp() {
 
     val store =
         remember {
-            VehicleStore(context)
+            VehicleStore(
+                context
+            )
         }
 
     val vehicles =
         remember {
+
             mutableStateListOf<Vehicle>()
                 .apply {
-                    addAll(
-                        store.loadVehicles()
-                    )
-                }
-        }
 
-    val repairs =
-        remember {
-            mutableStateListOf<Repair>()
-                .apply {
                     addAll(
-                        store.loadRepairs()
-                    )
-                }
-        }
-
-    val maintenances =
-        remember {
-            mutableStateListOf<Maintenance>()
-                .apply {
-                    addAll(
-                        store.loadMaintenances()
-                    )
-                }
-        }
-
-    val pickerls =
-        remember {
-            mutableStateListOf<Pickerl>()
-                .apply {
-                    addAll(
-                        store.loadPickerls()
-                    )
-                }
-        }
-
-    val tires =
-        remember {
-            mutableStateListOf<TireSet>()
-                .apply {
-                    addAll(
-                        store.loadTires()
+                        store.load()
                     )
                 }
         }
@@ -976,44 +1011,50 @@ private fun AutoCheckApp() {
     var activeVehicle by remember {
 
         mutableStateOf(
-            store.loadActiveVehicle()
+            store.activeVehicle()
         )
     }
 
     var screen by remember {
+
         mutableStateOf(
             Screen.HOME
         )
     }
 
     var homeReady by remember {
-        mutableStateOf(false)
+
+        mutableStateOf(
+            false
+        )
     }
 
     LaunchedEffect(Unit) {
 
-        kotlinx.coroutines.delay(
-            2500
-        )
+        kotlinx.coroutines
+            .delay(
+                2500
+            )
 
         homeReady = true
+
+        if (
+            activeVehicle.isBlank() &&
+            vehicles.isNotEmpty()
+        ) {
+
+            activeVehicle =
+                vehicles.first().name
+
+            store.setActiveVehicle(
+                activeVehicle
+            )
+        }
     }
 
     if (
-        activeVehicle.isBlank() &&
-        vehicles.isNotEmpty()
-    ) {
-
-        activeVehicle =
-            vehicles.first().name
-
-        store.saveActiveVehicle(
-            activeVehicle
-        )
-    }
-
-    if (
-        screen == Screen.HOME
+        screen ==
+        Screen.HOME
     ) {
 
         HomeScreen(
@@ -1027,6 +1068,7 @@ private fun AutoCheckApp() {
     } else {
 
         DetailScaffold(
+
             title =
                 when (screen) {
 
@@ -1056,11 +1098,12 @@ private fun AutoCheckApp() {
                 screen =
                     Screen.HOME
             }
+
         ) {
 
             when (screen) {
 
-                Screen.AUTO -> {
+                Screen.AUTO ->
 
                     VehicleScreen(
                         vehicles =
@@ -1068,61 +1111,27 @@ private fun AutoCheckApp() {
                         activeVehicle =
                             activeVehicle,
                         onActiveVehicle = {
+
                             activeVehicle =
                                 it
 
-                            store.saveActiveVehicle(
+                            store.setActiveVehicle(
                                 it
                             )
                         },
-                        onAdd = {
-                            vehicle ->
+                        onSave = {
+                                vehicle,
+                                oldName ->
+
+                            val index =
+                                vehicles.indexOfFirst {
+                                    it.name ==
+                                        oldName
+                                }
 
                             if (
-                                vehicles.size < 5 &&
-                                vehicles.none {
-                                    it.name.equals(
-                                        vehicle.name,
-                                        true
-                                    )
-                                }
+                                index >= 0
                             ) {
-
-                                vehicles.add(
-                                    vehicle
-                                )
-
-                                store.saveVehicles(
-                                    vehicles
-                                )
-
-                                if (
-                                    activeVehicle
-                                        .isBlank()
-                                ) {
-
-                                    activeVehicle =
-                                        vehicle.name
-
-                                    store.saveActiveVehicle(
-                                        activeVehicle
-                                    )
-                                }
-                            }
-                        },
-                        onUpdate = {
-                            index,
-                            vehicle ->
-
-                            if (
-                                index in
-                                vehicles.indices
-                            ) {
-
-                                val oldName =
-                                    vehicles[
-                                        index
-                                    ].name
 
                                 vehicles[
                                     index
@@ -1130,470 +1139,165 @@ private fun AutoCheckApp() {
                                     vehicle
 
                                 if (
-                                    activeVehicle ==
-                                    oldName
+                                    oldName !=
+                                    vehicle.name
                                 ) {
 
-                                    activeVehicle =
+                                    migrateVehicleName(
+                                        store,
+                                        oldName,
                                         vehicle.name
-
-                                    store.saveActiveVehicle(
-                                        activeVehicle
                                     )
                                 }
 
-                                for (
-                                    i in repairs.indices
-                                ) {
-
-                                    if (
-                                        repairs[i]
-                                            .vehicleName ==
-                                        oldName
-                                    ) {
-
-                                        repairs[i] =
-                                            repairs[i]
-                                                .copy(
-                                                    vehicleName =
-                                                        vehicle.name
-                                                )
-                                    }
-                                }
-
-                                for (
-                                    i in
-                                    maintenances.indices
-                                ) {
-
-                                    if (
-                                        maintenances[i]
-                                            .vehicleName ==
-                                        oldName
-                                    ) {
-
-                                        maintenances[i] =
-                                            maintenances[i]
-                                                .copy(
-                                                    vehicleName =
-                                                        vehicle.name
-                                                )
-                                    }
-                                }
-
-                                for (
-                                    i in
-                                    pickerls.indices
-                                ) {
-
-                                    if (
-                                        pickerls[i]
-                                            .vehicleName ==
-                                        oldName
-                                    ) {
-
-                                        pickerls[i] =
-                                            pickerls[i]
-                                                .copy(
-                                                    vehicleName =
-                                                        vehicle.name
-                                                )
-                                    }
-                                }
-
-                                for (
-                                    i in tires.indices
-                                ) {
-
-                                    if (
-                                        tires[i]
-                                            .vehicleName ==
-                                        oldName
-                                    ) {
-
-                                        tires[i] =
-                                            tires[i]
-                                                .copy(
-                                                    vehicleName =
-                                                        vehicle.name
-                                                )
-                                    }
-                                }
-
-                                store.saveVehicles(
-                                    vehicles
-                                )
-
-                                store.saveRepairs(
-                                    repairs
-                                )
-
-                                store.saveMaintenances(
-                                    maintenances
-                                )
-
-                                store.savePickerls(
-                                    pickerls
-                                )
-
-                                store.saveTires(
-                                    tires
-                                )
-                            }
-                        },
-                        onDelete = {
-                            index ->
-
-                            if (
-                                index in
-                                vehicles.indices
+                            } else if (
+                                vehicles.size < 5
                             ) {
 
-                                val name =
-                                    vehicles[
-                                        index
-                                    ].name
-
-                                vehicles.removeAt(
-                                    index
+                                vehicles.add(
+                                    vehicle
                                 )
+                            }
 
-                                repairs.removeAll {
-                                    it.vehicleName ==
-                                        name
-                                }
+                            store.save(
+                                vehicles
+                            )
 
-                                maintenances.removeAll {
-                                    it.vehicleName ==
-                                        name
-                                }
+                            activeVehicle =
+                                vehicle.name
 
-                                pickerls.removeAll {
-                                    it.vehicleName ==
-                                        name
-                                }
+                            store.setActiveVehicle(
+                                activeVehicle
+                            )
+                        },
+                        onDelete = {
+                            vehicle ->
 
-                                tires.removeAll {
-                                    it.vehicleName ==
-                                        name
-                                }
+                            vehicles.remove(
+                                vehicle
+                            )
 
-                                if (
-                                    activeVehicle ==
-                                    name
-                                ) {
+                            store.deleteVehicleData(
+                                vehicle.name
+                            )
 
-                                    activeVehicle =
-                                        vehicles
-                                            .firstOrNull()
-                                            ?.name
-                                            ?: ""
+                            if (
+                                activeVehicle ==
+                                vehicle.name
+                            ) {
 
-                                    store.saveActiveVehicle(
-                                        activeVehicle
-                                    )
-                                }
-
-                                store.saveVehicles(
+                                activeVehicle =
                                     vehicles
-                                )
+                                        .firstOrNull()
+                                        ?.name
+                                        ?: ""
 
-                                store.saveRepairs(
-                                    repairs
-                                )
-
-                                store.saveMaintenances(
-                                    maintenances
-                                )
-
-                                store.savePickerls(
-                                    pickerls
-                                )
-
-                                store.saveTires(
-                                    tires
+                                store.setActiveVehicle(
+                                    activeVehicle
                                 )
                             }
                         }
                     )
-                }
 
-                Screen.REPARATUREN -> {
+                Screen.REPARATUREN ->
 
-                    RepairsScreen(
+                    RepairScreen(
+                        store =
+                            store,
                         vehicles =
                             vehicles,
-                        repairs =
-                            repairs,
-                        selectedVehicle =
+                        activeVehicle =
                             activeVehicle,
-                        onVehicleSelected = {
+                        onActiveVehicle = {
+
                             activeVehicle =
                                 it
 
-                            store.saveActiveVehicle(
+                            store.setActiveVehicle(
                                 it
-                            )
-                        },
-                        onSave = {
-                            item ->
-
-                            repairs.add(
-                                item
-                            )
-
-                            store.saveRepairs(
-                                repairs
-                            )
-                        },
-                        onUpdate = {
-                            item ->
-
-                            val index =
-                                repairs.indexOfFirst {
-                                    it.id ==
-                                        item.id
-                                }
-
-                            if (
-                                index >= 0
-                            ) {
-
-                                repairs[
-                                    index
-                                ] =
-                                    item
-
-                                store.saveRepairs(
-                                    repairs
-                                )
-                            }
-                        },
-                        onDelete = {
-                            item ->
-
-                            repairs.removeAll {
-                                it.id ==
-                                    item.id
-                            }
-
-                            store.saveRepairs(
-                                repairs
                             )
                         }
                     )
-                }
 
-                Screen.PICKERL -> {
+                Screen.PICKERL ->
 
                     PickerlScreen(
+                        store =
+                            store,
                         vehicles =
                             vehicles,
-                        pickerls =
-                            pickerls,
-                        selectedVehicle =
+                        activeVehicle =
                             activeVehicle,
-                        onVehicleSelected = {
+                        onActiveVehicle = {
+
                             activeVehicle =
                                 it
 
-                            store.saveActiveVehicle(
+                            store.setActiveVehicle(
                                 it
                             )
-                        },
-                        onSave = {
-                            item ->
-
-                            pickerls.removeAll {
-                                it.vehicleName ==
-                                    item.vehicleName
-                            }
-
-                            pickerls.add(
-                                item
-                            )
-
-                            store.savePickerls(
-                                pickerls
-                            )
-
-                            if (
-                                item.reminder &&
-                                item.nextDate
-                                    .isNotBlank()
-                            ) {
-
-                                schedulePickerlReminder(
-                                    context =
-                                        context,
-                                    vehicleName =
-                                        item.vehicleName,
-                                    nextDate =
-                                        item.nextDate
-                                )
-                            }
                         }
                     )
-                }
 
-                Screen.WARTUNGEN -> {
+                Screen.WARTUNGEN ->
 
                     MaintenanceScreen(
+                        store =
+                            store,
                         vehicles =
                             vehicles,
-                        maintenances =
-                            maintenances,
-                        selectedVehicle =
+                        activeVehicle =
                             activeVehicle,
-                        onVehicleSelected = {
+                        onActiveVehicle = {
+
                             activeVehicle =
                                 it
 
-                            store.saveActiveVehicle(
+                            store.setActiveVehicle(
                                 it
-                            )
-                        },
-                        onSave = {
-                            item ->
-
-                            maintenances.add(
-                                item
-                            )
-
-                            store.saveMaintenances(
-                                maintenances
-                            )
-                        },
-                        onUpdate = {
-                            item ->
-
-                            val index =
-                                maintenances
-                                    .indexOfFirst {
-                                        it.id ==
-                                            item.id
-                                    }
-
-                            if (
-                                index >= 0
-                            ) {
-
-                                maintenances[
-                                    index
-                                ] =
-                                    item
-
-                                store.saveMaintenances(
-                                    maintenances
-                                )
-                            }
-                        },
-                        onDelete = {
-                            item ->
-
-                            maintenances.removeAll {
-                                it.id ==
-                                    item.id
-                            }
-
-                            store.saveMaintenances(
-                                maintenances
                             )
                         }
                     )
-                }
 
-                Screen.GESAMTBLICK -> {
+                Screen.GESAMTBLICK ->
 
                     OverviewScreen(
+                        store =
+                            store,
                         vehicles =
                             vehicles,
-                        repairs =
-                            repairs,
-                        maintenances =
-                            maintenances,
-                        pickerls =
-                            pickerls,
-                        tires =
-                            tires,
-                        selectedVehicle =
+                        activeVehicle =
                             activeVehicle,
-                        onVehicleSelected = {
+                        onActiveVehicle = {
+
                             activeVehicle =
                                 it
 
-                            store.saveActiveVehicle(
+                            store.setActiveVehicle(
                                 it
                             )
                         }
                     )
-                }
 
-                Screen.REIFEN -> {
+                Screen.REIFEN ->
 
-                    TiresScreen(
+                    TireScreen(
+                        store =
+                            store,
                         vehicles =
                             vehicles,
-                        tires =
-                            tires,
-                        selectedVehicle =
+                        activeVehicle =
                             activeVehicle,
-                        onVehicleSelected = {
+                        onActiveVehicle = {
+
                             activeVehicle =
                                 it
 
-                            store.saveActiveVehicle(
+                            store.setActiveVehicle(
                                 it
-                            )
-                        },
-                        onSave = {
-                            item ->
-
-                            tires.add(
-                                item
-                            )
-
-                            store.saveTires(
-                                tires
-                            )
-                        },
-                        onUpdate = {
-                            item ->
-
-                            val index =
-                                tires.indexOfFirst {
-                                    it.id ==
-                                        item.id
-                                }
-
-                            if (
-                                index >= 0
-                            ) {
-
-                                tires[
-                                    index
-                                ] =
-                                    item
-
-                                store.saveTires(
-                                    tires
-                                )
-                            }
-                        },
-                        onDelete = {
-                            item ->
-
-                            tires.removeAll {
-                                it.id ==
-                                    item.id
-                            }
-
-                            store.saveTires(
-                                tires
                             )
                         }
                     )
-                }
 
                 else -> Unit
             }
@@ -1601,9 +1305,92 @@ private fun AutoCheckApp() {
     }
 }
 
-// ============================================================
-// ORIGINAL CUT1 HOME SCREEN
-// ============================================================
+private fun migrateVehicleName(
+    store: VehicleStore,
+    oldName: String,
+    newName: String
+) {
+
+    store.saveRepairs(
+        store.loadRepairs().map {
+
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+
+                it.copy(
+                    vehicle =
+                        newName
+                )
+
+            } else {
+
+                it
+            }
+        }
+    )
+
+    store.saveMaintenance(
+        store.loadMaintenance().map {
+
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+
+                it.copy(
+                    vehicle =
+                        newName
+                )
+
+            } else {
+
+                it
+            }
+        }
+    )
+
+    store.savePickerl(
+        store.loadPickerl().map {
+
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+
+                it.copy(
+                    vehicle =
+                        newName
+                )
+
+            } else {
+
+                it
+            }
+        }
+    )
+
+    store.saveTires(
+        store.loadTires().map {
+
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+
+                it.copy(
+                    vehicle =
+                        newName
+                )
+
+            } else {
+
+                it
+            }
+        }
+    )
+}
 
 @Composable
 private fun HomeScreen(
@@ -1615,185 +1402,477 @@ private fun HomeScreen(
         listOf(
 
             MenuItemData(
-                "Mein Auto",
-                "Fahrzeug & Details",
-                Icons.Filled.DirectionsCar,
-                Screen.AUTO
+                title =
+                    "Mein Auto",
+                subtitle =
+                    "Fahrzeug & Details",
+                icon =
+                    Icons.Filled.DirectionsCar,
+                screen =
+                    Screen.AUTO,
+                accent =
+                    Color(0xFFE51B2B),
+                start =
+                    Color(0xFF34131A)
             ),
 
             MenuItemData(
-                "Reparaturen",
-                "Reparaturen verwalten",
-                Icons.Filled.CarRepair,
-                Screen.REPARATUREN
+                title =
+                    "Reparaturen",
+                subtitle =
+                    "Reparaturen verwalten",
+                icon =
+                    Icons.Filled.CarRepair,
+                screen =
+                    Screen.REPARATUREN,
+                accent =
+                    Color(0xFF1689E8),
+                start =
+                    Color(0xFF102B43)
             ),
 
             MenuItemData(
-                "Pickerl/TÜV",
-                "Termine & Fristen",
-                Icons.Filled.Event,
-                Screen.PICKERL
+                title =
+                    "Pickerl/TÜV",
+                subtitle =
+                    "Termine & Fristen",
+                icon =
+                    Icons.Filled.Event,
+                screen =
+                    Screen.PICKERL,
+                accent =
+                    Color(0xFF20C05A),
+                start =
+                    Color(0xFF123C29)
             ),
 
             MenuItemData(
-                "Wartungen",
-                "Verschiedenes",
-                Icons.Filled.Build,
-                Screen.WARTUNGEN
+                title =
+                    "Wartungen",
+                subtitle =
+                    "Verschiedenes",
+                icon =
+                    Icons.Filled.Build,
+                screen =
+                    Screen.WARTUNGEN,
+                accent =
+                    Color(0xFFE59A0A),
+                start =
+                    Color(0xFF3A2C12)
             ),
 
             MenuItemData(
-                "Gesamtblick",
-                "Die wichtigsten Infos",
-                Icons.Filled.Visibility,
-                Screen.GESAMTBLICK
+                title =
+                    "Gesamtblick",
+                subtitle =
+                    "Die wichtigsten Infos",
+                icon =
+                    Icons.Filled.Visibility,
+                screen =
+                    Screen.GESAMTBLICK,
+                accent =
+                    Color(0xFF9348F0),
+                start =
+                    Color(0xFF29163E)
             ),
 
             MenuItemData(
-                "Reifen",
-                "Größen, Dimensionen und Alter",
-                Icons.Filled.TireRepair,
-                Screen.REIFEN
+                title =
+                    "Reifen",
+                subtitle =
+                    "Größen, Dimensionen",
+                icon =
+                    Icons.Filled.TireRepair,
+                screen =
+                    Screen.REIFEN,
+                accent =
+                    Color(0xFF18BDB5),
+                start =
+                    Color(0xFF103A3B)
             )
         )
 
-    Box(
+    LazyColumn(
+
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(
-                    Color(0xFF050608)
-                )
-                .padding(
-                    horizontal = 14.dp
-                )
+                    Background
+                ),
+
+        contentPadding =
+            androidx.compose.foundation
+                .layout
+                .PaddingValues(
+                    start =
+                        24.dp,
+                    end =
+                        24.dp,
+                    top =
+                        28.dp,
+                    bottom =
+                        28.dp
+                ),
+
+        verticalArrangement =
+            Arrangement.spacedBy(
+                16.dp
+            )
+
     ) {
 
-        Column(
-            modifier =
-                Modifier.fillMaxSize(),
-            horizontalAlignment =
-                Alignment.CenterHorizontally
-        ) {
-
-            Spacer(
-                Modifier.height(
-                    28.dp
-                )
-            )
-
-            Text(
-                "AutoCheck",
-                fontSize = 30.sp,
-                fontWeight =
-                    FontWeight.Bold,
-                color =
-                    Color.White
-            )
-
-            Spacer(
-                Modifier.height(
-                    8.dp
-                )
-            )
+        item {
 
             Image(
+
+                painter =
+                    painterResource(
+                        R.drawable.bild_4
+                    ),
+
+                contentDescription =
+                    "AutoCheck Logo",
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(
+                            120.dp
+                        ),
+
+                contentScale =
+                    ContentScale.Fit
+            )
+        }
+
+        item {
+
+            Image(
+
                 painter =
                     painterResource(
                         R.drawable.bild_3
                     ),
+
                 contentDescription =
                     "AutoCheck Hauptbild",
+
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .height(
+                            438.dp
+                        )
+                        .clip(
+                            RoundedCornerShape(
+                                28.dp
+                            )
+                        ),
+
                 contentScale =
-                    ContentScale.Fit
+                    ContentScale.Crop
             )
+        }
+
+        item {
 
             Spacer(
                 Modifier.height(
-                    10.dp
+                    4.dp
                 )
             )
+        }
 
-            Column(
+        item {
+
+            Row(
+
                 modifier =
                     Modifier.fillMaxWidth(),
-                verticalArrangement =
+
+                horizontalArrangement =
                     Arrangement.spacedBy(
-                        10.dp
+                        18.dp
                     )
+
             ) {
 
-                for (
-                    row in 0..2
+                AnimatedVisibility(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2500
+                                ),
+
+                            initialOffsetX = {
+                                -it
+                            }
+                        )
                 ) {
 
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                10.dp
+                    MenuCard(
+                        item =
+                            items[0],
+                        onClick = {
+                            onSelect(
+                                items[0]
+                                    .screen
                             )
-                    ) {
-
-                        for (
-                            col in 0..1
-                        ) {
-
-                            val item =
-                                items[
-                                    row * 2 +
-                                        col
-                                ]
-
-                            AnimatedVisibility(
-                                visible =
-                                    visible,
-                                enter =
-                                    slideInHorizontally(
-                                        animationSpec =
-                                            tween(
-                                                2500
-                                            ),
-                                        initialOffsetX = {
-                                            if (
-                                                col == 0
-                                            ) {
-                                                -it
-                                            } else {
-                                                it
-                                            }
-                                        }
-                                    )
-                            ) {
-
-                                MenuCard(
-                                    item =
-                                        item,
-                                    modifier =
-                                        Modifier.weight(
-                                            1f
-                                        ),
-                                    onClick = {
-                                        onSelect(
-                                            item.screen
-                                        )
-                                    }
-                                )
-                            }
                         }
-                    }
+                    )
+                }
+
+                AnimatedVisibility(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2500
+                                ),
+
+                            initialOffsetX = {
+                                it
+                            }
+                        )
+                ) {
+
+                    MenuCard(
+                        item =
+                            items[1],
+                        onClick = {
+                            onSelect(
+                                items[1]
+                                    .screen
+                            )
+                        }
+                    )
                 }
             }
+        }
 
-            Spacer(
-                Modifier.height(
-                    20.dp
-                )
+        item {
+
+            Row(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        18.dp
+                    )
+
+            ) {
+
+                AnimatedVisibility(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2500
+                                ),
+
+                            initialOffsetX = {
+                                -it
+                            }
+                        )
+                ) {
+
+                    MenuCard(
+                        item =
+                            items[2],
+                        onClick = {
+                            onSelect(
+                                items[2]
+                                    .screen
+                            )
+                        }
+                    )
+                }
+
+                AnimatedVisibility(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2500
+                                ),
+
+                            initialOffsetX = {
+                                it
+                            }
+                        )
+                ) {
+
+                    MenuCard(
+                        item =
+                            items[3],
+                        onClick = {
+                            onSelect(
+                                items[3]
+                                    .screen
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        item {
+
+            Row(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        18.dp
+                    )
+
+            ) {
+
+                AnimatedVisibility(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2500
+                                ),
+
+                            initialOffsetX = {
+                                -it
+                            }
+                        )
+                ) {
+
+                    MenuCard(
+                        item =
+                            items[4],
+                        onClick = {
+                            onSelect(
+                                items[4]
+                                    .screen
+                            )
+                        }
+                    )
+                }
+
+                AnimatedVisibility(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2500
+                                ),
+
+                            initialOffsetX = {
+                                it
+                            }
+                        )
+                ) {
+
+                    MenuCard(
+                        item =
+                            items[5],
+                        onClick = {
+                            onSelect(
+                                items[5]
+                                    .screen
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        item {
+
+            Text(
+
+                text =
+                    "AutoCheck • Verliere nicht die Übersicht",
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top =
+                                8.dp
+                        ),
+
+                color =
+                    Color(
+                        0xFF9BA1AE
+                    ),
+
+                fontSize =
+                    14.sp,
+
+                textAlign =
+                    TextAlign.Center
             )
         }
     }
@@ -1802,94 +1881,181 @@ private fun HomeScreen(
 @Composable
 private fun MenuCard(
     item: MenuItemData,
-    modifier: Modifier,
     onClick: () -> Unit
 ) {
 
-    Card(
+    Box(
+
         modifier =
-            modifier.clickable(
-                onClick =
-                    onClick
-            ),
-        shape =
-            RoundedCornerShape(
-                16.dp
-            ),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
+            Modifier
+                .fillMaxWidth()
+                .height(
+                    188.dp
+                )
+                .clip(
+                    RoundedCornerShape(
+                        28.dp
+                    )
+                )
+                .background(
+
+                    Brush.horizontalGradient(
+
+                        listOf(
+
+                            item.start,
+
+                            Color(
+                                0xFF101720
+                            )
+                        )
+                    )
+                )
+                .clickable(
+                    onClick =
+                        onClick
+                )
+                .padding(
+                    20.dp
+                )
+
     ) {
 
         Row(
+
             modifier =
-                Modifier.padding(
-                    13.dp
-                ),
+                Modifier.fillMaxSize(),
+
             verticalAlignment =
                 Alignment.CenterVertically
+
         ) {
 
             Box(
+
                 modifier =
                     Modifier
                         .size(
-                            46.dp
+                            94.dp
                         )
                         .clip(
                             RoundedCornerShape(
-                                12.dp
+                                24.dp
                             )
                         )
                         .background(
-                            Color(0xFFE21D32)
+                            item.accent
                         ),
+
                 contentAlignment =
                     Alignment.Center
+
             ) {
 
                 Icon(
-                    item.icon,
-                    item.title,
+
+                    imageVector =
+                        item.icon,
+
+                    contentDescription =
+                        item.title,
+
                     tint =
-                        Color.White
+                        Color.White,
+
+                    modifier =
+                        Modifier.size(
+                            52.dp
+                        )
                 )
             }
 
             Spacer(
                 Modifier.width(
-                    10.dp
+                    18.dp
                 )
             )
 
-            Column {
+            Column(
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    ),
+
+                verticalArrangement =
+                    Arrangement.Center
+
+            ) {
 
                 Text(
-                    item.title,
+
+                    text =
+                        item.title,
+
+                    color =
+                        Color.White,
+
+                    fontSize =
+                        23.sp,
+
+                    lineHeight =
+                        27.sp,
+
                     fontWeight =
                         FontWeight.Bold,
-                    color =
-                        Color.White
+
+                    maxLines =
+                        2
+                )
+
+                Spacer(
+                    Modifier.height(
+                        5.dp
+                    )
                 )
 
                 Text(
-                    item.subtitle,
-                    fontSize =
-                        11.sp,
+
+                    text =
+                        item.subtitle,
+
                     color =
-                        Color(0xFFB8BEC8),
-                    maxLines = 2
+                        Color(
+                            0xFF9EA5B3
+                        ),
+
+                    fontSize =
+                        15.sp,
+
+                    lineHeight =
+                        19.sp,
+
+                    maxLines =
+                        2
                 )
             }
+
+            Icon(
+
+                imageVector =
+                    Icons.Filled
+                        .KeyboardArrowRight,
+
+                contentDescription =
+                    null,
+
+                tint =
+                    item.accent,
+
+                modifier =
+                    Modifier.size(
+                        34.dp
+                    )
+            )
         }
     }
 }
-
-// ============================================================
-// DETAIL SCAFFOLD
-// ============================================================
 
 @OptIn(
     ExperimentalMaterial3Api::class
@@ -1904,14 +2070,16 @@ private fun DetailScaffold(
     Scaffold(
 
         containerColor =
-            Color(0xFF050608),
+            Background,
 
         topBar = {
 
             TopAppBar(
 
                 title = {
-                    Text(title)
+                    Text(
+                        title
+                    )
                 },
 
                 navigationIcon = {
@@ -1932,7 +2100,7 @@ private fun DetailScaffold(
                     TopAppBarDefaults
                         .topAppBarColors(
                             containerColor =
-                                Color(0xFF050608),
+                                Background,
                             titleContentColor =
                                 Color.White,
                             navigationIconContentColor =
@@ -1944,6 +2112,7 @@ private fun DetailScaffold(
     ) { padding ->
 
         Box(
+
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -1953,6 +2122,7 @@ private fun DetailScaffold(
                     .padding(
                         16.dp
                     )
+
         ) {
 
             content()
@@ -1960,104 +2130,84 @@ private fun DetailScaffold(
     }
 }
 
-// ============================================================
-// FAHRZEUGAUSWAHL
-// ============================================================
-
 @Composable
-private fun VehicleSelector(
-    vehicles: List<Vehicle>,
-    selectedVehicle: String,
-    onSelected: (String) -> Unit
+private fun VehicleScreen(
+    vehicles: MutableList<Vehicle>,
+    activeVehicle: String,
+    onActiveVehicle: (String) -> Unit,
+    onSave: (Vehicle, String) -> Unit,
+    onDelete: (Vehicle) -> Unit
 ) {
 
-    var expanded by remember {
+    var adding by remember {
         mutableStateOf(
             false
         )
     }
 
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-    ) {
+    var editingName by remember {
+        mutableStateOf(
+            ""
+        )
+    }
 
-        OutlinedButton(
-            modifier =
-                Modifier.fillMaxWidth(),
+    var name by remember {
+        mutableStateOf(
+            ""
+        )
+    }
 
-            onClick = {
-                expanded = true
-            }
-        ) {
+    var make by remember {
+        mutableStateOf(
+            ""
+        )
+    }
 
-            Text(
+    var model by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var year by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var plate by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var vin by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var imageUri by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    val launcher =
+        androidx.activity.compose
+            .rememberLauncherForActivityResult(
+                ActivityResultContracts
+                    .GetContent()
+            ) { uri ->
+
                 if (
-                    selectedVehicle
-                        .isBlank()
+                    uri != null
                 ) {
-                    "Fahrzeug auswählen"
-                } else {
-                    selectedVehicle
+
+                    imageUri =
+                        uri.toString()
                 }
-            )
-        }
-
-        DropdownMenu(
-            expanded =
-                expanded,
-            onDismissRequest = {
-                expanded = false
             }
-        ) {
-
-            vehicles.forEach {
-                vehicle ->
-
-                DropdownMenuItem(
-
-                    text = {
-                        Text(
-                            vehicle.name
-                        )
-                    },
-
-                    onClick = {
-
-                        onSelected(
-                            vehicle.name
-                        )
-
-                        expanded =
-                            false
-                    }
-                )
-            }
-        }
-    }
-}
-
-// ============================================================
-// MEIN AUTO
-// ============================================================
-
-@Composable
-private fun VehicleScreen(
-    vehicles: List<Vehicle>,
-    activeVehicle: String,
-    onActiveVehicle: (String) -> Unit,
-    onAdd: (Vehicle) -> Unit,
-    onUpdate: (Int, Vehicle) -> Unit,
-    onDelete: (Int) -> Unit
-) {
-
-    var editingIndex by remember {
-        mutableStateOf<Int?>(null)
-    }
-
-    var adding by remember {
-        mutableStateOf(false)
-    }
 
     Column(
         modifier =
@@ -2070,395 +2220,17 @@ private fun VehicleScreen(
                 Color(0xFFB8BEC8),
             modifier =
                 Modifier.padding(
-                    bottom = 12.dp
+                    bottom =
+                        12.dp
                 )
         )
-
-        LazyColumn(
-            modifier =
-                Modifier.weight(
-                    1f
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
-        ) {
-
-            items(
-                vehicles
-            ) { vehicle ->
-
-                val index =
-                    vehicles.indexOf(
-                        vehicle
-                    )
-
-                VehicleCard(
-                    vehicle =
-                        vehicle,
-                    active =
-                        vehicle.name ==
-                            activeVehicle,
-                    onSelect = {
-                        onActiveVehicle(
-                            vehicle.name
-                        )
-                    },
-                    onEdit = {
-                        editingIndex =
-                            index
-                        adding =
-                            false
-                    },
-                    onDelete = {
-                        onDelete(
-                            index
-                        )
-                    }
-                )
-            }
-
-            if (
-                adding ||
-                editingIndex != null
-            ) {
-
-                item {
-
-                    VehicleForm(
-                        vehicle =
-                            editingIndex
-                                ?.let {
-                                    vehicles[it]
-                                },
-                        onCancel = {
-
-                            adding =
-                                false
-
-                            editingIndex =
-                                null
-                        },
-                        onSave = {
-                            vehicle ->
-
-                            val index =
-                                editingIndex
-
-                            if (
-                                index == null
-                            ) {
-
-                                onAdd(
-                                    vehicle
-                                )
-
-                            } else {
-
-                                onUpdate(
-                                    index,
-                                    vehicle
-                                )
-                            }
-
-                            adding =
-                                false
-
-                            editingIndex =
-                                null
-                        }
-                    )
-                }
-            }
-        }
 
         if (
-            !adding &&
-            editingIndex == null &&
-            vehicles.size < 5
-        ) {
-
-            Button(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                onClick = {
-                    adding =
-                        true
-                }
-            ) {
-
-                Text(
-                    "Fahrzeug hinzufügen"
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun VehicleCard(
-    vehicle: Vehicle,
-    active: Boolean,
-    onSelect: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick =
-                        onSelect
-                ),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (
-                        active
-                    ) {
-                        Color(
-                            0xFF252A32
-                        )
-                    } else {
-                        Color(
-                            0xFF11141A
-                        )
-                    }
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                )
-        ) {
-
-            Row(
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                VehicleImage(
-                    uri =
-                        vehicle.imageUri,
-                    modifier =
-                        Modifier.size(
-                            86.dp
-                        )
-                )
-
-                Spacer(
-                    Modifier.width(
-                        14.dp
-                    )
-                )
-
-                Column(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        )
-                ) {
-
-                    Text(
-                        vehicle.name,
-                        color =
-                            Color.White,
-                        fontWeight =
-                            FontWeight.Bold,
-                        fontSize =
-                            20.sp
-                    )
-
-                    Text(
-                        "${vehicle.make} ${vehicle.model}",
-                        color =
-                            Color(0xFFB8BEC8)
-                    )
-
-                    if (
-                        vehicle.year
-                            .isNotBlank()
-                    ) {
-
-                        Text(
-                            "Baujahr: ${vehicle.year}",
-                            color =
-                                Color(0xFFB8BEC8)
-                        )
-                    }
-
-                    if (
-                        vehicle.plate
-                            .isNotBlank()
-                    ) {
-
-                        Text(
-                            "Kennzeichen: ${vehicle.plate}",
-                            color =
-                                Color(0xFFB8BEC8)
-                        )
-                    }
-                }
-            }
-
-            Spacer(
-                Modifier.height(
-                    10.dp
-                )
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    onClick =
-                        onEdit
-                ) {
-
-                    Icon(
-                        Icons.Filled.Edit,
-                        null
-                    )
-
-                    Spacer(
-                        Modifier.width(
-                            4.dp
-                        )
-                    )
-
-                    Text(
-                        "Bearbeiten"
-                    )
-                }
-
-                OutlinedButton(
-                    onClick =
-                        onDelete
-                ) {
-
-                    Icon(
-                        Icons.Filled.Delete,
-                        null
-                    )
-
-                    Spacer(
-                        Modifier.width(
-                            4.dp
-                        )
-                    )
-
-                    Text(
-                        "Löschen"
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VehicleForm(
-    vehicle: Vehicle?,
-    onCancel: () -> Unit,
-    onSave: (Vehicle) -> Unit
-) {
-
-    var name by remember {
-        mutableStateOf(
-            vehicle?.name ?: ""
-        )
-    }
-
-    var make by remember {
-        mutableStateOf(
-            vehicle?.make ?: ""
-        )
-    }
-
-    var model by remember {
-        mutableStateOf(
-            vehicle?.model ?: ""
-        )
-    }
-
-    var year by remember {
-        mutableStateOf(
-            vehicle?.year ?: ""
-        )
-    }
-
-    var plate by remember {
-        mutableStateOf(
-            vehicle?.plate ?: ""
-        )
-    }
-
-    var vin by remember {
-        mutableStateOf(
-            vehicle?.vin ?: ""
-        )
-    }
-
-    var imageUri by remember {
-        mutableStateOf(
-            vehicle?.imageUri ?: ""
-        )
-    }
-
-    val picker =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts
-                .OpenDocument()
-        ) { uri ->
-
-            if (
-                uri != null
-            ) {
-
-                imageUri =
-                    uri.toString()
-            }
-        }
-
-    Card(
-        modifier =
-            Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
-                )
+            vehicles.isEmpty()
         ) {
 
             Text(
-                if (
-                    vehicle == null
-                ) {
-                    "Fahrzeug hinzufügen"
-                } else {
-                    "Fahrzeug bearbeiten"
-                },
+                "Noch kein Fahrzeug angelegt.",
                 color =
                     Color.White,
                 fontSize =
@@ -2467,159 +2239,584 @@ private fun VehicleForm(
                     FontWeight.Bold
             )
 
-            VehicleImage(
-                uri =
-                    imageUri,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(
-                            180.dp
-                        )
+            Spacer(
+                Modifier.height(
+                    8.dp
+                )
             )
+        }
 
-            OutlinedButton(
+        LazyColumn(
+
+            modifier =
+                Modifier.weight(
+                    1f
+                ),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+
+        ) {
+
+            items(
+                vehicles
+            ) { vehicle ->
+
+                Card(
+
+                    colors =
+                        CardDefaults
+                            .cardColors(
+                                containerColor =
+                                    Color(
+                                        0xFF11141A
+                                    )
+                            ),
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+
+                ) {
+
+                    Column(
+                        Modifier.padding(
+                            16.dp
+                        )
+                    ) {
+
+                        Row(
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+
+                            VehicleImage(
+                                uri =
+                                    vehicle.imageUri,
+                                modifier =
+                                    Modifier.size(
+                                        82.dp
+                                    )
+                            )
+
+                            Spacer(
+                                Modifier.width(
+                                    12.dp
+                                )
+                            )
+
+                            Column(
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    )
+                            ) {
+
+                                Text(
+                                    vehicle.name,
+                                    color =
+                                        Color.White,
+                                    fontWeight =
+                                        FontWeight.Bold,
+                                    fontSize =
+                                        18.sp
+                                )
+
+                                Text(
+                                    "${vehicle.make} ${vehicle.model} ${vehicle.year}"
+                                        .trim(),
+                                    color =
+                                        Color(
+                                            0xFFB8BEC8
+                                        )
+                                )
+
+                                if (
+                                    vehicle.plate
+                                        .isNotBlank()
+                                ) {
+
+                                    Text(
+                                        "Kennzeichen: ${vehicle.plate}",
+                                        color =
+                                            Color.White
+                                    )
+                                }
+
+                                if (
+                                    vehicle.vin
+                                        .isNotBlank()
+                                ) {
+
+                                    Text(
+                                        "FIN/VIN: ${vehicle.vin}",
+                                        color =
+                                            Color(
+                                                0xFFB8BEC8
+                                            ),
+                                        maxLines =
+                                            1
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(
+                            Modifier.height(
+                                10.dp
+                            )
+                        )
+
+                        Row(
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    8.dp
+                                )
+                        ) {
+
+                            Button(
+                                onClick = {
+
+                                    onActiveVehicle(
+                                        vehicle.name
+                                    )
+                                }
+                            ) {
+
+                                Text(
+
+                                    if (
+                                        activeVehicle ==
+                                        vehicle.name
+                                    ) {
+                                        "Aktiv"
+                                    } else {
+                                        "Aktiv setzen"
+                                    }
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+
+                                    editingName =
+                                        vehicle.name
+
+                                    name =
+                                        vehicle.name
+
+                                    make =
+                                        vehicle.make
+
+                                    model =
+                                        vehicle.model
+
+                                    year =
+                                        vehicle.year
+
+                                    plate =
+                                        vehicle.plate
+
+                                    vin =
+                                        vehicle.vin
+
+                                    imageUri =
+                                        vehicle.imageUri
+
+                                    adding =
+                                        true
+                                }
+                            ) {
+
+                                Text(
+                                    "Bearbeiten"
+                                )
+                            }
+                        }
+
+                        Spacer(
+                            Modifier.height(
+                                4.dp
+                            )
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                onDelete(
+                                    vehicle
+                                )
+                            }
+                        ) {
+
+                            Text(
+                                "Fahrzeug entfernen"
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (
+                adding
+            ) {
+
+                item {
+
+                    Card(
+
+                        colors =
+                            CardDefaults
+                                .cardColors(
+                                    containerColor =
+                                        Color(
+                                            0xFF11141A
+                                        )
+                                ),
+
+                        modifier =
+                            Modifier.fillMaxWidth()
+
+                    ) {
+
+                        Column(
+
+                            Modifier.padding(
+                                16.dp
+                            ),
+
+                            verticalArrangement =
+                                Arrangement.spacedBy(
+                                    8.dp
+                                )
+
+                        ) {
+
+                            Text(
+
+                                if (
+                                    editingName
+                                        .isBlank()
+                                ) {
+                                    "Fahrzeug hinzufügen"
+                                } else {
+                                    "Fahrzeug bearbeiten"
+                                },
+
+                                color =
+                                    Color.White,
+
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+
+                            OutlinedTextField(
+
+                                name,
+
+                                {
+                                    name =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Bezeichnung"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+
+                                make,
+
+                                {
+                                    make =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Marke"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+
+                                model,
+
+                                {
+                                    model =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Modell"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+
+                                year,
+
+                                {
+                                    year =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Baujahr"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+
+                                plate,
+
+                                {
+                                    plate =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Kennzeichen"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+
+                                vin,
+
+                                {
+                                    vin =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "FIN / VIN"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            )
+
+                            OutlinedButton(
+
+                                onClick = {
+
+                                    launcher.launch(
+                                        "image/*"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+
+                            ) {
+
+                                Text(
+                                    "Fahrzeugbild aus Galerie wählen"
+                                )
+                            }
+
+                            if (
+                                imageUri
+                                    .isNotBlank()
+                            ) {
+
+                                VehicleImage(
+
+                                    uri =
+                                        imageUri,
+
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(
+                                                160.dp
+                                            )
+                                )
+                            }
+
+                            Row(
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        8.dp
+                                    )
+                            ) {
+
+                                Button(
+
+                                    enabled =
+                                        name
+                                            .isNotBlank(),
+
+                                    onClick = {
+
+                                        onSave(
+
+                                            Vehicle(
+
+                                                name =
+                                                    name.trim(),
+
+                                                make =
+                                                    make.trim(),
+
+                                                model =
+                                                    model.trim(),
+
+                                                year =
+                                                    year.trim(),
+
+                                                plate =
+                                                    plate.trim(),
+
+                                                vin =
+                                                    vin.trim(),
+
+                                                imageUri =
+                                                    imageUri
+                                            ),
+
+                                            editingName
+                                        )
+
+                                        name =
+                                            ""
+
+                                        make =
+                                            ""
+
+                                        model =
+                                            ""
+
+                                        year =
+                                            ""
+
+                                        plate =
+                                            ""
+
+                                        vin =
+                                            ""
+
+                                        imageUri =
+                                            ""
+
+                                        editingName =
+                                            ""
+
+                                        adding =
+                                            false
+                                    }
+
+                                ) {
+
+                                    Text(
+                                        "Speichern"
+                                    )
+                                }
+
+                                OutlinedButton(
+
+                                    onClick = {
+
+                                        adding =
+                                            false
+
+                                        editingName =
+                                            ""
+                                    }
+
+                                ) {
+
+                                    Text(
+                                        "Abbrechen"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (
+            !adding &&
+            vehicles.size < 5
+        ) {
+
+            Button(
+
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 onClick = {
 
-                    picker.launch(
-                        arrayOf(
-                            "image/*"
-                        )
-                    )
+                    editingName =
+                        ""
+
+                    name =
+                        ""
+
+                    make =
+                        ""
+
+                    model =
+                        ""
+
+                    year =
+                        ""
+
+                    plate =
+                        ""
+
+                    vin =
+                        ""
+
+                    imageUri =
+                        ""
+
+                    adding =
+                        true
                 }
+
             ) {
 
                 Text(
-                    "Fahrzeugbild auswählen"
+                    "Fahrzeug hinzufügen"
                 )
-            }
-
-            AppField(
-                value =
-                    name,
-                label =
-                    "Bezeichnung",
-                onValueChange = {
-                    name =
-                        it
-                }
-            )
-
-            AppField(
-                value =
-                    make,
-                label =
-                    "Marke",
-                onValueChange = {
-                    make =
-                        it
-                }
-            )
-
-            AppField(
-                value =
-                    model,
-                label =
-                    "Modell",
-                onValueChange = {
-                    model =
-                        it
-                }
-            )
-
-            AppField(
-                value =
-                    year,
-                label =
-                    "Baujahr",
-                onValueChange = {
-                    year =
-                        it
-                }
-            )
-
-            AppField(
-                value =
-                    plate,
-                label =
-                    "Kennzeichen",
-                onValueChange = {
-                    plate =
-                        it
-                }
-            )
-
-            AppField(
-                value =
-                    vin,
-                label =
-                    "VIN / FIN",
-                onValueChange = {
-                    vin =
-                        it
-                }
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick =
-                        onCancel
-                ) {
-
-                    Text(
-                        "Abbrechen"
-                    )
-                }
-
-                Button(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    enabled =
-                        name.isNotBlank(),
-
-                    onClick = {
-
-                        onSave(
-                            Vehicle(
-                                name =
-                                    name.trim(),
-                                make =
-                                    make.trim(),
-                                model =
-                                    model.trim(),
-                                year =
-                                    year.trim(),
-                                plate =
-                                    plate.trim(),
-                                vin =
-                                    vin.trim(),
-                                imageUri =
-                                    imageUri
-                            )
-                        )
-                    }
-                ) {
-
-                    Text(
-                        "Speichern"
-                    )
-                }
             }
         }
     }
@@ -2636,28 +2833,38 @@ private fun VehicleImage(
     ) {
 
         Box(
+
             modifier =
                 modifier
                     .clip(
                         RoundedCornerShape(
-                            14.dp
+                            12.dp
                         )
                     )
                     .background(
-                        Color(0xFF242830)
+                        Color(
+                            0xFF20242D
+                        )
                     ),
+
             contentAlignment =
                 Alignment.Center
+
         ) {
 
             Icon(
+
                 Icons.Filled.DirectionsCar,
-                null,
+
+                contentDescription =
+                    null,
+
                 tint =
-                    Color(0xFF8D949E),
+                    Color.White,
+
                 modifier =
                     Modifier.size(
-                        42.dp
+                        36.dp
                     )
             )
         }
@@ -2671,10 +2878,13 @@ private fun VehicleImage(
     var bitmap by remember(
         uri
     ) {
+
         mutableStateOf<
             androidx.compose.ui.graphics
                 .ImageBitmap?
-        >(null)
+        >(
+            null
+        )
     }
 
     LaunchedEffect(
@@ -2698,6 +2908,7 @@ private fun VehicleImage(
                                 )
                             )
                             ?.use {
+
                                 BitmapFactory
                                     .decodeStream(
                                         it
@@ -2719,16 +2930,20 @@ private fun VehicleImage(
     ) {
 
         Image(
+
             bitmap =
                 bitmap!!,
+
             contentDescription =
                 "Fahrzeugbild",
+
             modifier =
                 modifier.clip(
                     RoundedCornerShape(
-                        14.dp
+                        12.dp
                     )
                 ),
+
             contentScale =
                 ContentScale.Crop
         )
@@ -2736,1352 +2951,50 @@ private fun VehicleImage(
     } else {
 
         Box(
+
             modifier =
                 modifier
                     .clip(
                         RoundedCornerShape(
-                            14.dp
+                            12.dp
                         )
                     )
                     .background(
-                        Color(0xFF242830)
+                        Color(
+                            0xFF20242D
+                        )
                     ),
+
             contentAlignment =
                 Alignment.Center
+
         ) {
 
-            Text(
-                "Bild wird geladen...",
-                color =
-                    Color.White
-            )
-        }
-    }
-}
+            Icon(
 
-// ============================================================
-// REPARATUREN
-// ============================================================
+                Icons.Filled.DirectionsCar,
 
-@Composable
-private fun RepairsScreen(
-    vehicles: List<Vehicle>,
-    repairs: List<Repair>,
-    selectedVehicle: String,
-    onVehicleSelected: (String) -> Unit,
-    onSave: (Repair) -> Unit,
-    onUpdate: (Repair) -> Unit,
-    onDelete: (Repair) -> Unit
-) {
+                contentDescription =
+                    null,
 
-    var editing by remember {
-        mutableStateOf<Repair?>(
-            null
-        )
-    }
-
-    var adding by remember {
-        mutableStateOf(false)
-    }
-
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-    ) {
-
-        VehicleSelector(
-            vehicles =
-                vehicles,
-            selectedVehicle =
-                selectedVehicle,
-            onSelected =
-                onVehicleSelected
-        )
-
-        Spacer(
-            Modifier.height(
-                12.dp
-            )
-        )
-
-        if (
-            !adding &&
-            editing == null
-        ) {
-
-            Button(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                onClick = {
-                    adding =
-                        true
-                }
-            ) {
-
-                Text(
-                    "Reparatur hinzufügen"
-                )
-            }
-        }
-
-        Spacer(
-            Modifier.height(
-                12.dp
-            )
-        )
-
-        if (
-            adding ||
-            editing != null
-        ) {
-
-            RepairForm(
-                vehicleName =
-                    selectedVehicle,
-                repair =
-                    editing,
-                onCancel = {
-                    adding =
-                        false
-
-                    editing =
-                        null
-                },
-                onSave = {
-                    item ->
-
-                    if (
-                        editing == null
-                    ) {
-
-                        onSave(
-                            item
-                        )
-
-                    } else {
-
-                        onUpdate(
-                            item
-                        )
-                    }
-
-                    adding =
-                        false
-
-                    editing =
-                        null
-                }
-            )
-
-        } else {
-
-            LazyColumn(
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
-                    )
-            ) {
-
-                items(
-                    repairs.filter {
-                        it.vehicleName ==
-                            selectedVehicle
-                    }
-                ) { repair ->
-
-                    RepairCard(
-                        repair =
-                            repair,
-                        onEdit = {
-                            editing =
-                                repair
-                        },
-                        onDelete = {
-                            onDelete(
-                                repair
-                            )
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RepairForm(
-    vehicleName: String,
-    repair: Repair?,
-    onCancel: () -> Unit,
-    onSave: (Repair) -> Unit
-) {
-
-    var date by remember {
-        mutableStateOf(
-            repair?.date
-                ?: LocalDate.now()
-                    .toString()
-        )
-    }
-
-    var mileage by remember {
-        mutableStateOf(
-            repair?.mileage ?: ""
-        )
-    }
-
-    var description by remember {
-        mutableStateOf(
-            repair?.description ?: ""
-        )
-    }
-
-    var cost by remember {
-        mutableStateOf(
-            repair?.cost ?: ""
-        )
-    }
-
-    var workshop by remember {
-        mutableStateOf(
-            repair?.workshop ?: ""
-        )
-    }
-
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
-                )
-        ) {
-
-            Text(
-                "Reparatur",
-                color =
+                tint =
                     Color.White,
-                fontSize =
-                    20.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
 
-            AppField(
-                date,
-                "Datum",
-                { date = it }
-            )
-
-            AppField(
-                mileage,
-                "Kilometerstand",
-                { mileage = it }
-            )
-
-            AppField(
-                description,
-                "Beschreibung",
-                { description = it },
-                false
-            )
-
-            AppField(
-                cost,
-                "Kosten in €",
-                { cost = it }
-            )
-
-            AppField(
-                workshop,
-                "Werkstatt",
-                { workshop = it }
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick =
-                        onCancel
-                ) {
-
-                    Text(
-                        "Abbrechen"
-                    )
-                }
-
-                Button(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    enabled =
-                        description
-                            .isNotBlank(),
-
-                    onClick = {
-
-                        onSave(
-                            Repair(
-                                id =
-                                    repair?.id
-                                        ?: System
-                                            .currentTimeMillis(),
-                                vehicleName =
-                                    vehicleName,
-                                date =
-                                    date,
-                                mileage =
-                                    mileage,
-                                description =
-                                    description,
-                                cost =
-                                    cost,
-                                workshop =
-                                    workshop
-                            )
-                        )
-                    }
-                ) {
-
-                    Text(
-                        "Speichern"
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RepairCard(
-    repair: Repair,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                )
-        ) {
-
-            Text(
-                repair.description,
-                color =
-                    Color.White,
-                fontSize =
-                    18.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            Text(
-                "Datum: ${repair.date}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            Text(
-                "Kilometerstand: ${repair.mileage}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            Text(
-                "Kosten: ${repair.cost} €",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            if (
-                repair.workshop
-                    .isNotBlank()
-            ) {
-
-                Text(
-                    "Werkstatt: ${repair.workshop}",
-                    color =
-                        Color(0xFFB8BEC8)
-                )
-            }
-
-            Spacer(
-                Modifier.height(
-                    8.dp
-                )
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    onClick =
-                        onEdit
-                ) {
-
-                    Text(
-                        "Bearbeiten"
-                    )
-                }
-
-                OutlinedButton(
-                    onClick =
-                        onDelete
-                ) {
-
-                    Text(
-                        "Löschen"
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ============================================================
-// PICKERL / TÜV
-// ============================================================
-
-@Composable
-private fun PickerlScreen(
-    vehicles: List<Vehicle>,
-    pickerls: List<Pickerl>,
-    selectedVehicle: String,
-    onVehicleSelected: (String) -> Unit,
-    onSave: (Pickerl) -> Unit
-) {
-
-    val context =
-        LocalContext.current
-
-    val existing =
-        pickerls.firstOrNull {
-            it.vehicleName ==
-                selectedVehicle
-        }
-
-    var lastDate by remember(
-        selectedVehicle
-    ) {
-        mutableStateOf(
-            existing?.lastDate
-                ?: ""
-        )
-    }
-
-    var nextDate by remember(
-        selectedVehicle
-    ) {
-        mutableStateOf(
-            existing?.nextDate
-                ?: ""
-        )
-    }
-
-    var notes by remember(
-        selectedVehicle
-    ) {
-        mutableStateOf(
-            existing?.notes
-                ?: ""
-        )
-    }
-
-    var reminder by remember(
-        selectedVehicle
-    ) {
-        mutableStateOf(
-            existing?.reminder
-                ?: true
-        )
-    }
-
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-    ) {
-
-        VehicleSelector(
-            vehicles =
-                vehicles,
-            selectedVehicle =
-                selectedVehicle,
-            onSelected =
-                onVehicleSelected
-        )
-
-        Spacer(
-            Modifier.height(
-                12.dp
-            )
-        )
-
-        Card(
-            colors =
-                CardDefaults.cardColors(
-                    containerColor =
-                        Color(0xFF11141A)
-                )
-        ) {
-
-            Column(
                 modifier =
-                    Modifier.padding(
-                        16.dp
-                    ),
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
+                    Modifier.size(
+                        36.dp
                     )
-            ) {
-
-                Text(
-                    "Pickerl / TÜV",
-                    color =
-                        Color.White,
-                    fontSize =
-                        20.sp,
-                    fontWeight =
-                        FontWeight.Bold
-                )
-
-                AppField(
-                    lastDate,
-                    "Letztes Pickerl (YYYY-MM-DD)",
-                    { lastDate = it }
-                )
-
-                AppField(
-                    nextDate,
-                    "Nächstes Pickerl (YYYY-MM-DD)",
-                    { nextDate = it }
-                )
-
-                AppField(
-                    notes,
-                    "Notizen",
-                    { notes = it },
-                    false
-                )
-
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    verticalAlignment =
-                        Alignment.CenterVertically
-                ) {
-
-                    Column(
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
-                    ) {
-
-                        Text(
-                            "Erinnerung",
-                            color =
-                                Color.White
-                        )
-
-                        Text(
-                            "3 Monate vor dem Pickerl",
-                            color =
-                                Color(0xFFB8BEC8),
-                            fontSize =
-                                12.sp
-                        )
-                    }
-
-                    Switch(
-                        checked =
-                            reminder,
-                        onCheckedChange = {
-                            reminder =
-                                it
-                        }
-                    )
-                }
-
-                Button(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    enabled =
-                        selectedVehicle
-                            .isNotBlank(),
-
-                    onClick = {
-
-                        val item =
-                            Pickerl(
-                                vehicleName =
-                                    selectedVehicle,
-                                lastDate =
-                                    lastDate,
-                                nextDate =
-                                    nextDate,
-                                notes =
-                                    notes,
-                                reminder =
-                                    reminder
-                            )
-
-                        onSave(
-                            item
-                        )
-
-                        if (
-                            reminder &&
-                            nextDate
-                                .isNotBlank()
-                        ) {
-
-                            schedulePickerlReminder(
-                                context,
-                                selectedVehicle,
-                                nextDate
-                            )
-                        }
-                    }
-                ) {
-
-                    Text(
-                        "Pickerl speichern"
-                    )
-                }
-            }
+            )
         }
     }
 }
 
-// ============================================================
-// PICKERL ALARM
-// ============================================================
-
-private fun schedulePickerlReminder(
-    context: Context,
-    vehicleName: String,
-    nextDate: String
-) {
-
-    try {
-
-        val date =
-            LocalDate.parse(
-                nextDate
-            )
-
-        val reminderDate =
-            date.minusMonths(
-                3
-            )
-
-        val trigger =
-            reminderDate
-                .atTime(
-                    9,
-                    0
-                )
-                .atZone(
-                    ZoneId.systemDefault()
-                )
-                .toInstant()
-                .toEpochMilli()
-
-        val intent =
-            Intent(
-                context,
-                PickerlReceiver::class.java
-            ).apply {
-
-                putExtra(
-                    "vehicle",
-                    vehicleName
-                )
-            }
-
-        val pending =
-            PendingIntent.getBroadcast(
-                context,
-                vehicleName.hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or
-                    PendingIntent.FLAG_IMMUTABLE
-            )
-
-        val alarm =
-            context.getSystemService(
-                Context.ALARM_SERVICE
-            ) as AlarmManager
-
-        alarm.setAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            trigger,
-            pending
-        )
-
-    } catch (_: Exception) {
-        // Ungültiges Datum wird ignoriert.
-    }
-}
-
-// ============================================================
-// WARTUNGEN
-// ============================================================
-
 @Composable
-private fun MaintenanceScreen(
+private fun VehicleSelector(
     vehicles: List<Vehicle>,
-    maintenances: List<Maintenance>,
-    selectedVehicle: String,
-    onVehicleSelected: (String) -> Unit,
-    onSave: (Maintenance) -> Unit,
-    onUpdate: (Maintenance) -> Unit,
-    onDelete: (Maintenance) -> Unit
+    activeVehicle: String,
+    onSelected: (String) -> Unit
 ) {
-
-    var adding by remember {
-        mutableStateOf(false)
-    }
-
-    var editing by remember {
-        mutableStateOf<Maintenance?>(
-            null
-        )
-    }
-
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-    ) {
-
-        VehicleSelector(
-            vehicles =
-                vehicles,
-            selectedVehicle =
-                selectedVehicle,
-            onSelected =
-                onVehicleSelected
-        )
-
-        Spacer(
-            Modifier.height(
-                12.dp
-            )
-        )
-
-        if (
-            !adding &&
-            editing == null
-        ) {
-
-            Button(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                onClick = {
-                    adding =
-                        true
-                }
-            ) {
-
-                Text(
-                    "Wartung hinzufügen"
-                )
-            }
-        }
-
-        Spacer(
-            Modifier.height(
-                12.dp
-            )
-        )
-
-        if (
-            adding ||
-            editing != null
-        ) {
-
-            MaintenanceForm(
-                vehicleName =
-                    selectedVehicle,
-                maintenance =
-                    editing,
-                onCancel = {
-                    adding =
-                        false
-                    editing =
-                        null
-                },
-                onSave = {
-                    item ->
-
-                    if (
-                        editing == null
-                    ) {
-                        onSave(
-                            item
-                        )
-                    } else {
-                        onUpdate(
-                            item
-                        )
-                    }
-
-                    adding =
-                        false
-                    editing =
-                        null
-                }
-            )
-
-        } else {
-
-            LazyColumn(
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
-                    )
-            ) {
-
-                items(
-                    maintenances.filter {
-                        it.vehicleName ==
-                            selectedVehicle
-                    }
-                ) { item ->
-
-                    MaintenanceCard(
-                        maintenance =
-                            item,
-                        onEdit = {
-                            editing =
-                                item
-                        },
-                        onDelete = {
-                            onDelete(
-                                item
-                            )
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MaintenanceForm(
-    vehicleName: String,
-    maintenance: Maintenance?,
-    onCancel: () -> Unit,
-    onSave: (Maintenance) -> Unit
-) {
-
-    var date by remember {
-        mutableStateOf(
-            maintenance?.date
-                ?: LocalDate.now()
-                    .toString()
-        )
-    }
-
-    var mileage by remember {
-        mutableStateOf(
-            maintenance?.mileage
-                ?: ""
-        )
-    }
-
-    var cost by remember {
-        mutableStateOf(
-            maintenance?.cost
-                ?: ""
-        )
-    }
-
-    var workshop by remember {
-        mutableStateOf(
-            maintenance?.workshop
-                ?: ""
-        )
-    }
-
-    var notes by remember {
-        mutableStateOf(
-            maintenance?.notes
-                ?: ""
-        )
-    }
-
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
-                )
-        ) {
-
-            Text(
-                "Wartung",
-                color =
-                    Color.White,
-                fontSize =
-                    20.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            AppField(
-                date,
-                "Datum",
-                { date = it }
-            )
-
-            AppField(
-                mileage,
-                "Kilometerstand",
-                { mileage = it }
-            )
-
-            AppField(
-                cost,
-                "Kosten in €",
-                { cost = it }
-            )
-
-            AppField(
-                workshop,
-                "Werkstatt",
-                { workshop = it }
-            )
-
-            AppField(
-                notes,
-                "Notizen",
-                { notes = it },
-                false
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick =
-                        onCancel
-                ) {
-
-                    Text(
-                        "Abbrechen"
-                    )
-                }
-
-                Button(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick = {
-
-                        onSave(
-                            Maintenance(
-                                id =
-                                    maintenance?.id
-                                        ?: System
-                                            .currentTimeMillis(),
-                                vehicleName =
-                                    vehicleName,
-                                date =
-                                    date,
-                                mileage =
-                                    mileage,
-                                cost =
-                                    cost,
-                                workshop =
-                                    workshop,
-                                notes =
-                                    notes
-                            )
-                        )
-                    }
-                ) {
-
-                    Text(
-                        "Speichern"
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MaintenanceCard(
-    maintenance: Maintenance,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                )
-        ) {
-
-            Text(
-                "Wartung",
-                color =
-                    Color.White,
-                fontSize =
-                    18.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            Text(
-                "Datum: ${maintenance.date}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            Text(
-                "Kilometerstand: ${maintenance.mileage}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            Text(
-                "Kosten: ${maintenance.cost} €",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            if (
-                maintenance.workshop
-                    .isNotBlank()
-            ) {
-
-                Text(
-                    "Werkstatt: ${maintenance.workshop}",
-                    color =
-                        Color(0xFFB8BEC8)
-                )
-            }
-
-            if (
-                maintenance.notes
-                    .isNotBlank()
-            ) {
-
-                Text(
-                    "Notizen: ${maintenance.notes}",
-                    color =
-                        Color(0xFFB8BEC8)
-                )
-            }
-
-            Spacer(
-                Modifier.height(
-                    8.dp
-                )
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    onClick =
-                        onEdit
-                ) {
-
-                    Text(
-                        "Bearbeiten"
-                    )
-                }
-
-                OutlinedButton(
-                    onClick =
-                        onDelete
-                ) {
-
-                    Text(
-                        "Löschen"
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ============================================================
-// REIFEN
-// ============================================================
-
-@Composable
-private fun TiresScreen(
-    vehicles: List<Vehicle>,
-    tires: List<TireSet>,
-    selectedVehicle: String,
-    onVehicleSelected: (String) -> Unit,
-    onSave: (TireSet) -> Unit,
-    onUpdate: (TireSet) -> Unit,
-    onDelete: (TireSet) -> Unit
-) {
-
-    var adding by remember {
-        mutableStateOf(false)
-    }
-
-    var editing by remember {
-        mutableStateOf<TireSet?>(
-            null
-        )
-    }
-
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-    ) {
-
-        VehicleSelector(
-            vehicles =
-                vehicles,
-            selectedVehicle =
-                selectedVehicle,
-            onSelected =
-                onVehicleSelected
-        )
-
-        Spacer(
-            Modifier.height(
-                12.dp
-            )
-        )
-
-        if (
-            !adding &&
-            editing == null
-        ) {
-
-            Button(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                onClick = {
-                    adding =
-                        true
-                }
-            ) {
-
-                Text(
-                    "Reifensatz hinzufügen"
-                )
-            }
-        }
-
-        Spacer(
-            Modifier.height(
-                12.dp
-            )
-        )
-
-        if (
-            adding ||
-            editing != null
-        ) {
-
-            TireForm(
-                vehicleName =
-                    selectedVehicle,
-                tire =
-                    editing,
-                onCancel = {
-                    adding =
-                        false
-                    editing =
-                        null
-                },
-                onSave = {
-                    item ->
-
-                    if (
-                        editing == null
-                    ) {
-                        onSave(
-                            item
-                        )
-                    } else {
-                        onUpdate(
-                            item
-                        )
-                    }
-
-                    adding =
-                        false
-                    editing =
-                        null
-                }
-            )
-
-        } else {
-
-            LazyColumn(
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
-                    )
-            ) {
-
-                items(
-                    tires.filter {
-                        it.vehicleName ==
-                            selectedVehicle
-                    }
-                ) { tire ->
-
-                    TireCard(
-                        tire =
-                            tire,
-                        onEdit = {
-                            editing =
-                                tire
-                        },
-                        onDelete = {
-                            onDelete(
-                                tire
-                            )
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TireForm(
-    vehicleName: String,
-    tire: TireSet?,
-    onCancel: () -> Unit,
-    onSave: (TireSet) -> Unit
-) {
-
-    var season by remember {
-        mutableStateOf(
-            tire?.season
-                ?: "Sommer"
-        )
-    }
-
-    var dimension by remember {
-        mutableStateOf(
-            tire?.dimension
-                ?: ""
-        )
-    }
-
-    var brand by remember {
-        mutableStateOf(
-            tire?.brand
-                ?: ""
-        )
-    }
-
-    var dot by remember {
-        mutableStateOf(
-            tire?.dot
-                ?: ""
-        )
-    }
-
-    var tread by remember {
-        mutableStateOf(
-            tire?.treadDepth
-                ?: ""
-        )
-    }
-
-    var condition by remember {
-        mutableStateOf(
-            tire?.condition
-                ?: ""
-        )
-    }
-
-    var storage by remember {
-        mutableStateOf(
-            tire?.storage
-                ?: ""
-        )
-    }
 
     var expanded by remember {
         mutableStateOf(
@@ -4089,658 +3002,1658 @@ private fun TireForm(
         )
     }
 
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
+    if (
+        vehicles.isEmpty()
     ) {
 
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
+        Text(
+
+            "Bitte zuerst unter „Mein Auto“ ein Fahrzeug anlegen.",
+
+            color =
+                Color(
+                    0xFFB8BEC8
                 )
-        ) {
+        )
 
-            Text(
-                "Reifensatz",
-                color =
-                    Color.White,
-                fontSize =
-                    20.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
+        return
+    }
 
-            Box {
+    val selected =
+        vehicles
+            .firstOrNull {
+                it.name ==
+                    activeVehicle
+            }
+            ?.name
+            ?: vehicles.first().name
 
-                OutlinedButton(
-                    modifier =
-                        Modifier.fillMaxWidth(),
+    Box {
 
-                    onClick = {
+        OutlinedTextField(
+
+            value =
+                selected,
+
+            onValueChange = {},
+
+            readOnly =
+                true,
+
+            label = {
+                Text(
+                    "Aktives Fahrzeug"
+                )
+            },
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable {
                         expanded =
                             true
                     }
-                ) {
+        )
 
-                    Text(
-                        "Saison: $season"
-                    )
-                }
+        DropdownMenu(
 
-                DropdownMenu(
-                    expanded =
-                        expanded,
-                    onDismissRequest = {
-                        expanded =
-                            false
-                    }
-                ) {
+            expanded =
+                expanded,
 
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                "Sommer"
-                            )
-                        },
-                        onClick = {
-                            season =
-                                "Sommer"
-                            expanded =
-                                false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                "Winter"
-                            )
-                        },
-                        onClick = {
-                            season =
-                                "Winter"
-                            expanded =
-                                false
-                        }
-                    )
-                }
+            onDismissRequest = {
+                expanded =
+                    false
             }
 
-            AppField(
-                dimension,
-                "Dimension",
-                { dimension = it }
-            )
-
-            AppField(
-                brand,
-                "Marke",
-                { brand = it }
-            )
-
-            AppField(
-                dot,
-                "DOT",
-                { dot = it }
-            )
-
-            AppField(
-                tread,
-                "Profiltiefe",
-                { tread = it }
-            )
-
-            AppField(
-                condition,
-                "Zustand",
-                { condition = it }
-            )
-
-            AppField(
-                storage,
-                "Lagerung",
-                { storage = it }
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick =
-                        onCancel
-                ) {
-
-                    Text(
-                        "Abbrechen"
-                    )
-                }
-
-                Button(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick = {
-
-                        onSave(
-                            TireSet(
-                                id =
-                                    tire?.id
-                                        ?: System
-                                            .currentTimeMillis(),
-                                vehicleName =
-                                    vehicleName,
-                                season =
-                                    season,
-                                dimension =
-                                    dimension,
-                                brand =
-                                    brand,
-                                dot =
-                                    dot,
-                                treadDepth =
-                                    tread,
-                                condition =
-                                    condition,
-                                storage =
-                                    storage
-                            )
-                        )
-                    }
-                ) {
-
-                    Text(
-                        "Speichern"
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TireCard(
-    tire: TireSet,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                )
         ) {
 
-            Text(
-                tire.season,
-                color =
-                    Color.White,
-                fontSize =
-                    18.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
+            vehicles.forEach {
+                vehicle ->
 
-            Text(
-                "Dimension: ${tire.dimension}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
+                DropdownMenuItem(
 
-            Text(
-                "Marke: ${tire.brand}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
+                    text = {
+                        Text(
+                            vehicle.name
+                        )
+                    },
 
-            Text(
-                "DOT: ${tire.dot}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
+                    onClick = {
 
-            Text(
-                "Profiltiefe: ${tire.treadDepth}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
+                        expanded =
+                            false
 
-            Text(
-                "Zustand: ${tire.condition}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            Text(
-                "Lagerung: ${tire.storage}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            Spacer(
-                Modifier.height(
-                    8.dp
+                        onSelected(
+                            vehicle.name
+                        )
+                    }
                 )
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    onClick =
-                        onEdit
-                ) {
-
-                    Text(
-                        "Bearbeiten"
-                    )
-                }
-
-                OutlinedButton(
-                    onClick =
-                        onDelete
-                ) {
-
-                    Text(
-                        "Löschen"
-                    )
-                }
             }
         }
     }
 }
 
-// ============================================================
-// GESAMTBLICK
-// ============================================================
-
 @Composable
-private fun OverviewScreen(
+private fun RepairScreen(
+    store: VehicleStore,
     vehicles: List<Vehicle>,
-    repairs: List<Repair>,
-    maintenances: List<Maintenance>,
-    pickerls: List<Pickerl>,
-    tires: List<TireSet>,
-    selectedVehicle: String,
-    onVehicleSelected: (String) -> Unit
+    activeVehicle: String,
+    onActiveVehicle: (String) -> Unit
 ) {
 
+    var showForm by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    var date by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var mileage by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var description by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var cost by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var workshop by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var repairs by remember {
+        mutableStateOf(
+            store.loadRepairs()
+        )
+    }
+
+    val list =
+        repairs.filter {
+            it.vehicle ==
+                activeVehicle
+        }
+
     Column(
-        modifier =
-            Modifier.fillMaxSize()
+        Modifier.fillMaxSize()
     ) {
 
         VehicleSelector(
-            vehicles =
-                vehicles,
-            selectedVehicle =
-                selectedVehicle,
-            onSelected =
-                onVehicleSelected
+            vehicles,
+            activeVehicle,
+            onActiveVehicle
         )
 
         Spacer(
             Modifier.height(
-                12.dp
+                10.dp
             )
         )
 
-        val vehicle =
-            vehicles.firstOrNull {
-                it.name ==
-                    selectedVehicle
+        if (
+            vehicles.isEmpty()
+        ) return@Column
+
+        LazyColumn(
+
+            modifier =
+                Modifier.weight(
+                    1f
+                ),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+
+        ) {
+
+            if (
+                list.isEmpty()
+            ) {
+
+                item {
+
+                    EmptyCard(
+                        "Noch keine Reparatur eingetragen."
+                    )
+                }
             }
+
+            items(
+                list
+            ) { repair ->
+
+                RecordCard(
+
+                    title =
+                        repair.description
+                            .ifBlank {
+                                "Reparatur"
+                            },
+
+                    lines =
+                        listOf(
+                            "Datum: ${repair.date}",
+                            "Kilometerstand: ${repair.mileage}",
+                            "Kosten: ${repair.cost}",
+                            "Werkstatt: ${repair.workshop}"
+                        ),
+
+                    onDelete = {
+
+                        repairs =
+                            repairs.filterNot {
+                                it.id ==
+                                    repair.id
+                            }
+
+                        store.saveRepairs(
+                            repairs
+                        )
+                    }
+                )
+            }
+
+            if (
+                showForm
+            ) {
+
+                item {
+
+                    CardForm {
+
+                        FormField(
+                            "Datum (YYYY-MM-DD)",
+                            date
+                        ) {
+                            date =
+                                it
+                        }
+
+                        FormField(
+                            "Kilometerstand",
+                            mileage
+                        ) {
+                            mileage =
+                                it
+                        }
+
+                        FormField(
+                            "Beschreibung",
+                            description
+                        ) {
+                            description =
+                                it
+                        }
+
+                        FormField(
+                            "Kosten",
+                            cost
+                        ) {
+                            cost =
+                                it
+                        }
+
+                        FormField(
+                            "Werkstatt",
+                            workshop
+                        ) {
+                            workshop =
+                                it
+                        }
+
+                        FormButtons(
+
+                            onSave = {
+
+                                val updated =
+                                    repairs +
+                                        Repair(
+
+                                            id =
+                                                System
+                                                    .currentTimeMillis(),
+
+                                            vehicle =
+                                                activeVehicle,
+
+                                            date =
+                                                date.trim(),
+
+                                            mileage =
+                                                mileage.trim(),
+
+                                            description =
+                                                description.trim(),
+
+                                            cost =
+                                                cost.trim(),
+
+                                            workshop =
+                                                workshop.trim()
+                                        )
+
+                                repairs =
+                                    updated
+
+                                store.saveRepairs(
+                                    updated
+                                )
+
+                                date =
+                                    ""
+
+                                mileage =
+                                    ""
+
+                                description =
+                                    ""
+
+                                cost =
+                                    ""
+
+                                workshop =
+                                    ""
+
+                                showForm =
+                                    false
+                            },
+
+                            onCancel = {
+                                showForm =
+                                    false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (
+            !showForm
+        ) {
+
+            Button(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                onClick = {
+                    showForm =
+                        true
+                }
+
+            ) {
+
+                Text(
+                    "Reparatur hinzufügen"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickerlScreen(
+    store: VehicleStore,
+    vehicles: List<Vehicle>,
+    activeVehicle: String,
+    onActiveVehicle: (String) -> Unit
+) {
+
+    var lastDate by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var nextDate by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var notes by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var reminder by remember {
+        mutableStateOf(
+            true
+        )
+    }
+
+    var saved by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    val context =
+        LocalContext.current
+
+    val all =
+        remember {
+            mutableStateOf(
+                store.loadPickerl()
+            )
+        }
+
+    LaunchedEffect(
+        activeVehicle
+    ) {
+
+        val entry =
+            all.value.firstOrNull {
+                it.vehicle ==
+                    activeVehicle
+            }
+
+        lastDate =
+            entry?.lastDate
+                ?: ""
+
+        nextDate =
+            entry?.nextDate
+                ?: ""
+
+        notes =
+            entry?.notes
+                ?: ""
+
+        reminder =
+            entry?.reminder
+                ?: true
+
+        saved =
+            entry != null
+    }
+
+    Column(
+        Modifier.fillMaxSize()
+    ) {
+
+        VehicleSelector(
+            vehicles,
+            activeVehicle,
+            onActiveVehicle
+        )
+
+        Spacer(
+            Modifier.height(
+                10.dp
+            )
+        )
+
+        if (
+            vehicles.isEmpty()
+        ) return@Column
+
+        LazyColumn(
+
+            modifier =
+                Modifier.weight(
+                    1f
+                ),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+
+        ) {
+
+            item {
+
+                CardForm {
+
+                    Text(
+
+                        "Pickerl / TÜV",
+
+                        color =
+                            Color.White,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        fontSize =
+                            20.sp
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            4.dp
+                        )
+                    )
+
+                    FormField(
+
+                        "Letzte Prüfung (YYYY-MM-DD)",
+
+                        lastDate
+
+                    ) {
+                        lastDate =
+                            it
+                    }
+
+                    FormField(
+
+                        "Nächste Prüfung (YYYY-MM-DD)",
+
+                        nextDate
+
+                    ) {
+                        nextDate =
+                            it
+                    }
+
+                    FormField(
+
+                        "Notizen",
+
+                        notes
+
+                    ) {
+                        notes =
+                            it
+                    }
+
+                    Row(
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        verticalAlignment =
+                            Alignment.CenterVertically,
+
+                        horizontalArrangement =
+                            Arrangement.SpaceBetween
+
+                    ) {
+
+                        Text(
+
+                            "Erinnerung 3 Monate vorher",
+
+                            color =
+                                Color.White
+                        )
+
+                        Switch(
+
+                            checked =
+                                reminder,
+
+                            onCheckedChange = {
+                                reminder =
+                                    it
+                            }
+                        )
+                    }
+
+                    Button(
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        onClick = {
+
+                            val entry =
+                                Pickerl(
+
+                                    vehicle =
+                                        activeVehicle,
+
+                                    lastDate =
+                                        lastDate.trim(),
+
+                                    nextDate =
+                                        nextDate.trim(),
+
+                                    notes =
+                                        notes.trim(),
+
+                                    reminder =
+                                        reminder
+                                )
+
+                            val updated =
+                                all.value
+                                    .filterNot {
+                                        it.vehicle ==
+                                            activeVehicle
+                                    } +
+                                    entry
+
+                            all.value =
+                                updated
+
+                            store.savePickerl(
+                                updated
+                            )
+
+                            if (
+                                reminder &&
+                                nextDate
+                                    .isNotBlank()
+                            ) {
+
+                                schedulePickerlReminder(
+
+                                    context,
+
+                                    activeVehicle,
+
+                                    nextDate.trim()
+                                )
+
+                            } else {
+
+                                cancelPickerlReminder(
+
+                                    context,
+
+                                    activeVehicle
+                                )
+                            }
+
+                            saved =
+                                true
+                        }
+
+                    ) {
+
+                        Text(
+
+                            if (
+                                saved
+                            ) {
+                                "Pickerl gespeichert"
+                            } else {
+                                "Pickerl speichern"
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MaintenanceScreen(
+    store: VehicleStore,
+    vehicles: List<Vehicle>,
+    activeVehicle: String,
+    onActiveVehicle: (String) -> Unit
+) {
+
+    var showForm by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    var date by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var mileage by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var cost by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var workshop by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var notes by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var entries by remember {
+        mutableStateOf(
+            store.loadMaintenance()
+        )
+    }
+
+    val list =
+        entries.filter {
+            it.vehicle ==
+                activeVehicle
+        }
+
+    Column(
+        Modifier.fillMaxSize()
+    ) {
+
+        VehicleSelector(
+            vehicles,
+            activeVehicle,
+            onActiveVehicle
+        )
+
+        Spacer(
+            Modifier.height(
+                10.dp
+            )
+        )
+
+        if (
+            vehicles.isEmpty()
+        ) return@Column
+
+        LazyColumn(
+
+            modifier =
+                Modifier.weight(
+                    1f
+                ),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+
+        ) {
+
+            if (
+                list.isEmpty()
+            ) {
+
+                item {
+
+                    EmptyCard(
+                        "Noch keine Wartung eingetragen."
+                    )
+                }
+            }
+
+            items(
+                list
+            ) { entry ->
+
+                RecordCard(
+
+                    title =
+                        "Wartung",
+
+                    lines =
+                        listOf(
+                            "Datum: ${entry.date}",
+                            "Kilometerstand: ${entry.mileage}",
+                            "Kosten: ${entry.cost}",
+                            "Werkstatt: ${entry.workshop}",
+                            "Notizen: ${entry.notes}"
+                        ),
+
+                    onDelete = {
+
+                        entries =
+                            entries.filterNot {
+                                it.id ==
+                                    entry.id
+                            }
+
+                        store.saveMaintenance(
+                            entries
+                        )
+                    }
+                )
+            }
+
+            if (
+                showForm
+            ) {
+
+                item {
+
+                    CardForm {
+
+                        FormField(
+                            "Datum (YYYY-MM-DD)",
+                            date
+                        ) {
+                            date =
+                                it
+                        }
+
+                        FormField(
+                            "Kilometerstand",
+                            mileage
+                        ) {
+                            mileage =
+                                it
+                        }
+
+                        FormField(
+                            "Kosten",
+                            cost
+                        ) {
+                            cost =
+                                it
+                        }
+
+                        FormField(
+                            "Werkstatt",
+                            workshop
+                        ) {
+                            workshop =
+                                it
+                        }
+
+                        FormField(
+                            "Notizen",
+                            notes
+                        ) {
+                            notes =
+                                it
+                        }
+
+                        FormButtons(
+
+                            onSave = {
+
+                                val updated =
+                                    entries +
+                                        Maintenance(
+
+                                            id =
+                                                System
+                                                    .currentTimeMillis(),
+
+                                            vehicle =
+                                                activeVehicle,
+
+                                            date =
+                                                date.trim(),
+
+                                            mileage =
+                                                mileage.trim(),
+
+                                            cost =
+                                                cost.trim(),
+
+                                            workshop =
+                                                workshop.trim(),
+
+                                            notes =
+                                                notes.trim()
+                                        )
+
+                                entries =
+                                    updated
+
+                                store.saveMaintenance(
+                                    updated
+                                )
+
+                                date =
+                                    ""
+
+                                mileage =
+                                    ""
+
+                                cost =
+                                    ""
+
+                                workshop =
+                                    ""
+
+                                notes =
+                                    ""
+
+                                showForm =
+                                    false
+                            },
+
+                            onCancel = {
+                                showForm =
+                                    false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (
+            !showForm
+        ) {
+
+            Button(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                onClick = {
+                    showForm =
+                        true
+                }
+
+            ) {
+
+                Text(
+                    "Wartung hinzufügen"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TireScreen(
+    store: VehicleStore,
+    vehicles: List<Vehicle>,
+    activeVehicle: String,
+    onActiveVehicle: (String) -> Unit
+) {
+
+    var showForm by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    var season by remember {
+        mutableStateOf(
+            "Sommer"
+        )
+    }
+
+    var dimension by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var brand by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var dot by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var tread by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var condition by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var storage by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var tires by remember {
+        mutableStateOf(
+            store.loadTires()
+        )
+    }
+
+    val list =
+        tires.filter {
+            it.vehicle ==
+                activeVehicle
+        }
+
+    Column(
+        Modifier.fillMaxSize()
+    ) {
+
+        VehicleSelector(
+            vehicles,
+            activeVehicle,
+            onActiveVehicle
+        )
+
+        Spacer(
+            Modifier.height(
+                10.dp
+            )
+        )
+
+        if (
+            vehicles.isEmpty()
+        ) return@Column
+
+        LazyColumn(
+
+            modifier =
+                Modifier.weight(
+                    1f
+                ),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+
+        ) {
+
+            if (
+                list.isEmpty()
+            ) {
+
+                item {
+
+                    EmptyCard(
+                        "Noch kein Reifensatz eingetragen."
+                    )
+                }
+            }
+
+            items(
+                list
+            ) { tire ->
+
+                RecordCard(
+
+                    title =
+                        "${tire.season} – ${tire.dimension}",
+
+                    lines =
+                        listOf(
+                            "Marke: ${tire.brand}",
+                            "DOT: ${tire.dot}",
+                            "Profiltiefe: ${tire.tread}",
+                            "Zustand: ${tire.condition}",
+                            "Lagerung: ${tire.storage}"
+                        ),
+
+                    onDelete = {
+
+                        tires =
+                            tires.filterNot {
+                                it.id ==
+                                    tire.id
+                            }
+
+                        store.saveTires(
+                            tires
+                        )
+                    }
+                )
+            }
+
+            if (
+                showForm
+            ) {
+
+                item {
+
+                    CardForm {
+
+                        FormField(
+                            "Saison (Sommer/Winter)",
+                            season
+                        ) {
+                            season =
+                                it
+                        }
+
+                        FormField(
+                            "Dimension",
+                            dimension
+                        ) {
+                            dimension =
+                                it
+                        }
+
+                        FormField(
+                            "Marke",
+                            brand
+                        ) {
+                            brand =
+                                it
+                        }
+
+                        FormField(
+                            "DOT",
+                            dot
+                        ) {
+                            dot =
+                                it
+                        }
+
+                        FormField(
+                            "Profiltiefe",
+                            tread
+                        ) {
+                            tread =
+                                it
+                        }
+
+                        FormField(
+                            "Zustand",
+                            condition
+                        ) {
+                            condition =
+                                it
+                        }
+
+                        FormField(
+                            "Lagerung",
+                            storage
+                        ) {
+                            storage =
+                                it
+                        }
+
+                        FormButtons(
+
+                            onSave = {
+
+                                val updated =
+                                    tires +
+                                        TireSet(
+
+                                            id =
+                                                System
+                                                    .currentTimeMillis(),
+
+                                            vehicle =
+                                                activeVehicle,
+
+                                            season =
+                                                season.trim(),
+
+                                            dimension =
+                                                dimension.trim(),
+
+                                            brand =
+                                                brand.trim(),
+
+                                            dot =
+                                                dot.trim(),
+
+                                            tread =
+                                                tread.trim(),
+
+                                            condition =
+                                                condition.trim(),
+
+                                            storage =
+                                                storage.trim()
+                                        )
+
+                                tires =
+                                    updated
+
+                                store.saveTires(
+                                    updated
+                                )
+
+                                dimension =
+                                    ""
+
+                                brand =
+                                    ""
+
+                                dot =
+                                    ""
+
+                                tread =
+                                    ""
+
+                                condition =
+                                    ""
+
+                                storage =
+                                    ""
+
+                                showForm =
+                                    false
+                            },
+
+                            onCancel = {
+                                showForm =
+                                    false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (
+            !showForm
+        ) {
+
+            Button(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                onClick = {
+                    showForm =
+                        true
+                }
+
+            ) {
+
+                Text(
+                    "Reifensatz hinzufügen"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverviewScreen(
+    store: VehicleStore,
+    vehicles: List<Vehicle>,
+    activeVehicle: String,
+    onActiveVehicle: (String) -> Unit
+) {
+
+    val vehicle =
+        vehicles.firstOrNull {
+            it.name ==
+                activeVehicle
+        }
+
+    val repairs =
+        store.loadRepairs()
+            .count {
+                it.vehicle ==
+                    activeVehicle
+            }
+
+    val maintenance =
+        store.loadMaintenance()
+            .count {
+                it.vehicle ==
+                    activeVehicle
+            }
+
+    val tires =
+        store.loadTires()
+            .count {
+                it.vehicle ==
+                    activeVehicle
+            }
+
+    val pickerl =
+        store.loadPickerl()
+            .firstOrNull {
+                it.vehicle ==
+                    activeVehicle
+            }
+
+    Column(
+        Modifier.fillMaxSize()
+    ) {
+
+        VehicleSelector(
+            vehicles,
+            activeVehicle,
+            onActiveVehicle
+        )
+
+        Spacer(
+            Modifier.height(
+                10.dp
+            )
+        )
 
         if (
             vehicle == null
         ) {
 
-            Text(
-                "Noch kein Fahrzeug vorhanden.",
-                color =
-                    Color.White
+            EmptyCard(
+                "Bitte zuerst ein Fahrzeug anlegen."
             )
 
-        } else {
+            return@Column
+        }
 
-            LazyColumn(
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
+        LazyColumn(
+
+            modifier =
+                Modifier.fillMaxSize(),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+
+        ) {
+
+            item {
+
+                CardForm {
+
+                    Text(
+
+                        vehicle.name,
+
+                        color =
+                            Color.White,
+
+                        fontSize =
+                            24.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
                     )
-            ) {
 
-                item {
+                    Text(
 
-                    VehicleOverviewCard(
-                        vehicle =
-                            vehicle
+                        "${vehicle.make} ${vehicle.model} ${vehicle.year}"
+                            .trim(),
+
+                        color =
+                            Muted
                     )
-                }
 
-                item {
-
-                    OverviewCard(
-                        title =
-                            "Reparaturen",
-                        value =
-                            repairs.count {
-                                it.vehicleName ==
-                                    selectedVehicle
-                            }.toString()
-                    )
-                }
-
-                item {
-
-                    OverviewCard(
-                        title =
-                            "Wartungen",
-                        value =
-                            maintenances.count {
-                                it.vehicleName ==
-                                    selectedVehicle
-                            }.toString()
-                    )
-                }
-
-                item {
-
-                    OverviewCard(
-                        title =
-                            "Reifensätze",
-                        value =
-                            tires.count {
-                                it.vehicleName ==
-                                    selectedVehicle
-                            }.toString()
-                    )
-                }
-
-                item {
-
-                    val pickerl =
-                        pickerls.firstOrNull {
-                            it.vehicleName ==
-                                selectedVehicle
-                        }
-
-                    Card(
-                        colors =
-                            CardDefaults
-                                .cardColors(
-                                    containerColor =
-                                        Color(
-                                            0xFF11141A
-                                        )
-                                )
+                    if (
+                        vehicle.plate
+                            .isNotBlank()
                     ) {
 
-                        Column(
-                            modifier =
-                                Modifier.padding(
-                                    16.dp
-                                )
-                        ) {
+                        Text(
 
-                            Text(
-                                "Pickerl / TÜV",
-                                color =
-                                    Color.White,
-                                fontSize =
-                                    18.sp,
-                                fontWeight =
-                                    FontWeight.Bold
-                            )
+                            "Kennzeichen: ${vehicle.plate}",
 
-                            Spacer(
-                                Modifier.height(
-                                    6.dp
-                                )
-                            )
-
-                            if (
-                                pickerl ==
-                                    null
-                            ) {
-
-                                Text(
-                                    "Noch keine Pickerl-Daten gespeichert.",
-                                    color =
-                                        Color(
-                                            0xFFB8BEC8
-                                        )
-                                )
-
-                            } else {
-
-                                Text(
-                                    "Nächstes Pickerl: ${pickerl.nextDate}",
-                                    color =
-                                        Color(
-                                            0xFFB8BEC8
-                                        )
-                                )
-
-                                Text(
-                                    if (
-                                        pickerl
-                                            .reminder
-                                    ) {
-                                        "Erinnerung: aktiv"
-                                    } else {
-                                        "Erinnerung: deaktiviert"
-                                    },
-                                    color =
-                                        Color(
-                                            0xFFB8BEC8
-                                        )
-                                )
-                            }
-                        }
+                            color =
+                                Color.White
+                        )
                     }
+
+                    if (
+                        vehicle.vin
+                            .isNotBlank()
+                    ) {
+
+                        Text(
+
+                            "FIN/VIN: ${vehicle.vin}",
+
+                            color =
+                                Color.White
+                        )
+                    }
+
+                    Spacer(
+                        Modifier.height(
+                            8.dp
+                        )
+                    )
+
+                    Text(
+                        "Reparaturen: $repairs",
+                        color =
+                            Color.White
+                    )
+
+                    Text(
+                        "Wartungen: $maintenance",
+                        color =
+                            Color.White
+                    )
+
+                    Text(
+                        "Reifensätze: $tires",
+                        color =
+                            Color.White
+                    )
+
+                    Text(
+
+                        "Nächster Pickerl-Termin: ${
+                            pickerl
+                                ?.nextDate
+                                ?.ifBlank {
+                                    "nicht eingetragen"
+                                }
+                                ?: "nicht eingetragen"
+                        }",
+
+                        color =
+                            Color.White
+                    )
                 }
+            }
+
+            item {
+
+                vehicle.imageUri
+                    .takeIf {
+                        it.isNotBlank()
+                    }
+                    ?.let { uri ->
+
+                        VehicleImage(
+
+                            uri =
+                                uri,
+
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(
+                                        180.dp
+                                    )
+                        )
+                    }
             }
         }
     }
 }
 
 @Composable
-private fun VehicleOverviewCard(
-    vehicle: Vehicle
+private fun CardForm(
+    content:
+        @Composable
+        ColumnScope.() -> Unit
 ) {
 
     Card(
+
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color(0xFF11141A)
-            )
+                    Color(
+                        0xFF11141A
+                    )
+            ),
+
+        modifier =
+            Modifier.fillMaxWidth()
+
     ) {
 
         Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                )
-        ) {
 
-            VehicleImage(
-                uri =
-                    vehicle.imageUri,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(
-                            190.dp
-                        )
-            )
+            Modifier.padding(
+                16.dp
+            ),
 
-            Spacer(
-                Modifier.height(
-                    10.dp
-                )
-            )
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                ),
 
-            Text(
-                vehicle.name,
-                color =
-                    Color.White,
-                fontSize =
-                    22.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            Text(
-                "${vehicle.make} ${vehicle.model}",
-                color =
-                    Color(0xFFB8BEC8)
-            )
-
-            if (
-                vehicle.year
-                    .isNotBlank()
-            ) {
-
-                Text(
-                    "Baujahr: ${vehicle.year}",
-                    color =
-                        Color(0xFFB8BEC8)
-                )
-            }
-
-            if (
-                vehicle.plate
-                    .isNotBlank()
-            ) {
-
-                Text(
-                    "Kennzeichen: ${vehicle.plate}",
-                    color =
-                        Color(0xFFB8BEC8)
-                )
-            }
-
-            if (
-                vehicle.vin
-                    .isNotBlank()
-            ) {
-
-                Text(
-                    "VIN / FIN: ${vehicle.vin}",
-                    color =
-                        Color(0xFFB8BEC8)
-                )
-            }
-        }
+            content =
+                content
+        )
     }
 }
 
 @Composable
-private fun OverviewCard(
-    title: String,
-    value: String
-) {
-
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
-    ) {
-
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        16.dp
-                    ),
-            verticalAlignment =
-                Alignment.CenterVertically
-        ) {
-
-            Text(
-                title,
-                color =
-                    Color.White,
-                fontSize =
-                    18.sp,
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
-            )
-
-            Text(
-                value,
-                color =
-                    Color.White,
-                fontSize =
-                    22.sp,
-                fontWeight =
-                    FontWeight.Bold
-            )
-        }
-    }
-}
-
-// ============================================================
-// STANDARD-TEXTFELD
-// ============================================================
-
-@Composable
-private fun AppField(
-    value: String,
+private fun FormField(
     label: String,
-    onValueChange: (String) -> Unit,
-    singleLine: Boolean = true
+    value: String,
+    onValueChange: (String) -> Unit
 ) {
 
     OutlinedTextField(
+
         value =
             value,
+
         onValueChange =
             onValueChange,
-        modifier =
-            Modifier.fillMaxWidth(),
+
         label = {
             Text(
                 label
             )
         },
-        singleLine =
-            singleLine
+
+        modifier =
+            Modifier.fillMaxWidth()
     )
+}
+
+@Composable
+private fun FormButtons(
+    onSave: () -> Unit,
+    onCancel: () -> Unit
+) {
+
+    Row(
+
+        horizontalArrangement =
+            Arrangement.spacedBy(
+                8.dp
+            )
+
+    ) {
+
+        Button(
+            onClick =
+                onSave
+        ) {
+
+            Text(
+                "Speichern"
+            )
+        }
+
+        OutlinedButton(
+            onClick =
+                onCancel
+        ) {
+
+            Text(
+                "Abbrechen"
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyCard(
+    text: String
+) {
+
+    CardForm {
+
+        Text(
+
+            text,
+
+            color =
+                Color.White,
+
+            fontWeight =
+                FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun RecordCard(
+    title: String,
+    lines: List<String>,
+    onDelete: () -> Unit
+) {
+
+    Card(
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            ),
+
+        modifier =
+            Modifier.fillMaxWidth()
+
+    ) {
+
+        Column(
+
+            Modifier.padding(
+                16.dp
+            )
+
+        ) {
+
+            Text(
+
+                title,
+
+                color =
+                    Color.White,
+
+                fontSize =
+                    18.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Spacer(
+                Modifier.height(
+                    6.dp
+                )
+            )
+
+            lines
+                .filter {
+                    it.substringAfter(
+                        ":"
+                    ).isNotBlank()
+                }
+                .forEach {
+
+                    Text(
+
+                        it,
+
+                        color =
+                            Color(
+                                0xFFB8BEC8
+                            )
+                    )
+                }
+
+            Spacer(
+                Modifier.height(
+                    8.dp
+                )
+            )
+
+            OutlinedButton(
+                onClick =
+                    onDelete
+            ) {
+
+                Text(
+                    "Eintrag löschen"
+                )
+            }
+        }
+    }
 }
