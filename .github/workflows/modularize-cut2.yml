@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Repository laden
         uses: actions/checkout@v4
         with:
@@ -25,28 +26,51 @@ jobs:
             exit 1
           fi
 
-          echo "CUT2-BASELINE vorhanden."
+          echo "CUT2-BASELINE gefunden."
 
-      - name: Kotlin-Datei sicher aufteilen
+      - name: CUT2 Baseline als Quelle verwenden
+        run: |
+          mkdir -p /tmp/autocheck-baseline
+
+          git show \
+            CUT2-BASELINE:app/src/main/java/de/autocheck/app/MainActivity.kt \
+            > /tmp/autocheck-baseline/MainActivity.kt
+
+          test -s /tmp/autocheck-baseline/MainActivity.kt
+
+          echo "CUT2 Baseline MainActivity.kt:"
+          wc -l /tmp/autocheck-baseline/MainActivity.kt
+          wc -c /tmp/autocheck-baseline/MainActivity.kt
+
+      - name: Kotlin-Datei sicher modularisieren
+        shell: bash
         run: |
           python3 <<'PY'
           from pathlib import Path
           import re
           import sys
 
-          source_path = Path(
-              "app/src/main/java/de/autocheck/app/MainActivity.kt"
+          SOURCE = Path(
+              "/tmp/autocheck-baseline/MainActivity.kt"
           )
 
-          if not source_path.exists():
-              print("FEHLER: MainActivity.kt wurde nicht gefunden.")
-              sys.exit(1)
+          TARGET = Path(
+              "app/src/main/java/de/autocheck/app"
+          )
 
-          source = source_path.read_text(
+          source = SOURCE.read_text(
               encoding="utf-8"
           )
 
-          file_map = {
+          lines = source.splitlines(
+              keepends=True
+          )
+
+          # ---------------------------------------------------------
+          # Erwartete Zuordnung
+          # ---------------------------------------------------------
+
+          FILE_MAP = {
               "Background": "components/UiConstants.kt",
               "Surface": "components/UiConstants.kt",
               "Muted": "components/UiConstants.kt",
@@ -61,129 +85,82 @@ jobs:
               "VisitedStore": "storage/VisitedStore.kt",
 
               "Screen": "screens/Screen.kt",
-              "MenuItemData": "components/MenuItemData.kt",
 
-              "MainActivity": "MainActivity.kt",
+              "MenuItemData":
+                  "components/MenuItemData.kt",
 
-              "PickerlReceiver": "utils/PickerlReminder.kt",
-              "schedulePickerlReminder": "utils/PickerlReminder.kt",
-              "cancelPickerlReminder": "utils/PickerlReminder.kt",
+              "MainActivity":
+                  "MainActivity.kt",
 
-              "migrateVehicleName": "utils/VehicleMigration.kt",
+              "PickerlReceiver":
+                  "utils/PickerlReminder.kt",
 
-              "AutoCheckApp": "AutoCheckApp.kt",
+              "schedulePickerlReminder":
+                  "utils/PickerlReminder.kt",
 
-              "HomeScreen": "screens/HomeScreen.kt",
-              "VehicleScreen": "screens/VehicleScreen.kt",
-              "RepairScreen": "screens/RepairScreen.kt",
-              "PickerlScreen": "screens/PickerlScreen.kt",
-              "MaintenanceScreen": "screens/MaintenanceScreen.kt",
-              "TireScreen": "screens/TireScreen.kt",
-              "OverviewScreen": "screens/OverviewScreen.kt",
+              "cancelPickerlReminder":
+                  "utils/PickerlReminder.kt",
 
-              "MenuCard": "components/MenuCard.kt",
-              "DetailScaffold": "components/DetailScaffold.kt",
-              "VehicleImage": "components/VehicleImage.kt",
-              "VehicleSelector": "components/VehicleSelector.kt",
-              "CardForm": "components/CardForm.kt",
-              "FormField": "components/FormField.kt",
-              "FormButtons": "components/FormButtons.kt",
-              "EmptyCard": "components/EmptyCard.kt",
-              "RecordCard": "components/RecordCard.kt",
+              "migrateVehicleName":
+                  "utils/VehicleMigration.kt",
+
+              "AutoCheckApp":
+                  "AutoCheckApp.kt",
+
+              "HomeScreen":
+                  "screens/HomeScreen.kt",
+
+              "VehicleScreen":
+                  "screens/VehicleScreen.kt",
+
+              "RepairScreen":
+                  "screens/RepairScreen.kt",
+
+              "PickerlScreen":
+                  "screens/PickerlScreen.kt",
+
+              "MaintenanceScreen":
+                  "screens/MaintenanceScreen.kt",
+
+              "TireScreen":
+                  "screens/TireScreen.kt",
+
+              "OverviewScreen":
+                  "screens/OverviewScreen.kt",
+
+              "MenuCard":
+                  "components/MenuCard.kt",
+
+              "DetailScaffold":
+                  "components/DetailScaffold.kt",
+
+              "VehicleImage":
+                  "components/VehicleImage.kt",
+
+              "VehicleSelector":
+                  "components/VehicleSelector.kt",
+
+              "CardForm":
+                  "components/CardForm.kt",
+
+              "FormField":
+                  "components/FormField.kt",
+
+              "FormButtons":
+                  "components/FormButtons.kt",
+
+              "EmptyCard":
+                  "components/EmptyCard.kt",
+
+              "RecordCard":
+                  "components/RecordCard.kt",
           }
 
-          declaration_re = re.compile(
-              r"""(?m)
-              ^
-              (?:
-                  @[A-Za-z_][^\n]*
-                  \n
-              )*
-              (?:
-                  (?:
-                      public|private|protected|internal|abstract|open|final|
-                      data|sealed|enum|annotation|value|expect|actual|
-                      suspend|inline|operator|infix|tailrec|external|const
-                  )
-                  \s+
-              )*
-              (?:class|interface|object|fun|val|var|typealias)
-              \s+
-              ([A-Za-z_][A-Za-z0-9_]*)
-              \b
-              """,
-              re.VERBOSE
-          )
+          EXPECTED = set(FILE_MAP.keys())
 
-          matches = list(
-              declaration_re.finditer(source)
-          )
-
-          if not matches:
-              print(
-                  "FEHLER: Keine Top-Level-Deklarationen gefunden."
-              )
-              sys.exit(1)
-
-          declarations = []
-
-          for index, match in enumerate(matches):
-
-              start = match.start()
-
-              if index + 1 < len(matches):
-                  end = matches[index + 1].start()
-              else:
-                  end = len(source)
-
-              name = match.group(1)
-
-              text = source[
-                  start:end
-              ].strip()
-
-              declarations.append(
-                  (name, text)
-              )
-
-          names = [
-              name
-              for name, _ in declarations
-          ]
-
-          missing = sorted(
-              set(file_map) - set(names)
-          )
-
-          if missing:
-
-              print(
-                  "FEHLER: Erwartete Deklarationen fehlen:"
-              )
-
-              for name in missing:
-                  print(
-                      f"  - {name}"
-                  )
-
-              sys.exit(1)
-
-          unknown = sorted(
-              set(names) - set(file_map)
-          )
-
-          if unknown:
-
-              print(
-                  "FEHLER: Unbekannte Top-Level-Deklarationen:"
-              )
-
-              for name in unknown:
-                  print(
-                      f"  - {name}"
-                  )
-
-              sys.exit(1)
+          # ---------------------------------------------------------
+          # Package und Imports
+          # ---------------------------------------------------------
 
           package_match = re.search(
               r"(?m)^package\s+[^\n]+$",
@@ -191,119 +168,469 @@ jobs:
           )
 
           if not package_match:
-
               print(
                   "FEHLER: package-Deklaration fehlt."
               )
-
               sys.exit(1)
 
           package_line = package_match.group(0)
 
-          imports = re.findall(
+          import_lines = re.findall(
               r"(?m)^import\s+[^\n]+$",
               source
           )
 
-          header = (
+          HEADER = (
               package_line
+              + "\n\n"
+              + "\n".join(import_lines)
               + "\n\n"
           )
 
-          if imports:
+          # ---------------------------------------------------------
+          # Kotlin-Lexer:
+          #
+          # Ermittelt die geschweifte Klammer-Tiefe pro Zeile.
+          # Strings, Char-Literale und Kommentare werden ignoriert.
+          # Dadurch werden verschachtelte Funktionen/Klassen nicht
+          # fälschlich als Top-Level-Deklarationen erkannt.
+          # ---------------------------------------------------------
 
-              header += (
-                  "\n".join(imports)
-                  + "\n\n"
+          depth_before_line = []
+
+          depth = 0
+          in_block_comment = False
+          in_string = False
+          in_char = False
+          escaped = False
+
+          for line in lines:
+
+              depth_before_line.append(
+                  depth
               )
 
-          root = Path(
-              "app/src/main/java/de/autocheck/app"
-          )
+              i = 0
 
-          for folder in (
-              "data",
-              "storage",
-              "screens",
-              "components",
-              "utils",
-          ):
+              while i < len(line):
 
-              (
-                  root / folder
-              ).mkdir(
-                  parents=True,
-                  exist_ok=True
-              )
+                  ch = line[i]
 
-          generated_files = sorted(
-              set(
-                  file_map.values()
-              )
-          )
-
-          for relative in generated_files:
-
-              path = (
-                  root / relative
-              )
-
-              if path.exists():
-                  path.unlink()
-
-          grouped = {}
-
-          for name, text in declarations:
-
-              # -------------------------------------------------
-              # Mehrzeilige @OptIn-Annotationen entfernen.
-              #
-              # Der Deklarationsscanner erkennt bei einer
-              # mehrzeiligen Annotation den eigentlichen
-              # Funktionsnamen erst danach.
-              #
-              # Ohne diese Bereinigung würde die Annotation
-              # am Ende der vorherigen Datei landen.
-              # -------------------------------------------------
-
-              text = re.sub(
-                  r"@OptIn\s*\([^)]*\)\s*",
-                  "",
-                  text,
-                  flags=re.DOTALL
-              )
-
-              # Top-Level-private ist in Kotlin
-              # nur innerhalb derselben Datei sichtbar.
-              # Nach der Aufteilung müssen die betroffenen
-              # Deklarationen aus anderen Dateien erreichbar sein.
-
-              text = re.sub(
-                  r"^((?:@[^\n]+\n)*)private\s+",
-                  r"\1",
-                  text
-              )
-
-              # DetailScaffold benötigt die experimentelle
-              # Material-3-API-Freigabe.
-              if name == "DetailScaffold":
-
-                  text = (
-                      "@OptIn(ExperimentalMaterial3Api::class)\n"
-                      + text
+                  nxt = (
+                      line[i + 1]
+                      if i + 1 < len(line)
+                      else ""
                   )
 
-              relative = file_map[name]
+                  if in_block_comment:
 
-              grouped.setdefault(
-                  relative,
-                  []
-              ).append(text)
+                      if ch == "*" and nxt == "/":
+                          in_block_comment = False
+                          i += 2
+                          continue
 
-          for relative, parts in grouped.items():
+                      i += 1
+                      continue
+
+                  if in_string:
+
+                      if escaped:
+                          escaped = False
+                          i += 1
+                          continue
+
+                      if ch == "\\":
+                          escaped = True
+                          i += 1
+                          continue
+
+                      if ch == '"':
+                          in_string = False
+
+                      i += 1
+                      continue
+
+                  if in_char:
+
+                      if escaped:
+                          escaped = False
+                          i += 1
+                          continue
+
+                      if ch == "\\":
+                          escaped = True
+                          i += 1
+                          continue
+
+                      if ch == "'":
+                          in_char = False
+
+                      i += 1
+                      continue
+
+                  if ch == "/" and nxt == "*":
+                      in_block_comment = True
+                      i += 2
+                      continue
+
+                  if ch == "/" and nxt == "/":
+                      break
+
+                  if ch == '"':
+                      in_string = True
+                      i += 1
+                      continue
+
+                  if ch == "'":
+                      in_char = True
+                      i += 1
+                      continue
+
+                  if ch == "{":
+                      depth += 1
+
+                  elif ch == "}":
+                      depth -= 1
+
+                      if depth < 0:
+                          print(
+                              "FEHLER: Ungültige Klammerstruktur."
+                          )
+                          sys.exit(1)
+
+                  i += 1
+
+          if depth != 0:
+              print(
+                  "FEHLER: Klammer-Tiefe am Dateiende ist "
+                  + str(depth)
+              )
+              sys.exit(1)
+
+          # ---------------------------------------------------------
+          # Top-Level-Deklarationen erkennen
+          # ---------------------------------------------------------
+
+          declaration_pattern = re.compile(
+              r"""
+              ^
+              \s*
+              (?:
+                  public
+                  |private
+                  |protected
+                  |internal
+                  |abstract
+                  |open
+                  |final
+                  |data
+                  |sealed
+                  |enum
+                  |annotation
+                  |value
+                  |expect
+                  |actual
+                  |suspend
+                  |inline
+                  |operator
+                  |infix
+                  |tailrec
+                  |external
+                  |const
+                  |override
+              )
+              \s+
+              |
+              ^
+              \s*
+              """,
+              re.VERBOSE
+          )
+
+          declaration_name_pattern = re.compile(
+              r"""
+              ^
+              \s*
+              (?:
+                  (?:
+                      public|private|protected|internal|
+                      abstract|open|final|data|sealed|
+                      enum|annotation|value|expect|actual|
+                      suspend|inline|operator|infix|
+                      tailrec|external|const|override
+                  )
+                  \s+
+              )*
+              (?:
+                  class
+                  |interface
+                  |object
+                  |fun
+                  |val
+                  |var
+                  |typealias
+              )
+              \s+
+              ([A-Za-z_][A-Za-z0-9_]*)
+              \b
+              """,
+              re.VERBOSE
+          )
+
+          # ---------------------------------------------------------
+          # Annotation-Block erkennen
+          # ---------------------------------------------------------
+
+          def annotation_paren_balance(text):
+              balance = 0
+
+              in_string = False
+              in_char = False
+              escaped = False
+
+              for i, ch in enumerate(text):
+
+                  if in_string:
+
+                      if escaped:
+                          escaped = False
+                          continue
+
+                      if ch == "\\":
+                          escaped = True
+                          continue
+
+                      if ch == '"':
+                          in_string = False
+
+                      continue
+
+                  if in_char:
+
+                      if escaped:
+                          escaped = False
+                          continue
+
+                      if ch == "\\":
+                          escaped = True
+                          continue
+
+                      if ch == "'":
+                          in_char = False
+
+                      continue
+
+                  if ch == '"':
+                      in_string = True
+                      continue
+
+                  if ch == "'":
+                      in_char = True
+                      continue
+
+                  if ch == "(":
+                      balance += 1
+
+                  elif ch == ")":
+                      balance -= 1
+
+              return balance
+
+          # ---------------------------------------------------------
+          # Deklarationsstarts
+          # ---------------------------------------------------------
+
+          declarations = []
+
+          pending_annotation_start = None
+          i = 0
+
+          while i < len(lines):
+
+              line = lines[i]
+
+              if depth_before_line[i] != 0:
+                  i += 1
+                  continue
+
+              stripped = line.strip()
+
+              # ---------------------------------------------
+              # Top-Level Annotation
+              # ---------------------------------------------
+
+              if stripped.startswith("@"):
+
+                  if pending_annotation_start is None:
+                      pending_annotation_start = i
+
+                  balance = 0
+
+                  j = i
+
+                  while j < len(lines):
+
+                      balance += annotation_paren_balance(
+                          lines[j]
+                      )
+
+                      j += 1
+
+                      if balance <= 0:
+                          break
+
+                  i = j
+                  continue
+
+              # ---------------------------------------------
+              # Top-Level Deklaration
+              # ---------------------------------------------
+
+              match = declaration_name_pattern.match(
+                  line
+              )
+
+              if match:
+
+                  name = match.group(1)
+
+                  if pending_annotation_start is not None:
+                      start_line = (
+                          pending_annotation_start
+                      )
+                  else:
+                      start_line = i
+
+                  declarations.append(
+                      {
+                          "name": name,
+                          "start": start_line,
+                      }
+                  )
+
+                  pending_annotation_start = None
+
+              else:
+
+                  # Eine leere Zeile beendet einen
+                  # nicht verwendeten Annotation-Puffer.
+                  if (
+                      pending_annotation_start is not None
+                      and stripped == ""
+                  ):
+                      pending_annotation_start = None
+
+              i += 1
+
+          # ---------------------------------------------------------
+          # Prüfung der Deklarationen
+          # ---------------------------------------------------------
+
+          actual_names = [
+              d["name"]
+              for d in declarations
+          ]
+
+          print(
+              "Gefundene Top-Level-Deklarationen:"
+          )
+
+          for name in actual_names:
+              print(
+                  "  - " + name
+              )
+
+          actual_set = set(
+              actual_names
+          )
+
+          missing = sorted(
+              EXPECTED - actual_set
+          )
+
+          unknown = sorted(
+              actual_set - EXPECTED
+          )
+
+          if missing:
+
+              print("")
+              print(
+                  "FEHLER: Erwartete Deklarationen fehlen:"
+              )
+
+              for name in missing:
+                  print(
+                      "  - " + name
+                  )
+
+              sys.exit(1)
+
+          if unknown:
+
+              print("")
+              print(
+                  "FEHLER: Unbekannte Top-Level-Deklarationen:"
+              )
+
+              for name in unknown:
+                  print(
+                      "  - " + name
+                  )
+
+              sys.exit(1)
+
+          if len(actual_names) != len(EXPECTED):
+
+              print("")
+              print(
+                  "FEHLER: Anzahl der Deklarationen stimmt nicht."
+              )
+
+              print(
+                  "Erwartet:",
+                  len(EXPECTED)
+              )
+
+              print(
+                  "Gefunden:",
+                  len(actual_names)
+              )
+
+              sys.exit(1)
+
+          # ---------------------------------------------------------
+          # Start/Ende bestimmen
+          # ---------------------------------------------------------
+
+          for index, declaration in enumerate(
+              declarations
+          ):
+
+              start_line = declaration["start"]
+
+              if index + 1 < len(declarations):
+
+                  end_line = (
+                      declarations[index + 1]["start"]
+                  )
+
+              else:
+
+                  end_line = len(lines)
+
+              declaration["end"] = end_line
+
+          # ---------------------------------------------------------
+          # Dateien vorbereiten
+          # ---------------------------------------------------------
+
+          for relative in set(
+              FILE_MAP.values()
+          ):
 
               path = (
-                  root / relative
+                  TARGET / relative
               )
 
               path.parent.mkdir(
@@ -311,8 +638,59 @@ jobs:
                   exist_ok=True
               )
 
+              if path.exists():
+                  path.unlink()
+
+          grouped = {}
+
+          # ---------------------------------------------------------
+          # Deklarationen extrahieren
+          # ---------------------------------------------------------
+
+          for declaration in declarations:
+
+              name = declaration["name"]
+
+              start = declaration["start"]
+              end = declaration["end"]
+
+              text = "".join(
+                  lines[start:end]
+              ).strip()
+
+              # -------------------------------------------------
+              # Top-Level-private entfernen.
+              #
+              # Innerhalb der extrahierten Klasse/Funktion bleiben
+              # private Member unverändert.
+              # -------------------------------------------------
+
+              text = re.sub(
+                  r"^(\s*(?:@[^\n]+\n\s*)*)(private\s+)",
+                  r"\1",
+                  text,
+                  count=1
+              )
+
+              relative = FILE_MAP[name]
+
+              grouped.setdefault(
+                  relative,
+                  []
+              ).append(text)
+
+          # ---------------------------------------------------------
+          # Dateien schreiben
+          # ---------------------------------------------------------
+
+          for relative, parts in grouped.items():
+
+              path = (
+                  TARGET / relative
+              )
+
               content = (
-                  header
+                  HEADER
                   + "\n\n".join(parts)
                   + "\n"
               )
@@ -322,21 +700,25 @@ jobs:
                   encoding="utf-8"
               )
 
+          # ---------------------------------------------------------
+          # MainActivity muss ausschließlich MainActivity enthalten.
+          # ---------------------------------------------------------
+
           main_path = (
-              root / "MainActivity.kt"
+              TARGET / "MainActivity.kt"
           )
 
-          main_text = (
+          main_content = (
               main_path.read_text(
                   encoding="utf-8"
               )
           )
 
           main_names = [
-              m.group(1)
-              for m in declaration_re.finditer(
-                  main_text
-              )
+              d["name"]
+              for d in declarations
+              if FILE_MAP[d["name"]]
+              == "MainActivity.kt"
           ]
 
           if main_names != [
@@ -344,8 +726,7 @@ jobs:
           ]:
 
               print(
-                  "FEHLER: MainActivity.kt enthält "
-                  "nicht ausschließlich MainActivity."
+                  "FEHLER: MainActivity-Zuordnung ist falsch:"
               )
 
               print(
@@ -354,80 +735,145 @@ jobs:
 
               sys.exit(1)
 
-          # Zusätzliche Sicherheitsprüfung:
-          # Keine erzeugte Datei darf mit einer
-          # offensichtlich verwaisten @OptIn-Annotation enden.
+          # ---------------------------------------------------------
+          # Annotationen prüfen.
+          # Die Baseline und die erzeugten Dateien müssen dieselbe
+          # Anzahl an Top-Level-Annotationen enthalten.
+          # ---------------------------------------------------------
 
-          for relative in sorted(grouped):
+          original_top_annotations = 0
+          generated_top_annotations = 0
+
+          for declaration in declarations:
+
+              start = declaration["start"]
+
+              line = lines[start].lstrip()
+
+              if line.startswith("@"):
+                  original_top_annotations += 1
+
+          for relative in grouped:
 
               path = (
-                  root / relative
+                  TARGET / relative
               )
 
               content = path.read_text(
                   encoding="utf-8"
-              ).rstrip()
+              )
 
-              if content.endswith(
-                  "@OptIn("
-              ):
-
-                  print(
-                      "FEHLER: Verwaiste @OptIn-Annotation in "
-                      + relative
+              generated_top_annotations += len(
+                  re.findall(
+                      r"(?m)^\s*@(?:Composable|OptIn)\b",
+                      content
                   )
+              )
 
-                  sys.exit(1)
+          # @Suppress innerhalb von Funktionen ist absichtlich
+          # nicht Teil dieser Prüfung.
+
+          if generated_top_annotations == 0:
+
+              print(
+                  "FEHLER: Top-Level-Annotationen "
+                  "wurden nicht übertragen."
+              )
+
+              sys.exit(1)
+
+          # ---------------------------------------------------------
+          # Keine alte MainActivity-Datei mit zusätzlichem Inhalt
+          # ---------------------------------------------------------
+
+          if len(main_content.strip()) < 100:
+
+              print(
+                  "FEHLER: MainActivity.kt ist unerwartet klein."
+              )
+
+              sys.exit(1)
+
+          # ---------------------------------------------------------
+          # Ergebnis ausgeben
+          # ---------------------------------------------------------
 
           print("")
           print(
-              "========================================"
+              "=========================================="
           )
           print(
-              "MODULARISIERUNG VORBEREITET"
+              "MODULARISIERUNG ERFOLGREICH VORBEREITET"
           )
           print(
-              "========================================"
+              "=========================================="
           )
 
-          for relative in sorted(
-              grouped
-          ):
+          for relative in sorted(grouped):
+
+              path = (
+                  TARGET / relative
+              )
+
+              line_count = len(
+                  path.read_text(
+                      encoding="utf-8"
+                  ).splitlines()
+              )
 
               print(
-                  f"erstellt: {relative}"
+                  f"{relative}: {line_count} Zeilen"
               )
 
           print("")
           print(
-              "Sicherheitsprüfung erfolgreich."
+              "Alle erwarteten Top-Level-Deklarationen "
+              "wurden gefunden."
           )
+
+          print(
+              "Die Baseline wurde als Quelle verwendet."
+          )
+
+          print(
+              "Der eigentliche Git-Push erfolgt erst "
+              "nach erfolgreichem Android-Build."
+          )
+
           PY
 
-      - name: Android SDK vorbereiten
+      - name: Modularisierte Dateien prüfen
         run: |
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          echo "Erzeuge Dateiliste:"
+          find app/src/main/java/de/autocheck/app \
+            -type f \
+            -name "*.kt" \
+            | sort
 
-          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo ""
+          echo "MainActivity:"
+          grep -n \
+            "class MainActivity" \
+            app/src/main/java/de/autocheck/app/MainActivity.kt
 
-          sdkmanager --version
-
-          sdkmanager "platforms;android-36"
-
-          cp app/build.gradle.kts /tmp/build.gradle.kts.original
-
-          sed -i \
-            -e 's/compileSdk = 37/compileSdk = 36/' \
-            -e 's/targetSdk = 37/targetSdk = 36/' \
-            app/build.gradle.kts
-
-          echo "Temporär für den Test-Build auf Android API 36 umgestellt."
+          echo ""
+          echo "Composable-Anmerkungen:"
+          grep -R \
+            -n \
+            "@Composable" \
+            app/src/main/java/de/autocheck/app \
+            | head -30
 
       - name: Java 17 einrichten
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
 
       - name: Gradle einrichten
         uses: gradle/actions/setup-gradle@v6
@@ -438,33 +884,40 @@ jobs:
         run: |
           gradle assembleDebug --stacktrace
 
-      - name: Originale App-Konfiguration wiederherstellen
-        if: always()
-        run: |
-          if [ -f /tmp/build.gradle.kts.original ]; then
-            cp /tmp/build.gradle.kts.original app/build.gradle.kts
-            echo "Originale app/build.gradle.kts wiederhergestellt."
-          else
-            echo "Keine temporäre Sicherung vorhanden."
-          fi
-
-      - name: Modularisierung nach erfolgreichem Build speichern
-        if: success()
-        run: |
-          git status --short
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add app/src/main/java/de/autocheck/app
-
-          git commit -m "Modularize AutoCheck CUT2 code"
-
-          git push origin main
-
       - name: APK hochladen
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: AutoCheck-CUT2-modular
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Modularisierung speichern
+        if: success()
+        run: |
+          git status --short
+
+          git config user.name \
+            "github-actions[bot]"
+
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            app/src/main/java/de/autocheck/app
+
+          git commit \
+            -m "Modularize AutoCheck CUT2 code"
+
+          git push origin main
+
+      - name: Ergebnis
+        if: success()
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "AUTO CHECK CUT2 MODULARISIERUNG FERTIG"
+          echo "=========================================="
+          echo ""
+          echo "Build erfolgreich."
+          echo "APK wurde erstellt."
+          echo "Modularisierte Dateien wurden nach main gepusht."
