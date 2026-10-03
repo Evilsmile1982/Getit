@@ -1,7 +1,6 @@
 package de.autocheck.app
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,14 +32,10 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 private val maintenanceDisplayFormatter =
-    DateTimeFormatter.ofPattern(
-        "dd.MM.yyyy"
-    )
+    DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
 private val maintenanceIsoFormatter =
-    DateTimeFormatter.ofPattern(
-        "yyyy-MM-dd"
-    )
+    DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
 private val standardMaintenanceItems =
     listOf(
@@ -66,9 +61,7 @@ private fun normalizeMaintenanceDate(
     val trimmed =
         value.trim()
 
-    if (
-        trimmed.isBlank()
-    ) {
+    if (trimmed.isBlank()) {
         return ""
     }
 
@@ -172,30 +165,28 @@ private fun decodeMaintenanceItems(
     }
 
     val rest =
-        storedNotes
-            .removePrefix(
-                MAINTENANCE_ITEMS_PREFIX
-            )
+        storedNotes.removePrefix(
+            MAINTENANCE_ITEMS_PREFIX
+        )
 
-    val lines =
+    val parts =
         rest.split(
             "\n",
             limit = 2
         )
 
     val itemPart =
-        lines
+        parts
             .firstOrNull()
             ?.trim()
             ?: ""
 
     val notes =
         if (
-            lines.size > 1
+            parts.size > 1
         ) {
 
-            lines[1]
-                .trim()
+            parts[1].trim()
 
         } else {
 
@@ -229,15 +220,6 @@ private fun decodeMaintenanceItems(
     )
 }
 
-private fun isCustomMaintenanceItem(
-    item: String
-): Boolean {
-
-    return !standardMaintenanceItems.contains(
-        item
-    )
-}
-
 @Composable
 fun MaintenanceScreen(
     store: VehicleStore,
@@ -255,80 +237,68 @@ fun MaintenanceScreen(
     }
 
     var showForm by remember {
-
         mutableStateOf(
             false
         )
     }
 
     var editingId by remember {
-
         mutableStateOf<Long?>(
             null
         )
     }
 
     var date by remember {
-
         mutableStateOf(
             ""
         )
     }
 
     var mileage by remember {
-
         mutableStateOf(
             ""
         )
     }
 
     var cost by remember {
-
         mutableStateOf(
             ""
         )
     }
 
     var workshop by remember {
-
         mutableStateOf(
             ""
         )
     }
 
     var notes by remember {
-
         mutableStateOf(
             ""
         )
     }
 
     var selectedItems by remember {
-
         mutableStateOf(
             emptyList<String>()
         )
     }
 
     var customItem by remember {
-
         mutableStateOf(
             ""
         )
     }
 
     var entries by remember {
-
         mutableStateOf(
             store.loadMaintenance()
         )
     }
 
-    val list =
+    val vehicleEntries =
         entries.filter {
-
-            it.vehicle ==
-                activeVehicle
+            it.vehicle == activeVehicle
         }
 
     fun resetForm() {
@@ -377,17 +347,16 @@ fun MaintenanceScreen(
                 )
             }
 
-        val customItems =
-            decoded.first.filter {
-                isCustomMaintenanceItem(
-                    it
-                )
-            }
-
         customItem =
-            customItems.joinToString(
-                ", "
-            )
+            decoded.first
+                .filterNot {
+                    standardMaintenanceItems.contains(
+                        it
+                    )
+                }
+                .joinToString(
+                    ", "
+                )
 
         date =
             normalizeMaintenanceDate(
@@ -442,13 +411,10 @@ fun MaintenanceScreen(
         }
 
         LazyColumn(
-
             modifier =
-                Modifier
-                    .weight(
-                        1f
-                    ),
-
+                Modifier.weight(
+                    1f
+                ),
             verticalArrangement =
                 Arrangement.spacedBy(
                     10.dp
@@ -456,15 +422,13 @@ fun MaintenanceScreen(
         ) {
 
             if (
-                list.isEmpty() &&
+                vehicleEntries.isEmpty() &&
                 !showForm
             ) {
 
                 item {
 
-                    EmptyCard(
-                        "Noch keine Wartung gespeichert."
-                    )
+                    EmptyMaintenanceCard()
                 }
             }
 
@@ -475,7 +439,6 @@ fun MaintenanceScreen(
                 item {
 
                     MaintenanceFormCard(
-
                         selectedItems =
                             selectedItems,
 
@@ -537,21 +500,6 @@ fun MaintenanceScreen(
 
                         onSave = {
 
-                            val normalizedDate =
-                                normalizeMaintenanceDate(
-                                    date
-                                )
-
-                            val encodedNotes =
-                                encodeMaintenanceNotes(
-                                    selectedItems =
-                                        selectedItems,
-                                    customItem =
-                                        customItem,
-                                    notes =
-                                        notes
-                                )
-
                             val newEntry =
                                 Maintenance(
 
@@ -564,7 +512,9 @@ fun MaintenanceScreen(
                                         activeVehicle,
 
                                     date =
-                                        normalizedDate,
+                                        normalizeMaintenanceDate(
+                                            date
+                                        ),
 
                                     mileage =
                                         mileage.trim(),
@@ -576,10 +526,14 @@ fun MaintenanceScreen(
                                         workshop.trim(),
 
                                     notes =
-                                        encodedNotes
+                                        encodeMaintenanceNotes(
+                                            selectedItems,
+                                            customItem,
+                                            notes
+                                        )
                                 )
 
-                            val updated =
+                            val updatedEntries =
                                 if (
                                     editingId != null
                                 ) {
@@ -588,7 +542,7 @@ fun MaintenanceScreen(
 
                                         if (
                                             it.id ==
-                                                editingId
+                                            editingId
                                         ) {
 
                                             newEntry
@@ -606,57 +560,52 @@ fun MaintenanceScreen(
                                 }
 
                             entries =
-                                updated
+                                updatedEntries
 
                             store.saveMaintenance(
-                                updated
+                                updatedEntries
                             )
 
                             resetForm()
                         },
 
-                        onCancel = {
-
-                            resetForm()
-                        }
+                        onCancel =
+                            {
+                                resetForm()
+                            }
                     )
                 }
-            }
 
-            if (
-                !showForm
-            ) {
+            } else {
 
                 items(
-                    list
+                    vehicleEntries
                 ) { entry ->
 
                     MaintenanceSummaryCard(
-
                         entry =
                             entry,
 
-                        onEdit = {
-
-                            editEntry(
-                                entry
-                            )
-                        },
+                        onEdit =
+                            {
+                                editEntry(
+                                    entry
+                                )
+                            },
 
                         onDelete = {
 
-                            val updated =
+                            val updatedEntries =
                                 entries.filterNot {
-
                                     it.id ==
                                         entry.id
                                 }
 
                             entries =
-                                updated
+                                updatedEntries
 
                             store.saveMaintenance(
-                                updated
+                                updatedEntries
                             )
                         }
                     )
@@ -669,45 +618,18 @@ fun MaintenanceScreen(
         ) {
 
             Button(
-
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(
-                            top =
-                                8.dp
+                            top = 8.dp
                         ),
 
                 onClick = {
 
-                    editingId =
-                        null
-
-                    date =
-                        ""
-
-                    mileage =
-                        ""
-
-                    cost =
-                        ""
-
-                    workshop =
-                        ""
-
-                    notes =
-                        ""
-
-                    selectedItems =
-                        emptyList()
-
-                    customItem =
-                        ""
-
                     showForm =
                         true
                 }
-
             ) {
 
                 Text(
@@ -747,7 +669,6 @@ private fun MaintenanceFormCard(
 ) {
 
     Card(
-
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -761,7 +682,6 @@ private fun MaintenanceFormCard(
     ) {
 
         Column(
-
             modifier =
                 Modifier.padding(
                     16.dp
@@ -769,71 +689,73 @@ private fun MaintenanceFormCard(
 
             verticalArrangement =
                 Arrangement.spacedBy(
-                    10.dp
+                    8.dp
                 )
         ) {
 
             Text(
-                text =
-                    if (
-                        isEditing
-                    ) {
-
-                        "Wartung ändern"
-
-                    } else {
-
-                        "Neue Wartung"
-                    }
+                if (
+                    isEditing
+                ) {
+                    "Wartung ändern"
+                } else {
+                    "Neue Wartung"
+                }
             )
 
             Text(
-                text =
-                    "Wartungsarbeiten"
+                "Wartungsarbeiten"
             )
 
             standardMaintenanceItems.forEach {
                 item ->
 
-                MaintenanceCheckRow(
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth(),
 
-                    label =
-                        item,
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
 
-                    checked =
-                        selectedItems.contains(
-                            item
-                        ),
+                    Checkbox(
+                        checked =
+                            selectedItems.contains(
+                                item
+                            ),
 
-                    onCheckedChange = {
+                        onCheckedChange = {
+                            checked ->
 
-                        val updated =
-                            if (
-                                it
-                            ) {
+                            onSelectedItemsChanged(
 
-                                selectedItems +
-                                    item
+                                if (
+                                    checked
+                                ) {
 
-                            } else {
+                                    (
+                                        selectedItems +
+                                            item
+                                    ).distinct()
 
-                                selectedItems.filterNot {
+                                } else {
 
-                                    selected ->
-                                    selected ==
-                                        item
+                                    selectedItems
+                                        .filterNot {
+                                            it == item
+                                        }
                                 }
-                            }
+                            )
+                        }
+                    )
 
-                        onSelectedItemsChanged(
-                            updated
-                        )
-                    }
-                )
+                    Text(
+                        item
+                    )
+                }
             }
 
             OutlinedTextField(
-
                 value =
                     customItem,
 
@@ -860,7 +782,6 @@ private fun MaintenanceFormCard(
             )
 
             OutlinedTextField(
-
                 value =
                     date,
 
@@ -887,7 +808,6 @@ private fun MaintenanceFormCard(
             )
 
             OutlinedTextField(
-
                 value =
                     mileage,
 
@@ -908,7 +828,6 @@ private fun MaintenanceFormCard(
             )
 
             OutlinedTextField(
-
                 value =
                     cost,
 
@@ -929,7 +848,6 @@ private fun MaintenanceFormCard(
             )
 
             OutlinedTextField(
-
                 value =
                     workshop,
 
@@ -950,7 +868,6 @@ private fun MaintenanceFormCard(
             )
 
             OutlinedTextField(
-
                 value =
                     notes,
 
@@ -964,21 +881,20 @@ private fun MaintenanceFormCard(
                     Text(
                         "Notizen"
                     )
-            }
+                }
+            )
 
             Row(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 horizontalArrangement =
                     Arrangement.spacedBy(
-                        10.dp
+                        8.dp
                     )
             ) {
 
                 OutlinedButton(
-
                     modifier =
                         Modifier.weight(
                             1f
@@ -986,7 +902,6 @@ private fun MaintenanceFormCard(
 
                     onClick =
                         onCancel
-
                 ) {
 
                     Text(
@@ -995,7 +910,6 @@ private fun MaintenanceFormCard(
                 }
 
                 Button(
-
                     modifier =
                         Modifier.weight(
                             1f
@@ -1003,56 +917,20 @@ private fun MaintenanceFormCard(
 
                     onClick =
                         onSave
-
                 ) {
 
                     Text(
                         if (
                             isEditing
                         ) {
-
                             "Änderung speichern"
-
                         } else {
-
                             "Wartung speichern"
                         }
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun MaintenanceCheckRow(
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-
-    Row(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        verticalAlignment =
-            Alignment.CenterVertically
-    ) {
-
-        Checkbox(
-
-            checked =
-                checked,
-
-            onCheckedChange =
-                onCheckedChange
-        )
-
-        Text(
-            text =
-                label
-        )
     }
 }
 
@@ -1068,14 +946,13 @@ private fun MaintenanceSummaryCard(
             entry.notes
         )
 
-    val selectedMaintenanceItems =
+    val items =
         decoded.first
 
-    val storedNotes =
+    val savedNotes =
         decoded.second
 
     Card(
-
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -1089,7 +966,6 @@ private fun MaintenanceSummaryCard(
     ) {
 
         Column(
-
             modifier =
                 Modifier.padding(
                     16.dp
@@ -1097,35 +973,31 @@ private fun MaintenanceSummaryCard(
 
             verticalArrangement =
                 Arrangement.spacedBy(
-                    8.dp
+                    7.dp
                 )
         ) {
 
             Text(
-                text =
-                    "Gespeichert"
+                "Gespeichert"
             )
 
             Text(
-                text =
-                    "Fahrzeug: ${entry.vehicle}"
+                "Fahrzeug: ${entry.vehicle}"
             )
 
             if (
-                selectedMaintenanceItems.isNotEmpty()
+                items.isNotEmpty()
             ) {
 
                 Text(
-                    text =
-                        "Wartungsarbeiten:"
+                    "Wartungsarbeiten:"
                 )
 
-                selectedMaintenanceItems.forEach {
+                items.forEach {
                     item ->
 
                     Text(
-                        text =
-                            "✓ $item"
+                        "✓ $item"
                     )
                 }
             }
@@ -1135,8 +1007,11 @@ private fun MaintenanceSummaryCard(
             ) {
 
                 Text(
-                    text =
-                        "Datum: ${normalizeMaintenanceDate(entry.date)}"
+                    "Datum: ${
+                        normalizeMaintenanceDate(
+                            entry.date
+                        )
+                    }"
                 )
             }
 
@@ -1145,8 +1020,7 @@ private fun MaintenanceSummaryCard(
             ) {
 
                 Text(
-                    text =
-                        "Kilometerstand: ${entry.mileage}"
+                    "Kilometerstand: ${entry.mileage}"
                 )
             }
 
@@ -1155,8 +1029,7 @@ private fun MaintenanceSummaryCard(
             ) {
 
                 Text(
-                    text =
-                        "Kosten: ${entry.cost}"
+                    "Kosten: ${entry.cost}"
                 )
             }
 
@@ -1165,41 +1038,30 @@ private fun MaintenanceSummaryCard(
             ) {
 
                 Text(
-                    text =
-                        "Werkstatt: ${entry.workshop}"
+                    "Werkstatt: ${entry.workshop}"
                 )
             }
 
             if (
-                storedNotes.isNotBlank()
+                savedNotes.isNotBlank()
             ) {
 
                 Text(
-                    text =
-                        "Notizen: $storedNotes"
+                    "Notizen: $savedNotes"
                 )
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        4.dp
-                    )
-            )
-
             Row(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 horizontalArrangement =
                     Arrangement.spacedBy(
-                        10.dp
+                        8.dp
                     )
             ) {
 
                 OutlinedButton(
-
                     modifier =
                         Modifier.weight(
                             1f
@@ -1207,7 +1069,6 @@ private fun MaintenanceSummaryCard(
 
                     onClick =
                         onEdit
-
                 ) {
 
                     Text(
@@ -1216,7 +1077,6 @@ private fun MaintenanceSummaryCard(
                 }
 
                 OutlinedButton(
-
                     modifier =
                         Modifier.weight(
                             1f
@@ -1224,7 +1084,6 @@ private fun MaintenanceSummaryCard(
 
                     onClick =
                         onDelete
-
                 ) {
 
                     Text(
@@ -1232,6 +1091,47 @@ private fun MaintenanceSummaryCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyMaintenanceCard() {
+
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            )
+    ) {
+
+        Column(
+            modifier =
+                Modifier.padding(
+                    20.dp
+                )
+        ) {
+
+            Text(
+                "Noch keine Wartung gespeichert."
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        6.dp
+                    )
+            )
+
+            Text(
+                "Über „Wartung hinzufügen“ kannst du die erste Wartung erfassen."
+            )
         }
     }
 }
