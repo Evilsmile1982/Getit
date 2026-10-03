@@ -1,29 +1,13 @@
 package de.autocheck.app
 
-import android.app.AlarmManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,61 +15,214 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CarRepair
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.TireRepair
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.autocheck.app.ui.AutoCheckTheme
-import org.json.JSONArray
-import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+
+private val pickerlIsoFormatter =
+    DateTimeFormatter.ofPattern(
+        "yyyy-MM-dd"
+    )
+
+private val pickerlEuropeanFormatter =
+    DateTimeFormatter.ofPattern(
+        "dd.MM.yyyy"
+    )
+
+private fun pickerlToDisplayDate(
+    value: String
+): String {
+
+    val trimmed =
+        value.trim()
+
+    if (trimmed.isBlank()) {
+        return ""
+    }
+
+    return try {
+
+        LocalDate
+            .parse(
+                trimmed,
+                pickerlIsoFormatter
+            )
+            .format(
+                pickerlEuropeanFormatter
+            )
+
+    } catch (_: DateTimeParseException) {
+
+        try {
+
+            LocalDate
+                .parse(
+                    trimmed,
+                    pickerlEuropeanFormatter
+                )
+                .format(
+                    pickerlEuropeanFormatter
+                )
+
+        } catch (_: DateTimeParseException) {
+
+            trimmed
+        }
+    }
+}
+
+private fun pickerlToStorageDate(
+    value: String
+): String {
+
+    val trimmed =
+        value.trim()
+
+    if (trimmed.isBlank()) {
+        return ""
+    }
+
+    return try {
+
+        LocalDate
+            .parse(
+                trimmed,
+                pickerlEuropeanFormatter
+            )
+            .format(
+                pickerlIsoFormatter
+            )
+
+    } catch (_: DateTimeParseException) {
+
+        try {
+
+            LocalDate
+                .parse(
+                    trimmed,
+                    pickerlIsoFormatter
+                )
+                .format(
+                    pickerlIsoFormatter
+                )
+
+        } catch (_: DateTimeParseException) {
+
+            trimmed
+        }
+    }
+}
+
+private fun copyPickerlImage(
+    context: android.content.Context,
+    uri: Uri
+): String? {
+
+    return try {
+
+        val extension =
+            when (
+                context.contentResolver
+                    .getType(uri)
+            ) {
+
+                "image/png" ->
+                    "png"
+
+                "image/webp" ->
+                    "webp"
+
+                else ->
+                    "jpg"
+            }
+
+        val file =
+            File(
+                context.filesDir,
+                "pickerl_${System.currentTimeMillis()}.$extension"
+            )
+
+        context.contentResolver
+            .openInputStream(uri)
+            ?.use { input ->
+
+                FileOutputStream(file)
+                    .use { output ->
+
+                        input.copyTo(
+                            output
+                        )
+                    }
+            }
+
+        file.absolutePath
+
+    } catch (_: Exception) {
+
+        null
+    }
+}
+
+private fun saveCameraBitmap(
+    context: android.content.Context,
+    bitmap: Bitmap
+): String? {
+
+    return try {
+
+        val file =
+            File(
+                context.filesDir,
+                "pickerl_${System.currentTimeMillis()}.jpg"
+            )
+
+        FileOutputStream(file)
+            .use { output ->
+
+                bitmap.compress(
+                    Bitmap.CompressFormat.JPEG,
+                    92,
+                    output
+                )
+            }
+
+        file.absolutePath
+
+    } catch (_: Exception) {
+
+        null
+    }
+}
 
 @Composable
 fun PickerlScreen(
@@ -96,49 +233,133 @@ fun PickerlScreen(
     onVisited: () -> Unit
 ) {
 
+    val context =
+        LocalContext.current
+
     LaunchedEffect(Unit) {
         onVisited()
     }
 
     var lastDate by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var nextDate by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var notes by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var reminder by remember {
-        mutableStateOf(
-            true
-        )
+        mutableStateOf(true)
+    }
+
+    var reminderMonths by remember {
+        mutableStateOf(3)
+    }
+
+    var photoUri by remember {
+        mutableStateOf("")
     }
 
     var saved by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
     }
 
-    val context =
-        LocalContext.current
+    var reminderMenuExpanded by remember {
+        mutableStateOf(false)
+    }
 
     val all =
         remember {
-
             mutableStateOf(
                 store.loadPickerl()
             )
+        }
+
+    var photoBitmap by remember {
+        mutableStateOf<android.graphics.Bitmap?>(
+            null
+        )
+    }
+
+    LaunchedEffect(
+        photoUri
+    ) {
+
+        photoBitmap = null
+
+        if (
+            photoUri.isBlank()
+        ) {
+            return@LaunchedEffect
+        }
+
+        photoBitmap =
+            try {
+
+                BitmapFactory.decodeFile(
+                    photoUri
+                )
+
+            } catch (_: Exception) {
+
+                null
+            }
+    }
+
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.GetContent()
+        ) { uri ->
+
+            if (
+                uri != null
+            ) {
+
+                val savedPath =
+                    copyPickerlImage(
+                        context,
+                        uri
+                    )
+
+                if (
+                    savedPath != null
+                ) {
+
+                    photoUri =
+                        savedPath
+                }
+            }
+        }
+
+    val cameraLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.TakePicturePreview()
+        ) { bitmap ->
+
+            if (
+                bitmap != null
+            ) {
+
+                val savedPath =
+                    saveCameraBitmap(
+                        context,
+                        bitmap
+                    )
+
+                if (
+                    savedPath != null
+                ) {
+
+                    photoUri =
+                        savedPath
+                }
+            }
         }
 
     LaunchedEffect(
@@ -152,12 +373,16 @@ fun PickerlScreen(
             }
 
         lastDate =
-            entry?.lastDate
-                ?: ""
+            pickerlToDisplayDate(
+                entry?.lastDate
+                    ?: ""
+            )
 
         nextDate =
-            entry?.nextDate
-                ?: ""
+            pickerlToDisplayDate(
+                entry?.nextDate
+                    ?: ""
+            )
 
         notes =
             entry?.notes
@@ -166,6 +391,18 @@ fun PickerlScreen(
         reminder =
             entry?.reminder
                 ?: true
+
+        reminderMonths =
+            entry?.reminderMonths
+                ?.coerceIn(
+                    1,
+                    5
+                )
+                ?: 3
+
+        photoUri =
+            entry?.photoUri
+                ?: ""
 
         saved =
             entry != null
@@ -189,7 +426,9 @@ fun PickerlScreen(
 
         if (
             vehicles.isEmpty()
-        ) return@Column
+        ) {
+            return@Column
+        }
 
         LazyColumn(
 
@@ -210,7 +449,8 @@ fun PickerlScreen(
 
                     Text(
 
-                        "Pickerl / TÜV",
+                        text =
+                            "Pickerl / TÜV",
 
                         color =
                             Color.White,
@@ -230,24 +470,203 @@ fun PickerlScreen(
 
                     FormField(
 
-                        "Letzte Prüfung (YYYY-MM-DD)",
+                        "Letzte Prüfung (TT.MM.JJJJ)",
 
                         lastDate
 
                     ) {
+
                         lastDate =
                             it
                     }
 
                     FormField(
 
-                        "Nächste Prüfung (YYYY-MM-DD)",
+                        "Nächste Prüfung (TT.MM.JJJJ)",
 
                         nextDate
 
                     ) {
+
                         nextDate =
                             it
+                    }
+
+                    Spacer(
+                        Modifier.height(
+                            6.dp
+                        )
+                    )
+
+                    Text(
+
+                        text =
+                            "Pickerl-Foto",
+
+                        color =
+                            Color.White,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        fontSize =
+                            16.sp
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            6.dp
+                        )
+                    )
+
+                    Row(
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            )
+                    ) {
+
+                        OutlinedButton(
+
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                ),
+
+                            onClick = {
+
+                                galleryLauncher.launch(
+                                    "image/*"
+                                )
+                            }
+
+                        ) {
+
+                            Icon(
+
+                                imageVector =
+                                    Icons.Default.PhotoLibrary,
+
+                                contentDescription =
+                                    "Galerie"
+                            )
+
+                            Spacer(
+                                Modifier.size(
+                                    6.dp
+                                )
+                            )
+
+                            Text(
+                                "Galerie"
+                            )
+                        }
+
+                        OutlinedButton(
+
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                ),
+
+                            onClick = {
+
+                                cameraLauncher.launch(
+                                    null
+                                )
+                            }
+
+                        ) {
+
+                            Icon(
+
+                                imageVector =
+                                    Icons.Default.PhotoCamera,
+
+                                contentDescription =
+                                    "Kamera"
+                            )
+
+                            Spacer(
+                                Modifier.size(
+                                    6.dp
+                                )
+                            )
+
+                            Text(
+                                "Kamera"
+                            )
+                        }
+                    }
+
+                    if (
+                        photoBitmap != null
+                    ) {
+
+                        Spacer(
+                            Modifier.height(
+                                10.dp
+                            )
+                        )
+
+                        Card(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                        ) {
+
+                            Image(
+
+                                bitmap =
+                                    photoBitmap!!
+                                        .asImageBitmap(),
+
+                                contentDescription =
+                                    "Pickerl Foto",
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(
+                                            220.dp
+                                        ),
+
+                                contentScale =
+                                    ContentScale.Crop
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.height(
+                                4.dp
+                            )
+                        )
+
+                        TextButton(
+
+                            modifier =
+                                Modifier.align(
+                                    Alignment.End
+                                ),
+
+                            onClick = {
+
+                                photoUri =
+                                    ""
+
+                                photoBitmap =
+                                    null
+                            }
+
+                        ) {
+
+                            Text(
+                                "Foto entfernen"
+                            )
+                        }
                     }
 
                     FormField(
@@ -257,9 +676,16 @@ fun PickerlScreen(
                         notes
 
                     ) {
+
                         notes =
                             it
                     }
+
+                    Spacer(
+                        Modifier.height(
+                            6.dp
+                        )
+                    )
 
                     Row(
 
@@ -275,10 +701,14 @@ fun PickerlScreen(
 
                         Text(
 
-                            "Erinnerung 3 Monate vorher",
+                            text =
+                                "Erinnerung",
 
                             color =
-                                Color.White
+                                Color.White,
+
+                            fontWeight =
+                                FontWeight.Bold
                         )
 
                         Switch(
@@ -287,11 +717,114 @@ fun PickerlScreen(
                                 reminder,
 
                             onCheckedChange = {
+
                                 reminder =
                                     it
                             }
                         )
                     }
+
+                    if (
+                        reminder
+                    ) {
+
+                        Spacer(
+                            Modifier.height(
+                                6.dp
+                            )
+                        )
+
+                        Text(
+
+                            text =
+                                "Erinnerung vor Ablauf",
+
+                            color =
+                                Color.White
+                        )
+
+                        Spacer(
+                            Modifier.height(
+                                4.dp
+                            )
+                        )
+
+                        Box {
+
+                            OutlinedButton(
+
+                                onClick = {
+
+                                    reminderMenuExpanded =
+                                        true
+                                }
+
+                            ) {
+
+                                Text(
+
+                                    "$reminderMonths " +
+                                        if (
+                                            reminderMonths == 1
+                                        ) {
+                                            "Monat vorher"
+                                        } else {
+                                            "Monate vorher"
+                                        }
+                                )
+                            }
+
+                            DropdownMenu(
+
+                                expanded =
+                                    reminderMenuExpanded,
+
+                                onDismissRequest = {
+
+                                    reminderMenuExpanded =
+                                        false
+                                }
+
+                            ) {
+
+                                (1..5).forEach { months ->
+
+                                    DropdownMenuItem(
+
+                                        text = {
+
+                                            Text(
+
+                                                "$months " +
+                                                    if (
+                                                        months == 1
+                                                    ) {
+                                                        "Monat vorher"
+                                                    } else {
+                                                        "Monate vorher"
+                                                    }
+                                            )
+                                        },
+
+                                        onClick = {
+
+                                            reminderMonths =
+                                                months
+
+                                            reminderMenuExpanded =
+                                                false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(
+                        Modifier.height(
+                            8.dp
+                        )
+                    )
 
                     Button(
 
@@ -300,6 +833,16 @@ fun PickerlScreen(
 
                         onClick = {
 
+                            val storageLastDate =
+                                pickerlToStorageDate(
+                                    lastDate
+                                )
+
+                            val storageNextDate =
+                                pickerlToStorageDate(
+                                    nextDate
+                                )
+
                             val entry =
                                 Pickerl(
 
@@ -307,16 +850,26 @@ fun PickerlScreen(
                                         activeVehicle,
 
                                     lastDate =
-                                        lastDate.trim(),
+                                        storageLastDate,
 
                                     nextDate =
-                                        nextDate.trim(),
+                                        storageNextDate,
 
                                     notes =
                                         notes.trim(),
 
                                     reminder =
-                                        reminder
+                                        reminder,
+
+                                    photoUri =
+                                        photoUri,
+
+                                    reminderMonths =
+                                        reminderMonths
+                                            .coerceIn(
+                                                1,
+                                                5
+                                            )
                                 )
 
                             val updated =
@@ -334,9 +887,18 @@ fun PickerlScreen(
                                 updated
                             )
 
+                            /*
+                             * Die eigentliche Erinnerung wird
+                             * im nächsten Schritt an die neue
+                             * Auswahl 1–5 Monate angepasst.
+                             *
+                             * Bis dahin bleibt der bestehende
+                             * Reminder-Aufruf kompatibel.
+                             */
+
                             if (
                                 reminder &&
-                                nextDate.isNotBlank()
+                                storageNextDate.isNotBlank()
                             ) {
 
                                 schedulePickerlReminder(
@@ -345,7 +907,7 @@ fun PickerlScreen(
 
                                     activeVehicle,
 
-                                    nextDate.trim()
+                                    storageNextDate
                                 )
 
                             } else {
