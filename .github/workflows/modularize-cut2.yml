@@ -66,10 +66,6 @@ jobs:
               keepends=True
           )
 
-          #
-          # Jede echte Top-Level-Deklaration bekommt
-          # eine feste Ziel-Datei.
-          #
           FILE_MAP = {
               "Background": "components/UiConstants.kt",
               "Surface": "components/UiConstants.kt",
@@ -158,9 +154,6 @@ jobs:
 
           EXPECTED = set(FILE_MAP.keys())
 
-          #
-          # Nur diese echten Deklarationsarten werden gesucht.
-          #
           DECLARATION_KIND = {
               "Background": r"(?:val|var)",
               "Surface": r"(?:val|var)",
@@ -175,9 +168,11 @@ jobs:
               "VehicleStore": r"class",
               "VisitedStore": r"class",
 
-              "Screen": r"(?:enum\s+class|sealed\s+class|class)",
+              "Screen":
+                  r"(?:enum\s+class|sealed\s+class|class)",
 
-              "MenuItemData": r"(?:data\s+class|class)",
+              "MenuItemData":
+                  r"(?:data\s+class|class)",
 
               "MainActivity": r"class",
               "PickerlReceiver": r"class",
@@ -233,19 +228,6 @@ jobs:
               + "\n\n"
           )
 
-          #
-          # Wir suchen bewusst NICHT mehr nach allen
-          # val/var-Deklarationen.
-          #
-          # Dadurch werden Konstruktorfelder wie
-          #
-          # val name: String
-          # val make: String
-          # val model: String
-          #
-          # nicht mehr als Top-Level-Code erkannt.
-          #
-
           declarations = []
 
           for name in sorted(
@@ -300,20 +282,14 @@ jobs:
 
               match = matches[0]
 
-              line_number = (
-                  source.count(
-                      "\n",
-                      0,
-                      match.start()
-                  )
+              line_number = source.count(
+                  "\n",
+                  0,
+                  match.start()
               )
 
               declaration_line = line_number
 
-              #
-              # Eventuelle @Composable / @OptIn-Anmerkungen
-              # direkt vor der Deklaration mitnehmen.
-              #
               annotation_start = declaration_line
 
               while annotation_start > 0:
@@ -336,46 +312,39 @@ jobs:
                   }
               )
 
-          #
-          # Nach Startposition sortieren.
-          #
           declarations.sort(
               key=lambda item: item["start"]
           )
 
-          #
-          # Sicherheitsprüfung:
-          # Jede erwartete Deklaration genau einmal.
-          #
           actual_names = [
               item["name"]
               for item in declarations
           ]
 
           if set(actual_names) != EXPECTED:
+
               print(
                   "FEHLER: Gefundene Deklarationen stimmen "
                   "nicht mit der erwarteten Liste überein."
               )
-              print(
-                  "Gefunden:"
-              )
+
+              print("Gefunden:")
+
               for name in actual_names:
                   print(
                       "  - " + name
                   )
+
               sys.exit(1)
 
           if len(actual_names) != len(EXPECTED):
+
               print(
                   "FEHLER: Anzahl der Deklarationen stimmt nicht."
               )
+
               sys.exit(1)
 
-          #
-          # Ende jeder Deklaration ist der Anfang der
-          # nächsten echten Top-Level-Deklaration.
-          #
           for index, declaration in enumerate(
               declarations
           ):
@@ -392,15 +361,8 @@ jobs:
 
                   declaration["end"] = len(lines)
 
-          #
-          # Alte erzeugte Kotlin-Dateien innerhalb
-          # des App-Pakets entfernen.
-          #
           for path in TARGET.rglob("*.kt"):
 
-              #
-              # Theme.kt unter ui darf bestehen bleiben.
-              #
               if "/ui/" in str(path):
                   continue
 
@@ -419,9 +381,6 @@ jobs:
                   lines[start:end]
               ).strip()
 
-              #
-              # Nur Top-Level-private entfernen.
-              #
               text = re.sub(
                   r"^(\s*@.*\n\s*)?private\s+",
                   r"\1",
@@ -436,9 +395,6 @@ jobs:
                   []
               ).append(text)
 
-          #
-          # Dateien schreiben.
-          #
           for relative, parts in grouped.items():
 
               path = TARGET / relative
@@ -459,9 +415,6 @@ jobs:
                   encoding="utf-8"
               )
 
-          #
-          # Sicherheitsprüfungen.
-          #
           expected_files = sorted(
               set(FILE_MAP.values())
           )
@@ -471,28 +424,29 @@ jobs:
               path = TARGET / relative
 
               if not path.exists():
+
                   print(
                       "FEHLER: Datei fehlt:"
                   )
+
                   print(
                       "  " + relative
                   )
+
                   sys.exit(1)
 
               if path.stat().st_size < 50:
+
                   print(
                       "FEHLER: Datei ist unerwartet klein:"
                   )
+
                   print(
                       "  " + relative
                   )
+
                   sys.exit(1)
 
-          #
-          # Prüfen, dass die alten Feldnamen NICHT
-          # fälschlich als eigene Dateien/Deklarationen
-          # erzeugt wurden.
-          #
           forbidden_names = {
               "name",
               "make",
@@ -554,12 +508,14 @@ jobs:
           if accidental:
 
               print("")
+
               print(
                   "FEHLER: Feldnamen wurden als eigene "
                   "Top-Level-Deklarationen erkannt:"
               )
 
               for name in accidental:
+
                   print(
                       "  - " + name
                   )
@@ -583,6 +539,7 @@ jobs:
           )
 
           for declaration in declarations:
+
               print(
                   "  - " + declaration["name"]
               )
@@ -616,6 +573,8 @@ jobs:
               "Die CUT2-BASELINE wurde unverändert als "
               "Quelle verwendet."
           )
+
+          PY
 
       - name: Modularisierte Dateien prüfen
         run: |
@@ -660,8 +619,47 @@ jobs:
           gradle-version: '9.6.1'
 
       - name: Modularisiertes Projekt bauen
+        shell: bash
         run: |
-          gradle assembleDebug --stacktrace
+          set +e
+
+          gradle assembleDebug --stacktrace --console=plain \
+            > /tmp/autocheck-build.log 2>&1
+
+          BUILD_STATUS=$?
+
+          echo ""
+          echo "=========================================="
+          echo "WICHTIGE BUILD-FEHLER"
+          echo "=========================================="
+
+          grep -nE \
+            "e: |error: |ERROR: |What went wrong|Execution failed|Unresolved reference|Expecting|Cannot access|Overload resolution ambiguity|Type mismatch|Modifier 'private' is not applicable|Conflicting declarations" \
+            /tmp/autocheck-build.log \
+            | tail -120 \
+            || true
+
+          echo ""
+          echo "=========================================="
+          echo "LETZTE 120 BUILD-ZEILEN"
+          echo "=========================================="
+
+          tail -120 /tmp/autocheck-build.log
+
+          echo ""
+          echo "=========================================="
+          echo "DATEIEN IM MODULARISIERTEN PROJEKT"
+          echo "=========================================="
+
+          find app/src/main/java/de/autocheck/app \
+            -type f \
+            -name "*.kt" \
+            | sort
+
+          echo ""
+          echo "Gradle Exit-Code: $BUILD_STATUS"
+
+          exit $BUILD_STATUS
 
       - name: APK hochladen
         if: success()
