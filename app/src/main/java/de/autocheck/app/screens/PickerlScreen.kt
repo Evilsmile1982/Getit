@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -26,6 +27,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,6 +44,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
@@ -49,99 +52,139 @@ import java.io.FileOutputStream
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.Locale
 
 private val pickerlIsoFormatter =
     DateTimeFormatter.ofPattern(
         "yyyy-MM-dd"
     )
 
-private val pickerlEuropeanFormatter =
-    DateTimeFormatter.ofPattern(
-        "dd.MM.yyyy"
+private val pickerlMonths =
+    listOf(
+        "JANUAR",
+        "FEBRUAR",
+        "MÄRZ",
+        "APRIL",
+        "MAI",
+        "JUNI",
+        "JULI",
+        "AUGUST",
+        "SEPTEMBER",
+        "OKTOBER",
+        "NOVEMBER",
+        "DEZEMBER"
     )
 
-private fun pickerlToDisplayDate(
-    value: String
+private fun monthNumber(
+    monthName: String
+): Int {
+
+    val index =
+        pickerlMonths.indexOf(
+            monthName.uppercase(
+                Locale.GERMAN
+            )
+        )
+
+    return if (
+        index >= 0
+    ) {
+        index + 1
+    } else {
+        1
+    }
+}
+
+private fun monthName(
+    monthNumber: Int
 ): String {
+
+    return pickerlMonths.getOrElse(
+        monthNumber - 1
+    ) {
+        "JANUAR"
+    }
+}
+
+private fun parseStoredPickerlDate(
+    value: String
+): LocalDate? {
 
     val trimmed =
         value.trim()
 
-    if (trimmed.isBlank()) {
-        return ""
+    if (
+        trimmed.isBlank()
+    ) {
+        return null
     }
 
     return try {
 
-        LocalDate
-            .parse(
-                trimmed,
-                pickerlIsoFormatter
-            )
-            .format(
-                pickerlEuropeanFormatter
-            )
+        LocalDate.parse(
+            trimmed,
+            pickerlIsoFormatter
+        )
 
     } catch (_: DateTimeParseException) {
 
         try {
 
-            LocalDate
-                .parse(
-                    trimmed,
-                    pickerlEuropeanFormatter
-                )
-                .format(
-                    pickerlEuropeanFormatter
-                )
+            LocalDate.parse(
+                trimmed
+            )
 
-        } catch (_: DateTimeParseException) {
+        } catch (_: Exception) {
 
-            trimmed
+            null
         }
     }
 }
 
-private fun pickerlToStorageDate(
-    value: String
+private fun createPickerlStorageDate(
+    month: Int,
+    year: String
 ): String {
 
-    val trimmed =
-        value.trim()
+    val cleanYear =
+        year.trim()
 
-    if (trimmed.isBlank()) {
+    if (
+        cleanYear.length != 4
+    ) {
         return ""
     }
 
-    return try {
+    val numericYear =
+        cleanYear.toIntOrNull()
+            ?: return ""
 
-        LocalDate
-            .parse(
-                trimmed,
-                pickerlEuropeanFormatter
-            )
-            .format(
-                pickerlIsoFormatter
-            )
-
-    } catch (_: DateTimeParseException) {
-
-        try {
-
-            LocalDate
-                .parse(
-                    trimmed,
-                    pickerlIsoFormatter
-                )
-                .format(
-                    pickerlIsoFormatter
-                )
-
-        } catch (_: DateTimeParseException) {
-
-            trimmed
-        }
+    if (
+        numericYear < 1900 ||
+        numericYear > 2200
+    ) {
+        return ""
     }
+
+    return "%04d-%02d-01".format(
+        Locale.US,
+        numericYear,
+        month
+    )
+}
+
+private fun displayPickerlMonthYear(
+    month: Int,
+    year: String
+): String {
+
+    if (
+        year.length != 4
+    ) {
+        return ""
+    }
+
+    return "${monthName(month)} $year"
 }
 
 private fun copyPickerlImage(
@@ -241,12 +284,36 @@ fun PickerlScreen(
         onVisited()
     }
 
-    var lastDate by remember {
-        mutableStateOf("")
+    val currentYear =
+        remember {
+            LocalDate
+                .now()
+                .year
+                .toString()
+        }
+
+    var lastMonth by remember {
+        mutableStateOf(1)
     }
 
-    var nextDate by remember {
-        mutableStateOf("")
+    var lastYear by remember {
+        mutableStateOf(currentYear)
+    }
+
+    var nextMonth by remember {
+        mutableStateOf(1)
+    }
+
+    var nextYear by remember {
+        mutableStateOf(currentYear)
+    }
+
+    var lastMonthMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    var nextMonthMenuExpanded by remember {
+        mutableStateOf(false)
     }
 
     var notes by remember {
@@ -269,6 +336,10 @@ fun PickerlScreen(
         mutableStateOf(false)
     }
 
+    var savedPickerl by remember {
+        mutableStateOf<Pickerl?>(null)
+    }
+
     var reminderMenuExpanded by remember {
         mutableStateOf(false)
     }
@@ -281,16 +352,15 @@ fun PickerlScreen(
         }
 
     var photoBitmap by remember {
-        mutableStateOf<android.graphics.Bitmap?>(
-            null
-        )
+        mutableStateOf<Bitmap?>(null)
     }
 
     LaunchedEffect(
         photoUri
     ) {
 
-        photoBitmap = null
+        photoBitmap =
+            null
 
         if (
             photoUri.isBlank()
@@ -373,40 +443,96 @@ fun PickerlScreen(
                     activeVehicle
             }
 
-        lastDate =
-            pickerlToDisplayDate(
-                entry?.lastDate
-                    ?: ""
+        if (
+            entry == null
+        ) {
+
+            lastMonth =
+                1
+
+            lastYear =
+                currentYear
+
+            nextMonth =
+                1
+
+            nextYear =
+                currentYear
+
+            notes =
+                ""
+
+            reminder =
+                true
+
+            reminderMonths =
+                3
+
+            photoUri =
+                ""
+
+            saved =
+                false
+
+            savedPickerl =
+                null
+
+            return@LaunchedEffect
+        }
+
+        val storedLastDate =
+            parseStoredPickerlDate(
+                entry.lastDate
             )
 
-        nextDate =
-            pickerlToDisplayDate(
-                entry?.nextDate
-                    ?: ""
+        val storedNextDate =
+            parseStoredPickerlDate(
+                entry.nextDate
             )
+
+        if (
+            storedLastDate != null
+        ) {
+
+            lastMonth =
+                storedLastDate.monthValue
+
+            lastYear =
+                storedLastDate.year.toString()
+        }
+
+        if (
+            storedNextDate != null
+        ) {
+
+            nextMonth =
+                storedNextDate.monthValue
+
+            nextYear =
+                storedNextDate.year.toString()
+        }
 
         notes =
-            entry?.notes
-                ?: ""
+            entry.notes
 
         reminder =
-            entry?.reminder
-                ?: true
+            entry.reminder
 
         reminderMonths =
-            entry?.reminderMonths
-                ?.coerceIn(
+            entry.reminderMonths
+                .coerceIn(
                     1,
                     5
                 )
-                ?: 3
 
         photoUri =
-            entry?.photoUri
-                ?: ""
+            entry.photoUri
 
         saved =
-            entry != null
+            true
+
+        savedPickerl =
+            entry
     }
 
     Column(
@@ -428,6 +554,11 @@ fun PickerlScreen(
         if (
             vehicles.isEmpty()
         ) {
+
+            EmptyCard(
+                "Bitte zuerst ein Fahrzeug anlegen."
+            )
+
             return@Column
         }
 
@@ -465,37 +596,328 @@ fun PickerlScreen(
 
                     Spacer(
                         Modifier.height(
-                            4.dp
+                            8.dp
                         )
                     )
 
-                    FormField(
+                    Text(
 
-                        "Letzte Prüfung (TT.MM.JJJJ)",
+                        text =
+                            "Letzter Termin",
 
-                        lastDate
+                        color =
+                            Color.White,
 
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        fontSize =
+                            16.sp
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            6.dp
+                        )
+                    )
+
+                    Row(
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            ),
+
+                        verticalAlignment =
+                            Alignment.CenterVertically
                     ) {
 
-                        lastDate =
-                            it
+                        Box(
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        ) {
+
+                            OutlinedButton(
+
+                                modifier =
+                                    Modifier.fillMaxWidth(),
+
+                                onClick = {
+
+                                    lastMonthMenuExpanded =
+                                        true
+                                }
+
+                            ) {
+
+                                Text(
+                                    monthName(
+                                        lastMonth
+                                    )
+                                )
+                            }
+
+                            DropdownMenu(
+
+                                expanded =
+                                    lastMonthMenuExpanded,
+
+                                onDismissRequest = {
+
+                                    lastMonthMenuExpanded =
+                                        false
+                                }
+
+                            ) {
+
+                                pickerlMonths.forEachIndexed {
+                                        index,
+                                        month ->
+
+                                    DropdownMenuItem(
+
+                                        text = {
+
+                                            Text(
+                                                month
+                                            )
+                                        },
+
+                                        onClick = {
+
+                                            lastMonth =
+                                                index + 1
+
+                                            lastMonthMenuExpanded =
+                                                false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        OutlinedTextField(
+
+                            value =
+                                lastYear,
+
+                            onValueChange = {
+
+                                if (
+                                    it.length <= 4 &&
+                                    it.all {
+                                        char ->
+                                        char.isDigit()
+                                    }
+                                ) {
+
+                                    lastYear =
+                                        it
+                                }
+                            },
+
+                            label = {
+                                Text(
+                                    "Jahr"
+                                )
+                            },
+
+                            singleLine =
+                                true,
+
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType =
+                                        KeyboardType.Number
+                                ),
+
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        )
                     }
 
-                    FormField(
+                    Spacer(
+                        Modifier.height(
+                            14.dp
+                        )
+                    )
 
-                        "Nächste Prüfung (TT.MM.JJJJ)",
+                    Text(
 
-                        nextDate
+                        text =
+                            "Nächster Termin",
 
+                        color =
+                            Color.White,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        fontSize =
+                            16.sp
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            6.dp
+                        )
+                    )
+
+                    Row(
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            ),
+
+                        verticalAlignment =
+                            Alignment.CenterVertically
                     ) {
 
-                        nextDate =
-                            it
+                        Box(
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        ) {
+
+                            OutlinedButton(
+
+                                modifier =
+                                    Modifier.fillMaxWidth(),
+
+                                onClick = {
+
+                                    nextMonthMenuExpanded =
+                                        true
+                                }
+
+                            ) {
+
+                                Text(
+                                    monthName(
+                                        nextMonth
+                                    )
+                                )
+                            }
+
+                            DropdownMenu(
+
+                                expanded =
+                                    nextMonthMenuExpanded,
+
+                                onDismissRequest = {
+
+                                    nextMonthMenuExpanded =
+                                        false
+                                }
+
+                            ) {
+
+                                pickerlMonths.forEachIndexed {
+                                        index,
+                                        month ->
+
+                                    DropdownMenuItem(
+
+                                        text = {
+
+                                            Text(
+                                                month
+                                            )
+                                        },
+
+                                        onClick = {
+
+                                            nextMonth =
+                                                index + 1
+
+                                            nextMonthMenuExpanded =
+                                                false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        OutlinedTextField(
+
+                            value =
+                                nextYear,
+
+                            onValueChange = {
+
+                                if (
+                                    it.length <= 4 &&
+                                    it.all {
+                                        char ->
+                                        char.isDigit()
+                                    }
+                                ) {
+
+                                    nextYear =
+                                        it
+                                }
+                            },
+
+                            label = {
+                                Text(
+                                    "Jahr"
+                                )
+                            },
+
+                            singleLine =
+                                true,
+
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType =
+                                        KeyboardType.Number
+                                ),
+
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        )
                     }
 
                     Spacer(
                         Modifier.height(
                             6.dp
+                        )
+                    )
+
+                    Text(
+
+                        text =
+                            "Nächster Termin: ${
+                                displayPickerlMonthYear(
+                                    nextMonth,
+                                    nextYear
+                                )
+                            }",
+
+                        color =
+                            Color.White,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            10.dp
                         )
                     )
 
@@ -788,7 +1210,8 @@ fun PickerlScreen(
 
                             ) {
 
-                                (1..5).forEach { months ->
+                                (1..5).forEach {
+                                        months ->
 
                                     DropdownMenuItem(
 
@@ -823,7 +1246,7 @@ fun PickerlScreen(
 
                     Spacer(
                         Modifier.height(
-                            8.dp
+                            12.dp
                         )
                     )
 
@@ -835,14 +1258,24 @@ fun PickerlScreen(
                         onClick = {
 
                             val storageLastDate =
-                                pickerlToStorageDate(
-                                    lastDate
+                                createPickerlStorageDate(
+                                    lastMonth,
+                                    lastYear
                                 )
 
                             val storageNextDate =
-                                pickerlToStorageDate(
-                                    nextDate
+                                createPickerlStorageDate(
+                                    nextMonth,
+                                    nextYear
                                 )
+
+                            if (
+                                storageLastDate.isBlank() ||
+                                storageNextDate.isBlank()
+                            ) {
+
+                                return@Button
+                            }
 
                             val selectedMonths =
                                 reminderMonths
@@ -891,9 +1324,14 @@ fun PickerlScreen(
                                 updated
                             )
 
+                            savedPickerl =
+                                entry
+
+                            saved =
+                                true
+
                             if (
-                                reminder &&
-                                storageNextDate.isNotBlank()
+                                reminder
                             ) {
 
                                 schedulePickerlReminder(
@@ -916,22 +1354,194 @@ fun PickerlScreen(
                                     activeVehicle
                                 )
                             }
-
-                            saved =
-                                true
                         }
 
                     ) {
 
                         Text(
+                            "Pickerl speichern"
+                        )
+                    }
+                }
+            }
 
-                            if (
-                                saved
-                            ) {
-                                "Pickerl gespeichert"
-                            } else {
-                                "Pickerl speichern"
-                            }
+            if (
+                saved &&
+                savedPickerl != null
+            ) {
+
+                item {
+
+                    CardForm {
+
+                        Text(
+
+                            text =
+                                "Gespeichert",
+
+                            color =
+                                Color.White,
+
+                            fontWeight =
+                                FontWeight.Bold,
+
+                            fontSize =
+                                20.sp
+                        )
+
+                        Spacer(
+                            Modifier.height(
+                                8.dp
+                            )
+                        )
+
+                        Text(
+
+                            text =
+                                "Fahrzeug: $activeVehicle",
+
+                            color =
+                                Color.White
+                        )
+
+                        Spacer(
+                            Modifier.height(
+                                4.dp
+                            )
+                        )
+
+                        Text(
+
+                            text =
+                                "Letzter Termin: ${
+                                    displayPickerlMonthYear(
+                                        lastMonth,
+                                        lastYear
+                                    )
+                                }",
+
+                            color =
+                                Color.White
+                        )
+
+                        Text(
+
+                            text =
+                                "Nächster Termin: ${
+                                    displayPickerlMonthYear(
+                                        nextMonth,
+                                        nextYear
+                                    )
+                                }",
+
+                            color =
+                                Color.White,
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+                        Text(
+
+                            text =
+                                if (
+                                    photoUri.isNotBlank()
+                                ) {
+                                    "Pickerl-Foto: gespeichert"
+                                } else {
+                                    "Pickerl-Foto: kein Foto"
+                                },
+
+                            color =
+                                Color.White
+                        )
+
+                        Text(
+
+                            text =
+                                if (
+                                    reminder
+                                ) {
+                                    "Erinnerung: $reminderMonths " +
+                                        if (
+                                            reminderMonths == 1
+                                        ) {
+                                            "Monat vorher"
+                                        } else {
+                                            "Monate vorher"
+                                        }
+                                } else {
+                                    "Erinnerung: ausgeschaltet"
+                                },
+
+                            color =
+                                Color.White
+                        )
+
+                        if (
+                            notes.isNotBlank()
+                        ) {
+
+                            Spacer(
+                                Modifier.height(
+                                    6.dp
+                                )
+                            )
+
+                            Text(
+
+                                text =
+                                    "Notizen: $notes",
+
+                                color =
+                                    Color.White
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.height(
+                                10.dp
+                            )
+                        )
+
+                        if (
+                            photoBitmap != null
+                        ) {
+
+                            Image(
+
+                                bitmap =
+                                    photoBitmap!!
+                                        .asImageBitmap(),
+
+                                contentDescription =
+                                    "Gespeichertes Pickerl-Foto",
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(
+                                            180.dp
+                                        ),
+
+                                contentScale =
+                                    ContentScale.Crop
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.height(
+                                8.dp
+                            )
+                        )
+
+                        Text(
+
+                            text =
+                                "Die Daten wurden lokal auf diesem Gerät gespeichert.",
+
+                            color =
+                                Muted
                         )
                     }
                 }
