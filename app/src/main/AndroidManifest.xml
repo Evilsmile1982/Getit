@@ -6,8 +6,8 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/bild2"
-        android:roundIcon="@drawable/bild2"
+        android:icon="@drawable/bild_2"
+        android:roundIcon="@drawable/bild_2"
         android:label="AutoCheck"
         android:supportsRtl="true"
         android:theme="@style/Theme.AutoCheck">
@@ -17,13 +17,8 @@
             android:exported="true">
 
             <intent-filter>
-
-                <action
-                    android:name="android.intent.action.MAIN" />
-
-                <category
-                    android:name="android.intent.category.LAUNCHER" />
-
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
         </activity>
