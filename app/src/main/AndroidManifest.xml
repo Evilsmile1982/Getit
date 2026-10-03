@@ -6,8 +6,8 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/autocheck_icon"
-        android:roundIcon="@drawable/autocheck_icon"
+        android:icon="@drawable/bild2"
+        android:roundIcon="@drawable/bild2"
         android:label="AutoCheck"
         android:supportsRtl="true"
         android:theme="@style/Theme.AutoCheck">
