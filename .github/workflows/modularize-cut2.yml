@@ -1,0 +1,339 @@
+name: AutoCheck CUT2 modularisieren
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  modularize:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: CUT2 Baseline prüfen
+        run: |
+          git fetch --tags --force
+
+          if ! git rev-parse CUT2-BASELINE >/dev/null 2>&1; then
+            echo "FEHLER: CUT2-BASELINE wurde nicht gefunden."
+            exit 1
+          fi
+
+          echo "CUT2-BASELINE vorhanden."
+
+      - name: Kotlin-Datei sicher aufteilen
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          source_path = Path(
+              "app/src/main/java/de/autocheck/app/MainActivity.kt"
+          )
+
+          if not source_path.exists():
+              print("FEHLER: MainActivity.kt wurde nicht gefunden.")
+              sys.exit(1)
+
+          source = source_path.read_text(encoding="utf-8")
+
+          # Alle erwarteten CUT2-Bestandteile
+          file_map = {
+              "Background": "components/UiConstants.kt",
+              "Surface": "components/UiConstants.kt",
+              "Muted": "components/UiConstants.kt",
+
+              "Vehicle": "data/Vehicle.kt",
+              "Repair": "data/Repair.kt",
+              "Maintenance": "data/Maintenance.kt",
+              "Pickerl": "data/Pickerl.kt",
+              "TireSet": "data/TireSet.kt",
+
+              "VehicleStore": "storage/VehicleStore.kt",
+              "VisitedStore": "storage/VisitedStore.kt",
+
+              "Screen": "screens/Screen.kt",
+              "MenuItemData": "components/MenuItemData.kt",
+
+              "MainActivity": "MainActivity.kt",
+
+              "PickerlReceiver": "utils/PickerlReminder.kt",
+              "schedulePickerlReminder": "utils/PickerlReminder.kt",
+              "cancelPickerlReminder": "utils/PickerlReminder.kt",
+
+              "migrateVehicleName": "utils/VehicleMigration.kt",
+
+              "AutoCheckApp": "AutoCheckApp.kt",
+
+              "HomeScreen": "screens/HomeScreen.kt",
+              "VehicleScreen": "screens/VehicleScreen.kt",
+              "RepairScreen": "screens/RepairScreen.kt",
+              "PickerlScreen": "screens/PickerlScreen.kt",
+              "MaintenanceScreen": "screens/MaintenanceScreen.kt",
+              "TireScreen": "screens/TireScreen.kt",
+              "OverviewScreen": "screens/OverviewScreen.kt",
+
+              "MenuCard": "components/MenuCard.kt",
+              "DetailScaffold": "components/DetailScaffold.kt",
+              "VehicleImage": "components/VehicleImage.kt",
+              "VehicleSelector": "components/VehicleSelector.kt",
+              "CardForm": "components/CardForm.kt",
+              "FormField": "components/FormField.kt",
+              "FormButtons": "components/FormButtons.kt",
+              "EmptyCard": "components/EmptyCard.kt",
+              "RecordCard": "components/RecordCard.kt",
+          }
+
+          # Top-Level-Deklarationen erkennen.
+          # Eingrückte Deklarationen innerhalb von Klassen/Funktionen
+          # werden dadurch nicht als eigene Dateien erkannt.
+          declaration_re = re.compile(
+              r"""(?m)
+              ^
+              (?:
+                  @[A-Za-z_][^\n]*
+                  \n
+              )*
+              (?:
+                  (?:
+                      public|private|protected|internal|abstract|open|final|
+                      data|sealed|enum|annotation|value|expect|actual|
+                      suspend|inline|operator|infix|tailrec|external|const
+                  )
+                  \s+
+              )*
+              (?:class|interface|object|fun|val|var|typealias)
+              \s+
+              ([A-Za-z_][A-Za-z0-9_]*)
+              \b
+              """,
+              re.VERBOSE
+          )
+
+          matches = list(declaration_re.finditer(source))
+
+          if not matches:
+              print("FEHLER: Keine Top-Level-Deklarationen gefunden.")
+              sys.exit(1)
+
+          declarations = []
+
+          for index, match in enumerate(matches):
+              start = match.start()
+
+              if index + 1 < len(matches):
+                  end = matches[index + 1].start()
+              else:
+                  end = len(source)
+
+              name = match.group(1)
+              text = source[start:end].strip()
+
+              declarations.append((name, text))
+
+          names = [name for name, _ in declarations]
+
+          # Prüfen, ob wirklich alle erwarteten Bestandteile vorhanden sind.
+          missing = sorted(set(file_map) - set(names))
+
+          if missing:
+              print("FEHLER: Erwartete Deklarationen fehlen:")
+
+              for name in missing:
+                  print(f"  - {name}")
+
+              sys.exit(1)
+
+          # Wenn etwas Unerwartetes auftaucht, NICHT automatisch weitermachen.
+          unknown = sorted(set(names) - set(file_map))
+
+          if unknown:
+              print(
+                  "FEHLER: Unbekannte Top-Level-Deklarationen gefunden:"
+              )
+
+              for name in unknown:
+                  print(f"  - {name}")
+
+              print(
+                  "Der Workflow stoppt absichtlich, "
+                  "damit nichts versehentlich verloren geht."
+              )
+
+              sys.exit(1)
+
+          # package holen
+          package_match = re.search(
+              r"(?m)^package\s+[^\n]+$",
+              source
+          )
+
+          if not package_match:
+              print("FEHLER: package-Deklaration fehlt.")
+              sys.exit(1)
+
+          package_line = package_match.group(0)
+
+          # Alle Imports übernehmen.
+          imports = re.findall(
+              r"(?m)^import\s+[^\n]+$",
+              source
+          )
+
+          header = package_line + "\n\n"
+
+          if imports:
+              header += "\n".join(imports) + "\n\n"
+
+          root = Path(
+              "app/src/main/java/de/autocheck/app"
+          )
+
+          for folder in (
+              "data",
+              "storage",
+              "screens",
+              "components",
+              "utils",
+          ):
+              (root / folder).mkdir(
+                  parents=True,
+                  exist_ok=True
+              )
+
+          # Nur die Dateien entfernen, die dieser Workflow selbst erzeugt.
+          generated_files = sorted(
+              set(file_map.values())
+          )
+
+          for relative in generated_files:
+              path = root / relative
+
+              if path.exists():
+                  path.unlink()
+
+          grouped = {}
+
+          for name, text in declarations:
+
+              # Wichtig:
+              # Top-Level-private ist in Kotlin nur innerhalb derselben
+              # Datei sichtbar.
+              #
+              # Nach der Aufteilung müssen diese Deklarationen teilweise
+              # aus anderen Dateien erreichbar sein.
+              #
+              # Deshalb entfernen wir NUR das äußerste private.
+              text = re.sub(
+                  r"^((?:@[^\n]+\n)*)private\s+",
+                  r"\1",
+                  text
+              )
+
+              relative = file_map[name]
+
+              grouped.setdefault(
+                  relative,
+                  []
+              ).append(text)
+
+          # Dateien schreiben
+          for relative, parts in grouped.items():
+
+              path = root / relative
+
+              path.parent.mkdir(
+                  parents=True,
+                  exist_ok=True
+              )
+
+              content = (
+                  header
+                  + "\n\n".join(parts)
+                  + "\n"
+              )
+
+              path.write_text(
+                  content,
+                  encoding="utf-8"
+              )
+
+          print("")
+          print("========================================")
+          print("MODULARISIERUNG VORBEREITET")
+          print("========================================")
+
+          for relative in sorted(grouped):
+              print(f"erstellt: {relative}")
+
+          # Sicherheitsprüfung:
+          # MainActivity.kt darf danach nur MainActivity enthalten.
+          main_path = root / "MainActivity.kt"
+
+          main_text = main_path.read_text(
+              encoding="utf-8"
+          )
+
+          main_names = [
+              m.group(1)
+              for m in declaration_re.finditer(
+                  main_text
+              )
+          ]
+
+          if main_names != ["MainActivity"]:
+              print("")
+              print(
+                  "FEHLER: MainActivity.kt enthält "
+                  "nicht ausschließlich MainActivity."
+              )
+
+              print(main_names)
+
+              sys.exit(1)
+
+          print("")
+          print(
+              "Sicherheitsprüfung der Dateiaufteilung erfolgreich."
+          )
+          PY
+
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-37'
+
+      - name: Gradle einrichten
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6'
+
+      - name: Modularisiertes Projekt bauen
+        run: |
+          gradle assembleDebug --stacktrace
+
+      - name: Modularisierung nach erfolgreichem Build speichern
+        run: |
+          git status --short
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add app/src/main/java/de/autocheck/app
+
+          git commit -m "Modularize AutoCheck CUT2 code"
+
+          git push origin main
+
+      - name: APK hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoCheck-CUT2-modular
+          path: app/build/outputs/apk/debug/app-debug.apk
