@@ -42,7 +42,9 @@ jobs:
               print("FEHLER: MainActivity.kt wurde nicht gefunden.")
               sys.exit(1)
 
-          source = source_path.read_text(encoding="utf-8")
+          source = source_path.read_text(
+              encoding="utf-8"
+          )
 
           file_map = {
               "Background": "components/UiConstants.kt",
@@ -135,7 +137,10 @@ jobs:
                   end = len(source)
 
               name = match.group(1)
-              text = source[start:end].strip()
+
+              text = source[
+                  start:end
+              ].strip()
 
               declarations.append(
                   (name, text)
@@ -250,6 +255,24 @@ jobs:
 
           for name, text in declarations:
 
+              # -------------------------------------------------
+              # Mehrzeilige @OptIn-Annotationen entfernen.
+              #
+              # Der Deklarationsscanner erkennt bei einer
+              # mehrzeiligen Annotation den eigentlichen
+              # Funktionsnamen erst danach.
+              #
+              # Ohne diese Bereinigung würde die Annotation
+              # am Ende der vorherigen Datei landen.
+              # -------------------------------------------------
+
+              text = re.sub(
+                  r"@OptIn\s*\([^)]*\)\s*",
+                  "",
+                  text,
+                  flags=re.DOTALL
+              )
+
               # Top-Level-private ist in Kotlin
               # nur innerhalb derselben Datei sichtbar.
               # Nach der Aufteilung müssen die betroffenen
@@ -261,16 +284,14 @@ jobs:
                   text
               )
 
-              # DetailScaffold benötigt weiterhin
-              # die Freigabe für ExperimentalMaterial3Api.
+              # DetailScaffold benötigt die experimentelle
+              # Material-3-API-Freigabe.
               if name == "DetailScaffold":
 
-                  if "@OptIn" not in text:
-
-                      text = (
-                          "@OptIn(ExperimentalMaterial3Api::class)\n"
-                          + text
-                      )
+                  text = (
+                      "@OptIn(ExperimentalMaterial3Api::class)\n"
+                      + text
+                  )
 
               relative = file_map[name]
 
@@ -332,6 +353,31 @@ jobs:
               )
 
               sys.exit(1)
+
+          # Zusätzliche Sicherheitsprüfung:
+          # Keine erzeugte Datei darf mit einer
+          # offensichtlich verwaisten @OptIn-Annotation enden.
+
+          for relative in sorted(grouped):
+
+              path = (
+                  root / relative
+              )
+
+              content = path.read_text(
+                  encoding="utf-8"
+              ).rstrip()
+
+              if content.endswith(
+                  "@OptIn("
+              ):
+
+                  print(
+                      "FEHLER: Verwaiste @OptIn-Annotation in "
+                      + relative
+                  )
+
+                  sys.exit(1)
 
           print("")
           print(
