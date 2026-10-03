@@ -87,60 +87,171 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+@Composable
+fun VehicleImage(
+    uri: String,
+    modifier: Modifier
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
+    if (
+        uri.isBlank()
     ) {
 
-        super.onCreate(
-            savedInstanceState
-        )
+        Box(
 
-        createNotificationChannel()
+            modifier =
+                modifier
+                    .clip(
+                        RoundedCornerShape(
+                            12.dp
+                        )
+                    )
+                    .background(
+                        Color(
+                            0xFF20242D
+                        )
+                    ),
 
-        if (
-            Build.VERSION.SDK_INT >= 33
+            contentAlignment =
+                Alignment.Center
         ) {
 
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
+            Icon(
+
+                Icons.Filled
+                    .DirectionsCar,
+
+                contentDescription =
+                    null,
+
+                tint =
+                    Color.White,
+
+                modifier =
+                    Modifier.size(
+                        36.dp
+                    )
             )
         }
 
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
+        return
     }
 
-    private fun createNotificationChannel() {
+    val context =
+        LocalContext.current
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
+    var bitmap by remember(
+        uri
+    ) {
+
+        mutableStateOf<
+            androidx.compose.ui.graphics
+                .ImageBitmap?
+        >(
+            null
+        )
+    }
+
+    LaunchedEffect(
+        uri
+    ) {
+
+        bitmap =
+            kotlinx.coroutines
+                .withContext(
+
+                    kotlinx.coroutines
+                        .Dispatchers.IO
+
+                ) {
+
+                    try {
+
+                        context
+                            .contentResolver
+                            .openInputStream(
+                                Uri.parse(
+                                    uri
+                                )
+                            )
+                            ?.use {
+
+                                BitmapFactory
+                                    .decodeStream(
+                                        it
+                                    )
+                                    ?.asImageBitmap()
+                            }
+
+                    } catch (
+                        _: Exception
+                    ) {
+
+                        null
+                    }
+                }
+    }
+
+    if (
+        bitmap != null
+    ) {
+
+        Image(
+
+            bitmap =
+                bitmap!!,
+
+            contentDescription =
+                "Fahrzeugbild",
+
+            modifier =
+                modifier.clip(
+                    RoundedCornerShape(
+                        12.dp
+                    )
+                ),
+
+            contentScale =
+                ContentScale.Crop
+        )
+
+    } else {
+
+        Box(
+
+            modifier =
+                modifier
+                    .clip(
+                        RoundedCornerShape(
+                            12.dp
+                        )
+                    )
+                    .background(
+                        Color(
+                            0xFF20242D
+                        )
+                    ),
+
+            contentAlignment =
+                Alignment.Center
         ) {
 
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
+            Icon(
 
-            getSystemService(
-                NotificationManager::class.java
+                Icons.Filled
+                    .DirectionsCar,
+
+                contentDescription =
+                    null,
+
+                tint =
+                    Color.White,
+
+                modifier =
+                    Modifier.size(
+                        36.dp
+                    )
             )
-                .createNotificationChannel(
-                    channel
-                )
         }
     }
 }

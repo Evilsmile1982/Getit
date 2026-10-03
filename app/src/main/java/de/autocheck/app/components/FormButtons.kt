@@ -87,60 +87,38 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+@Composable
+fun FormButtons(
+    onSave: () -> Unit,
+    onCancel: () -> Unit
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
+    Row(
+
+        horizontalArrangement =
+            Arrangement.spacedBy(
+                8.dp
+            )
     ) {
 
-        super.onCreate(
-            savedInstanceState
-        )
-
-        createNotificationChannel()
-
-        if (
-            Build.VERSION.SDK_INT >= 33
+        Button(
+            onClick =
+                onSave
         ) {
 
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
+            Text(
+                "Speichern"
             )
         }
 
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
-    }
-
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
+        OutlinedButton(
+            onClick =
+                onCancel
         ) {
 
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
+            Text(
+                "Abbrechen"
             )
-                .createNotificationChannel(
-                    channel
-                )
         }
     }
 }

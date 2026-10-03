@@ -87,60 +87,10 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
-
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-
-        super.onCreate(
-            savedInstanceState
-        )
-
-        createNotificationChannel()
-
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
-            )
-        }
-
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
-    }
-
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
-        }
-    }
-}
+data class Pickerl(
+    val vehicle: String,
+    val lastDate: String,
+    val nextDate: String,
+    val notes: String,
+    val reminder: Boolean
+)

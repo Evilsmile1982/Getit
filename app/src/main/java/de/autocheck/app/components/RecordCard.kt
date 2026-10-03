@@ -87,60 +87,88 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+@Composable
+fun RecordCard(
+    title: String,
+    lines: List<String>,
+    onDelete: () -> Unit
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
+    Card(
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            ),
+
+        modifier =
+            Modifier.fillMaxWidth()
     ) {
 
-        super.onCreate(
-            savedInstanceState
-        )
+        Column(
 
-        createNotificationChannel()
-
-        if (
-            Build.VERSION.SDK_INT >= 33
+            Modifier.padding(
+                16.dp
+            )
         ) {
 
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
+            Text(
+
+                title,
+
+                color =
+                    Color.White,
+
+                fontSize =
+                    18.sp,
+
+                fontWeight =
+                    FontWeight.Bold
             )
-        }
 
-        setContent {
+            Spacer(
+                Modifier.height(
+                    6.dp
+                )
+            )
 
-            AutoCheckTheme {
-                AutoCheckApp()
+            lines
+                .filter {
+                    it.substringAfter(
+                        ":"
+                    ).isNotBlank()
+                }
+                .forEach {
+
+                    Text(
+
+                        it,
+
+                        color =
+                            Color(
+                                0xFFB8BEC8
+                            )
+                    )
+                }
+
+            Spacer(
+                Modifier.height(
+                    8.dp
+                )
+            )
+
+            OutlinedButton(
+                onClick =
+                    onDelete
+            ) {
+
+                Text(
+                    "Eintrag löschen"
+                )
             }
-        }
-    }
-
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
         }
     }
 }

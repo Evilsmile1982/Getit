@@ -87,60 +87,77 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+fun migrateVehicleName(
+    store: VehicleStore,
+    oldName: String,
+    newName: String
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    store.saveRepairs(
+        store.loadRepairs().map {
 
-        super.onCreate(
-            savedInstanceState
-        )
-
-        createNotificationChannel()
-
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
-            )
-        }
-
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+                it.copy(
+                    vehicle =
+                        newName
+                )
+            } else {
+                it
             }
         }
-    }
+    )
 
-    private fun createNotificationChannel() {
+    store.saveMaintenance(
+        store.loadMaintenance().map {
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+                it.copy(
+                    vehicle =
+                        newName
                 )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
+            } else {
+                it
+            }
         }
-    }
+    )
+
+    store.savePickerl(
+        store.loadPickerl().map {
+
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+                it.copy(
+                    vehicle =
+                        newName
+                )
+            } else {
+                it
+            }
+        }
+    )
+
+    store.saveTires(
+        store.loadTires().map {
+
+            if (
+                it.vehicle ==
+                oldName
+            ) {
+                it.copy(
+                    vehicle =
+                        newName
+                )
+            } else {
+                it
+            }
+        }
+    )
 }

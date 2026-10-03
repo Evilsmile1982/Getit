@@ -87,60 +87,28 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+@Composable
+fun FormField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    OutlinedTextField(
 
-        super.onCreate(
-            savedInstanceState
-        )
+        value =
+            value,
 
-        createNotificationChannel()
+        onValueChange =
+            onValueChange,
 
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
+        label = {
+            Text(
+                label
             )
-        }
+        },
 
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
-    }
-
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
-        }
-    }
+        modifier =
+            Modifier.fillMaxWidth()
+    )
 }

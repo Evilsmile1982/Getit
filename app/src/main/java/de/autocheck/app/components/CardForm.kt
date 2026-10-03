@@ -87,60 +87,40 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+@Composable
+fun CardForm(
+    content:
+        @Composable
+        ColumnScope.() -> Unit
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
+    Card(
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            ),
+
+        modifier =
+            Modifier.fillMaxWidth()
     ) {
 
-        super.onCreate(
-            savedInstanceState
-        )
+        Column(
 
-        createNotificationChannel()
+            Modifier.padding(
+                16.dp
+            ),
 
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
                 ),
-                5001
-            )
-        }
 
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
-    }
-
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
-        }
+            content =
+                content
+        )
     }
 }

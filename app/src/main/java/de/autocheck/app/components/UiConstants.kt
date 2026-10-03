@@ -87,60 +87,8 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+val Background = Color(0xFF050608)
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+val Surface = Color(0xFF11151C)
 
-        super.onCreate(
-            savedInstanceState
-        )
-
-        createNotificationChannel()
-
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
-            )
-        }
-
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
-    }
-
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
-        }
-    }
-}
+val Muted = Color(0xFF9AA3B2)

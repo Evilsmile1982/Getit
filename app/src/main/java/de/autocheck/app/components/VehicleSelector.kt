@@ -87,60 +87,108 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+@Composable
+fun VehicleSelector(
+    vehicles: List<Vehicle>,
+    activeVehicle: String,
+    onSelected: (String) -> Unit
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-
-        super.onCreate(
-            savedInstanceState
+    var expanded by remember {
+        mutableStateOf(
+            false
         )
-
-        createNotificationChannel()
-
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
-            )
-        }
-
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
     }
 
-    private fun createNotificationChannel() {
+    if (
+        vehicles.isEmpty()
+    ) {
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
+        Text(
+
+            "Bitte zuerst unter „Mein Auto“ ein Fahrzeug anlegen.",
+
+            color =
+                Color(
+                    0xFFB8BEC8
+                )
+        )
+
+        return
+    }
+
+    val selected =
+        vehicles
+            .firstOrNull {
+                it.name ==
+                    activeVehicle
+            }
+            ?.name
+            ?: vehicles
+                .first()
+                .name
+
+    Box {
+
+        OutlinedTextField(
+
+            value =
+                selected,
+
+            onValueChange = {},
+
+            readOnly =
+                true,
+
+            label = {
+                Text(
+                    "Aktives Fahrzeug"
+                )
+            },
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        expanded =
+                            true
+                    }
+        )
+
+        DropdownMenu(
+
+            expanded =
+                expanded,
+
+            onDismissRequest = {
+                expanded =
+                    false
+            }
+
         ) {
 
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
+            vehicles.forEach {
+                vehicle ->
 
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
+                DropdownMenuItem(
+
+                    text = {
+                        Text(
+                            vehicle.name
+                        )
+                    },
+
+                    onClick = {
+
+                        expanded =
+                            false
+
+                        onSelected(
+                            vehicle.name
+                        )
+                    }
                 )
+            }
         }
     }
 }

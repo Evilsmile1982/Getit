@@ -87,60 +87,33 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+class VisitedStore(
+    context: Context
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-
-        super.onCreate(
-            savedInstanceState
+    private val prefs =
+        context.getSharedPreferences(
+            "autocheck_visited",
+            Context.MODE_PRIVATE
         )
 
-        createNotificationChannel()
+    fun isVisited(
+        screen: Screen
+    ): Boolean =
+        prefs.getBoolean(
+            screen.name,
+            false
+        )
 
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
+    fun markVisited(
+        screen: Screen
+    ) {
 
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
+        prefs.edit()
+            .putBoolean(
+                screen.name,
+                true
             )
-        }
-
-        setContent {
-
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
-    }
-
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
-        }
+            .apply()
     }
 }

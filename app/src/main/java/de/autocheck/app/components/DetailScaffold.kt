@@ -87,60 +87,76 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
-class MainActivity :
-    ComponentActivity() {
+@OptIn(
+    ExperimentalMaterial3Api::class
+)
+@Composable
+fun DetailScaffold(
+    title: String,
+    onBack: () -> Unit,
+    content: @Composable () -> Unit
+) {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    Scaffold(
 
-        super.onCreate(
-            savedInstanceState
-        )
+        containerColor =
+            Color(0xFF050608),
 
-        createNotificationChannel()
+        topBar = {
 
-        if (
-            Build.VERSION.SDK_INT >= 33
-        ) {
+            TopAppBar(
 
-            requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
-                5001
+                title = {
+                    Text(
+                        title
+                    )
+                },
+
+                navigationIcon = {
+
+                    IconButton(
+                        onClick =
+                            onBack
+                    ) {
+
+                        Icon(
+                            Icons.Filled.Menu,
+                            "Zurück"
+                        )
+                    }
+                },
+
+                colors =
+                    TopAppBarDefaults
+                        .topAppBarColors(
+                            containerColor =
+                                Color(
+                                    0xFF050608
+                                ),
+                            titleContentColor =
+                                Color.White,
+                            navigationIconContentColor =
+                                Color.White
+                        )
             )
         }
 
-        setContent {
+    ) { padding ->
 
-            AutoCheckTheme {
-                AutoCheckApp()
-            }
-        }
-    }
+        Box(
 
-    private fun createNotificationChannel() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        padding
+                    )
+                    .padding(
+                        16.dp
+                    )
         ) {
 
-            val channel =
-                NotificationChannel(
-                    "pickerl_reminders",
-                    "Pickerl Erinnerungen",
-                    NotificationManager
-                        .IMPORTANCE_DEFAULT
-                )
-
-            getSystemService(
-                NotificationManager::class.java
-            )
-                .createNotificationChannel(
-                    channel
-                )
+            content()
         }
     }
 }
