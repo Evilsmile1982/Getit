@@ -7,7 +7,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -16,6 +16,678 @@ jobs:
     steps:
       - name: Repository laden
         uses: actions/checkout@v4
+
+      - name: Aktive Fahrzeuglogik aktualisieren
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path("app/src/main/java/de/autocheck/app")
+
+          # ------------------------------------------------------------
+          # VehicleStore.kt
+          # ------------------------------------------------------------
+
+          store_path = root / "storage/VehicleStore.kt"
+          store = store_path.read_text()
+
+          old_store = """    fun setActiveVehicle(
+        name: String
+    ) {
+
+        prefs.edit()
+            .putString(
+                "activeVehicle",
+                name
+            )
+            .apply()
+    }
+"""
+
+          new_store = """    fun setActiveVehicle(
+        name: String
+    ) {
+
+        prefs.edit()
+            .putString(
+                "activeVehicle",
+                name
+            )
+            .apply()
+    }
+
+    fun ensureActiveVehicle(
+        vehicles: List<Vehicle>
+    ): String {
+
+        if (vehicles.isEmpty()) {
+            setActiveVehicle("")
+            return ""
+        }
+
+        val stored =
+            activeVehicle()
+
+        val resolved =
+            if (
+                stored.isNotBlank() &&
+                vehicles.any {
+                    it.name == stored
+                }
+            ) {
+                stored
+            } else {
+                vehicles.first().name
+            }
+
+        if (resolved != stored) {
+            setActiveVehicle(resolved)
+        }
+
+        return resolved
+    }
+"""
+
+          if "fun ensureActiveVehicle(" not in store:
+              if old_store not in store:
+                  raise SystemExit(
+                      "VehicleStore.kt: Einfügepunkt nicht gefunden"
+                  )
+
+              store = store.replace(
+                  old_store,
+                  new_store,
+                  1
+              )
+
+              store_path.write_text(store)
+
+          # ------------------------------------------------------------
+          # AutoCheckApp.kt
+          # ------------------------------------------------------------
+
+          app_path = root / "AutoCheckApp.kt"
+          app = app_path.read_text()
+
+          old_effect = """    LaunchedEffect(Unit) {
+
+        kotlinx.coroutines
+            .delay(
+                300
+            )
+
+        homeReady = true
+
+        if (
+            activeVehicle.isBlank() &&
+            vehicles.isNotEmpty()
+        ) {
+
+            activeVehicle =
+                vehicles.first().name
+
+            store.setActiveVehicle(
+                activeVehicle
+            )
+        }
+    }
+"""
+
+          new_effect = """    LaunchedEffect(Unit) {
+
+        kotlinx.coroutines
+            .delay(
+                300
+            )
+
+        homeReady = true
+
+        activeVehicle =
+            store.ensureActiveVehicle(
+                vehicles
+            )
+    }
+"""
+
+          if "store.ensureActiveVehicle(" not in app:
+              if old_effect not in app:
+                  raise SystemExit(
+                      "AutoCheckApp.kt: Active-Vehicle-Initialisierung nicht gefunden"
+                  )
+
+              app = app.replace(
+                  old_effect,
+                  new_effect,
+                  1
+              )
+
+          # ------------------------------------------------------------
+          # VehicleScreen.kt
+          # ------------------------------------------------------------
+
+          vehicle_path = root / "screens/VehicleScreen.kt"
+          vehicle = vehicle_path.read_text()
+
+          # items -> itemsIndexed
+          vehicle = vehicle.replace(
+              "import androidx.compose.foundation.lazy.items\n",
+              "import androidx.compose.foundation.lazy.itemsIndexed\n",
+              1
+          )
+
+          # editingName -> editingIndex
+          old_edit_state = """    var editingName by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+"""
+
+          new_edit_state = """    var editingIndex by remember {
+        mutableStateOf(
+            -1
+        )
+    }
+"""
+
+          if old_edit_state in vehicle:
+              vehicle = vehicle.replace(
+                  old_edit_state,
+                  new_edit_state,
+                  1
+              )
+
+          # Hilfswerte für aktive und doppelte Fahrzeuge
+          anchor_column = """    Column(
+        modifier =
+            Modifier.fillMaxSize()
+    ) {
+"""
+
+          replacement_column = """    val activeVehicleIndex =
+        vehicles.indexOfFirst {
+            it.name == activeVehicle
+        }
+
+    val duplicateVehicleNames =
+        vehicles
+            .groupBy {
+                it.name
+                    .trim()
+                    .lowercase()
+            }
+            .filter {
+                it.value.size > 1
+            }
+            .keys
+
+    val duplicateName =
+        name
+            .trim()
+            .isNotBlank() &&
+            vehicles.withIndex().any { entry ->
+                entry.index != editingIndex &&
+                    entry.value.name
+                        .trim()
+                        .equals(
+                            name.trim(),
+                            ignoreCase = true
+                        )
+            }
+
+    Column(
+        modifier =
+            Modifier.fillMaxSize()
+    ) {
+"""
+
+          if "val activeVehicleIndex =" not in vehicle:
+              if anchor_column not in vehicle:
+                  raise SystemExit(
+                      "VehicleScreen.kt: Haupt-Column nicht gefunden"
+                  )
+
+              vehicle = vehicle.replace(
+                  anchor_column,
+                  replacement_column,
+                  1
+              )
+
+          # items(...) -> itemsIndexed(...)
+          vehicle = vehicle.replace(
+              """            items(
+                vehicles
+            ) { vehicle ->
+""",
+              """            itemsIndexed(
+                vehicles
+            ) { vehicleIndex, vehicle ->
+""",
+              1
+          )
+
+          # Aktiv-Button
+          old_button = """                            Button(
+
+                                onClick = {
+
+                                    onActiveVehicle(
+                                        vehicle.name
+                                    )
+                                }
+
+                            ) {
+
+                                Text(
+
+                                    if (
+                                        activeVehicle ==
+                                        vehicle.name
+                                    ) {
+                                        "Aktiv"
+                                    } else {
+                                        "Aktiv setzen"
+                                    }
+                                )
+                            }
+"""
+
+          new_button = """                            Button(
+
+                                enabled =
+                                    vehicleIndex !=
+                                        activeVehicleIndex,
+
+                                onClick = {
+
+                                    if (
+                                        vehicleIndex !=
+                                        activeVehicleIndex
+                                    ) {
+
+                                        onActiveVehicle(
+                                            vehicle.name
+                                        )
+                                    }
+                                }
+
+                            ) {
+
+                                Text(
+
+                                    if (
+                                        vehicleIndex ==
+                                        activeVehicleIndex
+                                    ) {
+                                        "Aktiv"
+                                    } else {
+                                        "Aktiv setzen"
+                                    }
+                                )
+                            }
+"""
+
+          if old_button not in vehicle:
+              raise SystemExit(
+                  "VehicleScreen.kt: Aktiv-Button nicht gefunden"
+              )
+
+          vehicle = vehicle.replace(
+              old_button,
+              new_button,
+              1
+          )
+
+          # Bearbeiten: Index statt Fahrzeugname merken
+          old_edit_click = """                                    editingName =
+                                        vehicle.name
+
+                                    name =
+                                        vehicle.name
+"""
+
+          new_edit_click = """                                    editingIndex =
+                                        vehicles.indexOf(
+                                            vehicle
+                                        )
+
+                                    name =
+                                        vehicle.name
+"""
+
+          if old_edit_click in vehicle:
+              vehicle = vehicle.replace(
+                  old_edit_click,
+                  new_edit_click,
+                  1
+              )
+
+          # Titel Bearbeiten/Hinzufügen
+          vehicle = vehicle.replace(
+              """                                if (
+                                    editingName
+                                        .isBlank()
+                                ) {
+""",
+              """                                if (
+                                    editingIndex < 0
+                                ) {
+""",
+              1
+          )
+
+          # Speichern: editingIndex übergeben
+          old_save_call = """                                            ),
+
+                                            editingName
+                                        )
+"""
+
+          new_save_call = """                                            ),
+
+                                            editingIndex
+                                        )
+"""
+
+          if old_save_call not in vehicle:
+              raise SystemExit(
+                  "VehicleScreen.kt: Save-Aufruf nicht gefunden"
+              )
+
+          vehicle = vehicle.replace(
+              old_save_call,
+              new_save_call,
+              1
+          )
+
+          # Speichern-Button gegen doppelte Bezeichnungen absichern
+          old_enabled = """                                    enabled =
+                                        name
+                                            .isNotBlank(),
+
+                                    onClick = {
+"""
+
+          new_enabled = """                                    enabled =
+                                        name
+                                            .isNotBlank() &&
+                                            !duplicateName,
+
+                                    onClick = {
+"""
+
+          if old_enabled not in vehicle:
+              raise SystemExit(
+                  "VehicleScreen.kt: Speichern-Button nicht gefunden"
+              )
+
+          vehicle = vehicle.replace(
+              old_enabled,
+              new_enabled,
+              1
+          )
+
+          # Warnhinweis vor dem Speichern
+          warning_anchor = """                            Row(
+
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        8.dp
+                                    )
+"""
+
+          warning_replacement = """                            if (
+                                duplicateName
+                            ) {
+
+                                Text(
+                                    "Diese Fahrzeugbezeichnung ist bereits vergeben. Bitte eine eindeutige Bezeichnung verwenden.",
+                                    color =
+                                        Color(
+                                            0xFFFF6B6B
+                                        )
+                                )
+                            }
+
+                            Row(
+
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        8.dp
+                                    )
+"""
+
+          if "Diese Fahrzeugbezeichnung ist bereits vergeben." not in vehicle:
+              if warning_anchor not in vehicle:
+                  raise SystemExit(
+                      "VehicleScreen.kt: Formular-Buttonbereich nicht gefunden"
+                  )
+
+              vehicle = vehicle.replace(
+                  warning_anchor,
+                  warning_replacement,
+                  1
+              )
+
+          # Warnhinweis bei bereits vorhandenen Duplikaten
+          duplicate_warning_anchor = """        if (
+            vehicles.isEmpty()
+        ) {
+"""
+
+          duplicate_warning_replacement = """        if (
+            duplicateVehicleNames.isNotEmpty()
+        ) {
+
+            Text(
+                "Hinweis: Mehrere Fahrzeuge haben derzeit dieselbe Bezeichnung. Bitte unterschiedliche Bezeichnungen verwenden, damit die Fahrzeugdaten eindeutig zugeordnet werden können.",
+                color =
+                    Color(
+                        0xFFFFB74D
+                    ),
+
+                modifier =
+                    Modifier.padding(
+                        bottom = 12.dp
+                    )
+            )
+        }
+
+        if (
+            vehicles.isEmpty()
+        ) {
+"""
+
+          if "Mehrere Fahrzeuge haben derzeit dieselbe Bezeichnung." not in vehicle:
+              if duplicate_warning_anchor not in vehicle:
+                  raise SystemExit(
+                      "VehicleScreen.kt: Fahrzeugliste nicht gefunden"
+                  )
+
+              vehicle = vehicle.replace(
+                  duplicate_warning_anchor,
+                  duplicate_warning_replacement,
+                  1
+              )
+
+          # Reset nach Speichern
+          vehicle = vehicle.replace(
+              """                                        editingName =
+                                            ""
+
+                                        adding =
+                                            false
+""",
+              """                                        editingIndex =
+                                            -1
+
+                                        adding =
+                                            false
+""",
+              1
+          )
+
+          # Reset beim Abbrechen
+          vehicle = vehicle.replace(
+              """                                        adding =
+                                            false
+
+                                        editingName =
+                                            ""
+""",
+              """                                        adding =
+                                            false
+
+                                        editingIndex =
+                                            -1
+""",
+              1
+          )
+
+          # Neues Fahrzeug
+          vehicle = vehicle.replace(
+              """                    editingName =
+                        ""
+
+                    name =
+""",
+              """                    editingIndex =
+                        -1
+
+                    name =
+""",
+              1
+          )
+
+          vehicle_path.write_text(vehicle)
+
+          # ------------------------------------------------------------
+          # AutoCheckApp: VehicleScreen Save-Signatur auf Index umstellen
+          # ------------------------------------------------------------
+
+          app = app.replace(
+              """                        onSave = {
+                                vehicle,
+                                oldName ->
+""",
+              """                        onSave = {
+                                vehicle,
+                                editingIndex ->
+""",
+              1
+          )
+
+          old_index_block = """                            val index =
+                                vehicles.indexOfFirst {
+                                    it.name ==
+                                        oldName
+                                }
+
+                            if (
+                                index >= 0
+                            ) {
+
+                                vehicles[index] =
+                                    vehicle
+
+                                if (
+                                    oldName !=
+                                    vehicle.name
+                                ) {
+
+                                    migrateVehicleName(
+                                        store,
+                                        oldName,
+                                        vehicle.name
+                                    )
+                                }
+
+                            } else if (
+                                vehicles.size < 5
+                            ) {
+
+                                vehicles.add(
+                                    vehicle
+                                )
+                            }
+"""
+
+          new_index_block = """                            val index =
+                                if (
+                                    editingIndex >= 0 &&
+                                    editingIndex <
+                                        vehicles.size
+                                ) {
+                                    editingIndex
+                                } else {
+                                    -1
+                                }
+
+                            if (
+                                index >= 0
+                            ) {
+
+                                val oldName =
+                                    vehicles[index].name
+
+                                vehicles[index] =
+                                    vehicle
+
+                                if (
+                                    oldName !=
+                                    vehicle.name &&
+                                    vehicles.count {
+                                        it.name ==
+                                            oldName
+                                    } == 1
+                                ) {
+
+                                    migrateVehicleName(
+                                        store,
+                                        oldName,
+                                        vehicle.name
+                                    )
+                                }
+
+                            } else if (
+                                vehicles.size < 5
+                            ) {
+
+                                vehicles.add(
+                                    vehicle
+                                )
+                            }
+"""
+
+          if old_index_block not in app:
+              raise SystemExit(
+                  "AutoCheckApp.kt: Fahrzeug-Speicherlogik nicht gefunden"
+              )
+
+          app = app.replace(
+              old_index_block,
+              new_index_block,
+              1
+          )
+
+          app_path.write_text(app)
+
+          print("Active-Vehicle-Logik aktualisiert.")
+          PY
+
+      - name: Änderungen prüfen und speichern
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Keine Änderungen notwendig."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/src/main/java/de/autocheck/app
+            git commit -m "Enforce single active vehicle"
+            git push
+          fi
 
       - name: Java 17 einrichten
         uses: actions/setup-java@v4
