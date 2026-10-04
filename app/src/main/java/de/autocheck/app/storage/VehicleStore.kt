@@ -3,6 +3,7 @@ package de.autocheck.app
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 class VehicleStore(
     context: Context
@@ -14,6 +15,12 @@ class VehicleStore(
             Context.MODE_PRIVATE
         )
 
+    /*
+     * ============================================================
+     * FAHRZEUGE
+     * ============================================================
+     */
+
     fun load(): List<Vehicle> {
 
         val array =
@@ -24,55 +31,143 @@ class VehicleStore(
                 ) ?: "[]"
             )
 
-        return buildList {
+        val vehicles =
+            buildList {
 
-            for (
-                i in 0 until array.length()
-            ) {
+                for (
+                    i in 0 until array.length()
+                ) {
 
-                val o =
-                    array.getJSONObject(i)
+                    val o =
+                        array.getJSONObject(i)
 
-                add(
-                    Vehicle(
-                        name =
-                            o.optString(
-                                "name"
-                            ),
+                    val storedId =
+                        o.optString("id")
 
-                        make =
-                            o.optString(
-                                "make"
-                            ),
+                    add(
+                        Vehicle(
+                            id =
+                                if (storedId.isNotBlank()) {
+                                    storedId
+                                } else {
+                                    UUID.randomUUID().toString()
+                                },
 
-                        model =
-                            o.optString(
-                                "model"
-                            ),
+                            name =
+                                o.optString(
+                                    "name"
+                                ),
 
-                        year =
-                            o.optString(
-                                "year"
-                            ),
+                            make =
+                                o.optString(
+                                    "make"
+                                ),
 
-                        plate =
-                            o.optString(
-                                "plate"
-                            ),
+                            model =
+                                o.optString(
+                                    "model"
+                                ),
 
-                        vin =
-                            o.optString(
-                                "vin"
-                            ),
+                            year =
+                                o.optString(
+                                    "year"
+                                ),
 
-                        imageUri =
-                            o.optString(
-                                "imageUri"
-                            )
+                            plate =
+                                o.optString(
+                                    "plate"
+                                ),
+
+                            vin =
+                                o.optString(
+                                    "vin"
+                                ),
+
+                            imageUri =
+                                o.optString(
+                                    "imageUri"
+                                )
+                        )
                     )
-                )
+                }
+            }
+
+        /*
+         * Falls alte Fahrzeuge noch keine ID hatten,
+         * werden die neu erzeugten IDs sofort dauerhaft gespeichert.
+         */
+        if (
+            vehicles.any {
+                it.id.isBlank()
+            } ||
+            vehicles.size != array.length()
+        ) {
+            save(vehicles)
+        } else {
+
+            var needsMigration = false
+
+            for (i in vehicles.indices) {
+                val storedId =
+                    array
+                        .optJSONObject(i)
+                        ?.optString("id")
+                        ?: ""
+
+                if (
+                    storedId.isBlank() ||
+                    storedId != vehicles[i].id
+                ) {
+                    needsMigration = true
+                    break
+                }
+            }
+
+            if (needsMigration) {
+                save(vehicles)
             }
         }
+
+        /*
+         * Alte aktive Fahrzeugauswahl wurde bisher über den Namen
+         * gespeichert. Falls noch keine ID vorhanden ist, wird der
+         * alte Name einmalig auf die neue ID umgestellt.
+         */
+        val storedActiveId =
+            prefs.getString(
+                "activeVehicleId",
+                ""
+            ) ?: ""
+
+        if (
+            storedActiveId.isBlank() &&
+            vehicles.isNotEmpty()
+        ) {
+
+            val oldActiveName =
+                prefs.getString(
+                    "activeVehicle",
+                    ""
+                ) ?: ""
+
+            val matchingVehicle =
+                vehicles.firstOrNull {
+                    it.name == oldActiveName
+                }
+
+            val vehicleToActivate =
+                matchingVehicle
+                    ?: vehicles.first()
+
+            prefs.edit()
+                .putString(
+                    "activeVehicleId",
+                    vehicleToActivate.id
+                )
+                .apply()
+        }
+
+        return vehicles
     }
 
     fun save(
@@ -86,6 +181,11 @@ class VehicleStore(
 
             array.put(
                 JSONObject().apply {
+
+                    put(
+                        "id",
+                        vehicle.id
+                    )
 
                     put(
                         "name",
@@ -133,15 +233,52 @@ class VehicleStore(
             .apply()
     }
 
-    fun activeVehicle(): String =
-        prefs.getString(
+    /*
+     * ------------------------------------------------------------
+     * BISHERIGE NAMENS-FUNKTIONEN
+     *
+     * Diese bleiben vorerst erhalten, damit die bestehende App
+     * während der Umstellung weiterhin funktioniert.
+     * ------------------------------------------------------------
+     */
+
+    fun activeVehicle(): String {
+
+        val vehicles =
+            load()
+
+        val activeId =
+            prefs.getString(
+                "activeVehicleId",
+                ""
+            ) ?: ""
+
+        val activeById =
+            vehicles.firstOrNull {
+                it.id == activeId
+            }
+
+        if (activeById != null) {
+            return activeById.name
+        }
+
+        return prefs.getString(
             "activeVehicle",
             ""
         ) ?: ""
+    }
 
     fun setActiveVehicle(
         name: String
     ) {
+
+        val vehicles =
+            load()
+
+        val vehicle =
+            vehicles.firstOrNull {
+                it.name == name
+            }
 
         prefs.edit()
             .putString(
@@ -149,7 +286,104 @@ class VehicleStore(
                 name
             )
             .apply()
+
+        if (vehicle != null) {
+
+            prefs.edit()
+                .putString(
+                    "activeVehicleId",
+                    vehicle.id
+                )
+                .apply()
+        }
     }
+
+    /*
+     * ------------------------------------------------------------
+     * NEUE ID-BASIERTE AKTIVE FAHRZEUGAUSWAHL
+     * ------------------------------------------------------------
+     */
+
+    fun activeVehicleId(): String {
+
+        val vehicles =
+            load()
+
+        val storedId =
+            prefs.getString(
+                "activeVehicleId",
+                ""
+            ) ?: ""
+
+        val validVehicle =
+            vehicles.firstOrNull {
+                it.id == storedId
+            }
+
+        if (validVehicle != null) {
+            return validVehicle.id
+        }
+
+        if (vehicles.isNotEmpty()) {
+
+            val firstVehicle =
+                vehicles.first()
+
+            prefs.edit()
+                .putString(
+                    "activeVehicleId",
+                    firstVehicle.id
+                )
+                .putString(
+                    "activeVehicle",
+                    firstVehicle.name
+                )
+                .apply()
+
+            return firstVehicle.id
+        }
+
+        return ""
+    }
+
+    fun setActiveVehicleId(
+        id: String
+    ) {
+
+        val vehicles =
+            load()
+
+        val vehicle =
+            vehicles.firstOrNull {
+                it.id == id
+            }
+
+        if (vehicle == null) {
+            return
+        }
+
+        /*
+         * Es existiert immer nur genau EINE globale activeVehicleId.
+         * Ein zweites aktives Fahrzeug ist dadurch technisch
+         * ausgeschlossen.
+         */
+        prefs.edit()
+            .putString(
+                "activeVehicleId",
+                vehicle.id
+            )
+            .putString(
+                "activeVehicle",
+                vehicle.name
+            )
+            .apply()
+    }
+
+    /*
+     * ============================================================
+     * REPARATUREN
+     * ============================================================
+     */
 
     fun loadRepairs(): List<Repair> {
 
@@ -270,6 +504,12 @@ class VehicleStore(
             .apply()
     }
 
+    /*
+     * ============================================================
+     * WARTUNGEN
+     * ============================================================
+     */
+
     fun loadMaintenance(): List<Maintenance> {
 
         val array =
@@ -388,6 +628,12 @@ class VehicleStore(
             )
             .apply()
     }
+
+    /*
+     * ============================================================
+     * PICKERL / TÜV
+     * ============================================================
+     */
 
     fun loadPickerl(): List<Pickerl> {
 
@@ -516,6 +762,12 @@ class VehicleStore(
             )
             .apply()
     }
+
+    /*
+     * ============================================================
+     * REIFEN
+     * ============================================================
+     */
 
     fun loadTires(): List<TireSet> {
 
@@ -710,6 +962,12 @@ class VehicleStore(
             )
             .apply()
     }
+
+    /*
+     * ============================================================
+     * FAHRZEUGDATEN LÖSCHEN
+     * ============================================================
+     */
 
     fun deleteVehicleData(
         name: String
