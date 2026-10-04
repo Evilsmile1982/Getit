@@ -1,67 +1,5 @@
 package de.autocheck.app
 
-import android.app.AlarmManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.graphics.BitmapFactory
-import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CarRepair
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.TireRepair
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,23 +7,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import de.autocheck.app.ui.AutoCheckTheme
-import org.json.JSONArray
-import org.json.JSONObject
-import java.time.LocalDate
-import java.time.ZoneId
 
 @Composable
 fun AutoCheckApp() {
@@ -118,12 +40,36 @@ fun AutoCheckApp() {
                 }
         }
 
-    var activeVehicle by remember {
+    /*
+     * ============================================================
+     * EINZIGE QUELLE FÜR DAS AKTIVE FAHRZEUG
+     * ============================================================
+     *
+     * Die ID ist stabil und unabhängig vom Fahrzeugnamen.
+     */
+    var activeVehicleId by remember {
 
         mutableStateOf(
-            store.activeVehicle()
+            store.activeVehicleId()
         )
     }
+
+    /*
+     * Das aktuell aktive Fahrzeug wird immer über seine ID
+     * ermittelt.
+     */
+    val activeVehicle =
+        vehicles.firstOrNull {
+            it.id == activeVehicleId
+        }
+
+    /*
+     * Die bestehenden Untermenüs arbeiten momentan noch mit
+     * dem Fahrzeugnamen. Der Name wird deshalb ausschließlich
+     * aus dem zentral aktiven Fahrzeug abgeleitet.
+     */
+    val activeVehicleName =
+        activeVehicle?.name ?: ""
 
     var screen by remember {
         mutableStateOf(
@@ -137,6 +83,11 @@ fun AutoCheckApp() {
         )
     }
 
+    /*
+     * ============================================================
+     * START / AKTIVES FAHRZEUG SICHERSTELLEN
+     * ============================================================
+     */
     LaunchedEffect(Unit) {
 
         kotlinx.coroutines
@@ -146,20 +97,34 @@ fun AutoCheckApp() {
 
         homeReady = true
 
+        /*
+         * Falls kein gültiges aktives Fahrzeug vorhanden ist,
+         * wird automatisch das erste Fahrzeug aktiviert.
+         */
         if (
-            activeVehicle.isBlank() &&
-            vehicles.isNotEmpty()
+            vehicles.isNotEmpty() &&
+            vehicles.none {
+                it.id == activeVehicleId
+            }
         ) {
 
-            activeVehicle =
-                vehicles.first().name
+            val firstVehicle =
+                vehicles.first()
 
-            store.setActiveVehicle(
-                activeVehicle
+            activeVehicleId =
+                firstVehicle.id
+
+            store.setActiveVehicleId(
+                firstVehicle.id
             )
         }
     }
 
+    /*
+     * ============================================================
+     * HOME
+     * ============================================================
+     */
     if (
         screen ==
         Screen.HOME
@@ -168,15 +133,23 @@ fun AutoCheckApp() {
         HomeScreen(
             visible =
                 homeReady,
+
             visitedStore =
                 visitedStore,
+
             onSelect = {
-                screen = it
+                screen =
+                    it
             }
         )
 
     } else {
 
+        /*
+         * ========================================================
+         * TITEL
+         * ========================================================
+         */
         val title =
             when (screen) {
 
@@ -216,6 +189,11 @@ fun AutoCheckApp() {
 
             when (screen) {
 
+                /*
+                 * ==================================================
+                 * MEIN AUTO
+                 * ==================================================
+                 */
                 Screen.AUTO ->
 
                     VehicleScreen(
@@ -223,43 +201,91 @@ fun AutoCheckApp() {
                         vehicles =
                             vehicles,
 
+                        /*
+                         * Vorübergehend wird hier weiterhin der
+                         * Name übergeben. Im nächsten Schritt
+                         * stellen wir VehicleScreen selbst auf ID
+                         * um.
+                         */
                         activeVehicle =
-                            activeVehicle,
+                            activeVehicleName,
 
                         onActiveVehicle = {
-                            activeVehicle =
-                                it
+                            selectedName ->
 
-                            store.setActiveVehicle(
-                                it
-                            )
+                            /*
+                             * Den Namen niemals direkt als
+                             * dauerhafte aktive Kennung verwenden.
+                             *
+                             * Wir suchen das Fahrzeug und speichern
+                             * anschließend ausschließlich seine ID.
+                             */
+                            val selectedVehicle =
+                                vehicles.firstOrNull {
+                                    it.name ==
+                                        selectedName
+                                }
+
+                            if (
+                                selectedVehicle != null
+                            ) {
+
+                                activeVehicleId =
+                                    selectedVehicle.id
+
+                                store.setActiveVehicleId(
+                                    selectedVehicle.id
+                                )
+                            }
                         },
 
                         onSave = {
                                 vehicle,
                                 oldName ->
 
+                            /*
+                             * Primär über die stabile ID suchen.
+                             *
+                             * Fallback über den alten Namen ist
+                             * wichtig für bereits vorhandene Daten.
+                             */
                             val index =
                                 vehicles.indexOfFirst {
-                                    it.name ==
-                                        oldName
+                                    it.id ==
+                                        vehicle.id
                                 }
+                                    .takeIf {
+                                        it >= 0
+                                    }
+                                    ?: vehicles.indexOfFirst {
+                                        it.name ==
+                                            oldName
+                                    }
 
                             if (
                                 index >= 0
                             ) {
 
+                                val oldVehicle =
+                                    vehicles[index]
+
                                 vehicles[index] =
                                     vehicle
 
+                                /*
+                                 * Bestehende Reparatur-/Wartungs-/
+                                 * Pickerl-/Reifendaten werden bei
+                                 * einer Namensänderung weiterhin
+                                 * übernommen.
+                                 */
                                 if (
-                                    oldName !=
+                                    oldVehicle.name !=
                                     vehicle.name
                                 ) {
 
                                     migrateVehicleName(
                                         store,
-                                        oldName,
+                                        oldVehicle.name,
                                         vehicle.name
                                     )
                                 }
@@ -268,57 +294,111 @@ fun AutoCheckApp() {
                                 vehicles.size < 5
                             ) {
 
+                                /*
+                                 * Neues Fahrzeug.
+                                 */
                                 vehicles.add(
                                     vehicle
                                 )
                             }
 
+                            /*
+                             * Fahrzeugliste dauerhaft speichern.
+                             */
                             store.save(
                                 vehicles
                             )
 
-                            activeVehicle =
-                                vehicle.name
+                            /*
+                             * Das gerade gespeicherte Fahrzeug
+                             * wird zum EINZIGEN aktiven Fahrzeug.
+                             */
+                            activeVehicleId =
+                                vehicle.id
 
-                            store.setActiveVehicle(
-                                activeVehicle
+                            store.setActiveVehicleId(
+                                vehicle.id
                             )
                         },
 
                         onDelete = {
                                 vehicle ->
 
+                            val wasActive =
+                                vehicle.id ==
+                                    activeVehicleId
+
+                            /*
+                             * Fahrzeug aus der Liste entfernen.
+                             */
                             vehicles.remove(
                                 vehicle
                             )
 
+                            /*
+                             * Zugehörige Daten löschen.
+                             */
                             store.deleteVehicleData(
                                 vehicle.name
                             )
 
+                            /*
+                             * Pickerl-Erinnerung löschen.
+                             */
                             cancelPickerlReminder(
                                 context,
                                 vehicle.name
                             )
 
+                            /*
+                             * Geänderte Fahrzeugliste dauerhaft
+                             * speichern.
+                             */
+                            store.save(
+                                vehicles
+                            )
+
+                            /*
+                             * Wenn das aktive Fahrzeug gelöscht
+                             * wurde, wird genau ein neues aktives
+                             * Fahrzeug bestimmt.
+                             */
                             if (
-                                activeVehicle ==
-                                vehicle.name
+                                wasActive
                             ) {
 
-                                activeVehicle =
-                                    vehicles
-                                        .firstOrNull()
-                                        ?.name
-                                        ?: ""
+                                val nextVehicle =
+                                    vehicles.firstOrNull()
 
-                                store.setActiveVehicle(
-                                    activeVehicle
-                                )
+                                if (
+                                    nextVehicle != null
+                                ) {
+
+                                    activeVehicleId =
+                                        nextVehicle.id
+
+                                    store.setActiveVehicleId(
+                                        nextVehicle.id
+                                    )
+
+                                } else {
+
+                                    activeVehicleId =
+                                        ""
+
+                                    store.setActiveVehicleId(
+                                        ""
+                                    )
+                                }
                             }
                         }
                     )
 
+                /*
+                 * ==================================================
+                 * REPARATUREN
+                 * ==================================================
+                 */
                 Screen.REPARATUREN ->
 
                     RepairScreen(
@@ -330,16 +410,28 @@ fun AutoCheckApp() {
                             vehicles,
 
                         activeVehicle =
-                            activeVehicle,
+                            activeVehicleName,
 
                         onActiveVehicle = {
+                            selectedName ->
 
-                            activeVehicle =
-                                it
+                            val selectedVehicle =
+                                vehicles.firstOrNull {
+                                    it.name ==
+                                        selectedName
+                                }
 
-                            store.setActiveVehicle(
-                                it
-                            )
+                            if (
+                                selectedVehicle != null
+                            ) {
+
+                                activeVehicleId =
+                                    selectedVehicle.id
+
+                                store.setActiveVehicleId(
+                                    selectedVehicle.id
+                                )
+                            }
                         },
 
                         onVisited = {
@@ -350,6 +442,11 @@ fun AutoCheckApp() {
                         }
                     )
 
+                /*
+                 * ==================================================
+                 * PICKERL
+                 * ==================================================
+                 */
                 Screen.PICKERL ->
 
                     PickerlScreen(
@@ -361,16 +458,28 @@ fun AutoCheckApp() {
                             vehicles,
 
                         activeVehicle =
-                            activeVehicle,
+                            activeVehicleName,
 
                         onActiveVehicle = {
+                            selectedName ->
 
-                            activeVehicle =
-                                it
+                            val selectedVehicle =
+                                vehicles.firstOrNull {
+                                    it.name ==
+                                        selectedName
+                                }
 
-                            store.setActiveVehicle(
-                                it
-                            )
+                            if (
+                                selectedVehicle != null
+                            ) {
+
+                                activeVehicleId =
+                                    selectedVehicle.id
+
+                                store.setActiveVehicleId(
+                                    selectedVehicle.id
+                                )
+                            }
                         },
 
                         onVisited = {
@@ -381,6 +490,11 @@ fun AutoCheckApp() {
                         }
                     )
 
+                /*
+                 * ==================================================
+                 * WARTUNGEN
+                 * ==================================================
+                 */
                 Screen.WARTUNGEN ->
 
                     MaintenanceScreen(
@@ -392,16 +506,28 @@ fun AutoCheckApp() {
                             vehicles,
 
                         activeVehicle =
-                            activeVehicle,
+                            activeVehicleName,
 
                         onActiveVehicle = {
+                            selectedName ->
 
-                            activeVehicle =
-                                it
+                            val selectedVehicle =
+                                vehicles.firstOrNull {
+                                    it.name ==
+                                        selectedName
+                                }
 
-                            store.setActiveVehicle(
-                                it
-                            )
+                            if (
+                                selectedVehicle != null
+                            ) {
+
+                                activeVehicleId =
+                                    selectedVehicle.id
+
+                                store.setActiveVehicleId(
+                                    selectedVehicle.id
+                                )
+                            }
                         },
 
                         onVisited = {
@@ -412,6 +538,11 @@ fun AutoCheckApp() {
                         }
                     )
 
+                /*
+                 * ==================================================
+                 * GESAMTBLICK
+                 * ==================================================
+                 */
                 Screen.GESAMTBLICK ->
 
                     OverviewScreen(
@@ -423,16 +554,28 @@ fun AutoCheckApp() {
                             vehicles,
 
                         activeVehicle =
-                            activeVehicle,
+                            activeVehicleName,
 
                         onActiveVehicle = {
+                            selectedName ->
 
-                            activeVehicle =
-                                it
+                            val selectedVehicle =
+                                vehicles.firstOrNull {
+                                    it.name ==
+                                        selectedName
+                                }
 
-                            store.setActiveVehicle(
-                                it
-                            )
+                            if (
+                                selectedVehicle != null
+                            ) {
+
+                                activeVehicleId =
+                                    selectedVehicle.id
+
+                                store.setActiveVehicleId(
+                                    selectedVehicle.id
+                                )
+                            }
                         },
 
                         onVisited = {
@@ -443,6 +586,11 @@ fun AutoCheckApp() {
                         }
                     )
 
+                /*
+                 * ==================================================
+                 * REIFEN
+                 * ==================================================
+                 */
                 Screen.REIFEN ->
 
                     TireScreen(
@@ -454,16 +602,28 @@ fun AutoCheckApp() {
                             vehicles,
 
                         activeVehicle =
-                            activeVehicle,
+                            activeVehicleName,
 
                         onActiveVehicle = {
+                            selectedName ->
 
-                            activeVehicle =
-                                it
+                            val selectedVehicle =
+                                vehicles.firstOrNull {
+                                    it.name ==
+                                        selectedName
+                                }
 
-                            store.setActiveVehicle(
-                                it
-                            )
+                            if (
+                                selectedVehicle != null
+                            ) {
+
+                                activeVehicleId =
+                                    selectedVehicle.id
+
+                                store.setActiveVehicleId(
+                                    selectedVehicle.id
+                                )
+                            }
                         },
 
                         onVisited = {
