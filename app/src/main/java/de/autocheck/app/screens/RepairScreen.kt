@@ -1465,6 +1465,17 @@ fun RepairScreen(
                 activeVehicle
         }
 
+    /*
+     * Gesamte bisherige Reparaturinvestition
+     * ausschließlich für das aktuell aktive Fahrzeug.
+     */
+    val totalRepairInvestment =
+        list.sumOf {
+            repairTotal(
+                it
+            )
+        }
+
     if (
         detailRepair != null
     ) {
@@ -1558,6 +1569,83 @@ fun RepairScreen(
             modifier =
                 Modifier.height(10.dp)
         )
+
+        /*
+         * Gesamtinvestition Reparaturen
+         * für das aktuell aktive Fahrzeug.
+         * Die Farbe orientiert sich am blauen
+         * Reparaturbereich.
+         */
+        Card(
+            colors =
+                CardDefaults.cardColors(
+                    containerColor =
+                        Color(
+                            0xFF11141A
+                        )
+                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        bottom = 10.dp
+                    )
+        ) {
+
+            Column(
+                modifier =
+                    Modifier.padding(
+                        16.dp
+                    )
+            ) {
+
+                Text(
+                    "REPARATURHISTORIE",
+                    color =
+                        Color.White,
+                    fontSize =
+                        18.sp,
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            6.dp
+                        )
+                )
+
+                Text(
+                    "Gesamte bisherige Reparaturkosten",
+                    color =
+                        Color(
+                            0xFFB8BEC8
+                        )
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            4.dp
+                        )
+                )
+
+                Text(
+                    repairMoneyText(
+                        totalRepairInvestment
+                    ),
+                    color =
+                        Color(
+                            0xFF4A90E2
+                        ),
+                    fontSize =
+                        22.sp,
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+        }
 
         if (
             vehicles.isEmpty()
@@ -2493,7 +2581,9 @@ private fun RepairRecordCard(
                             total
                         ),
                         color =
-                            Color.White,
+                            Color(
+                                0xFF4A90E2
+                            ),
                         fontWeight =
                             FontWeight.Bold
                     )
@@ -2773,7 +2863,9 @@ private fun RepairDetailCard(
                 )
             }",
             color =
-                Color.White,
+                Color(
+                    0xFF4A90E2
+                ),
             fontWeight =
                 FontWeight.Bold
         )
