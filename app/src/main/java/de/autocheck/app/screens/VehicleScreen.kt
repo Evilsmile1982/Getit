@@ -1,10 +1,8 @@
 package de.autocheck.app
 
-import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -681,7 +678,6 @@ fun VehicleScreen(
                             /*
                              * ==================================================
                              * MOTORISIERUNG
-                             * DIREKT UNTER MODELL
                              * ==================================================
                              */
 
@@ -708,7 +704,6 @@ fun VehicleScreen(
                             /*
                              * ==================================================
                              * PS / KW
-                             * DIREKT UNTER MOTORISIERUNG
                              * ==================================================
                              */
 
@@ -868,12 +863,55 @@ fun VehicleScreen(
                                     )
                             ) {
 
+                                /*
+                                 * Speichern ist möglich, sobald
+                                 * Fahrzeugtyp, Marke und Modell
+                                 * vorhanden sind.
+                                 *
+                                 * Name wird bei einem neuen Fahrzeug
+                                 * automatisch erzeugt.
+                                 */
                                 Button(
 
                                     enabled =
-                                        name.isNotBlank(),
+                                        vehicleType.isNotBlank() &&
+                                        make.isNotBlank() &&
+                                        model.isNotBlank(),
 
                                     onClick = {
+
+                                        /*
+                                         * ==================================================
+                                         * AUTOMATISCHER FAHRZEUGNAME
+                                         * ==================================================
+                                         *
+                                         * Die stabile Vehicle-ID bleibt
+                                         * die eigentliche Identität.
+                                         *
+                                         * Der Name dient nur als lesbare
+                                         * Bezeichnung.
+                                         */
+
+                                        val generatedName =
+                                            listOf(
+                                                vehicleType,
+                                                make.trim(),
+                                                model.trim(),
+                                                year.trim(),
+                                                power.trim()
+                                            )
+                                                .filter {
+                                                    it.isNotBlank()
+                                                }
+                                                .joinToString(
+                                                    " "
+                                                )
+
+                                        /*
+                                         * ==================================================
+                                         * FAHRZEUG SPEICHERN
+                                         * ==================================================
+                                         */
 
                                         val vehicleToSave =
 
@@ -881,13 +919,26 @@ fun VehicleScreen(
                                                 editingVehicleId.isNotBlank()
                                             ) {
 
+                                                /*
+                                                 * BEARBEITEN
+                                                 *
+                                                 * Die bestehende ID bleibt
+                                                 * vollständig erhalten.
+                                                 */
+
                                                 Vehicle(
 
                                                     id =
                                                         editingVehicleId,
 
                                                     name =
-                                                        name.trim(),
+                                                        if (
+                                                            name.isNotBlank()
+                                                        ) {
+                                                            name.trim()
+                                                        } else {
+                                                            generatedName
+                                                        },
 
                                                     vehicleType =
                                                         vehicleType,
@@ -919,10 +970,17 @@ fun VehicleScreen(
 
                                             } else {
 
+                                                /*
+                                                 * NEUES FAHRZEUG
+                                                 *
+                                                 * Vehicle erzeugt automatisch
+                                                 * eine neue stabile UUID.
+                                                 */
+
                                                 Vehicle(
 
                                                     name =
-                                                        name.trim(),
+                                                        generatedName,
 
                                                     vehicleType =
                                                         vehicleType,
@@ -961,7 +1019,9 @@ fun VehicleScreen(
                                         )
 
                                         /*
-                                         * Formular zurücksetzen.
+                                         * ==================================================
+                                         * FORMULAR ZURÜCKSETZEN
+                                         * ==================================================
                                          */
 
                                         editingVehicleId =
@@ -1053,6 +1113,9 @@ fun VehicleScreen(
 
                                         imageUri =
                                             ""
+
+                                        vehicleTypeExpanded =
+                                            false
                                     }
 
                                 ) {
@@ -1121,6 +1184,9 @@ fun VehicleScreen(
 
                     imageUri =
                         ""
+
+                    vehicleTypeExpanded =
+                        false
 
                     adding =
                         true
