@@ -45,8 +45,8 @@ fun AutoCheckApp() {
      * EINZIGE QUELLE FÜR DAS AKTIVE FAHRZEUG
      * ============================================================
      *
-     * Ab jetzt wird ausschließlich die stabile Vehicle-ID
-     * verwendet.
+     * Das aktive Fahrzeug wird ausschließlich über seine
+     * stabile ID bestimmt.
      */
     var activeVehicleId by remember {
 
@@ -56,7 +56,7 @@ fun AutoCheckApp() {
     }
 
     /*
-     * Aktives Fahrzeug anhand der stabilen ID bestimmen.
+     * Aktives Fahrzeug anhand der ID bestimmen.
      */
     val activeVehicle =
         vehicles.firstOrNull {
@@ -64,11 +64,11 @@ fun AutoCheckApp() {
         }
 
     /*
-     * Die bestehenden Untermenüs arbeiten weiterhin mit dem
+     * Bestehende Untermenüs arbeiten weiterhin mit dem
      * Fahrzeugnamen.
      *
-     * Der Name wird ausschließlich aus dem zentral aktiven
-     * Fahrzeug abgeleitet.
+     * Der Name wird ausschließlich aus dem zentral
+     * aktiven Fahrzeug abgeleitet.
      */
     val activeVehicleName =
         activeVehicle?.name ?: ""
@@ -100,7 +100,7 @@ fun AutoCheckApp() {
         homeReady = true
 
         /*
-         * Falls keine gültige aktive ID gespeichert ist,
+         * Falls keine gültige aktive ID vorhanden ist,
          * wird automatisch das erste Fahrzeug aktiv.
          */
         if (
@@ -205,18 +205,12 @@ fun AutoCheckApp() {
                             vehicles,
 
                         /*
-                         * WICHTIG:
-                         *
-                         * VehicleScreen arbeitet jetzt direkt
-                         * mit der stabilen Fahrzeug-ID.
+                         * VehicleScreen arbeitet mit der
+                         * stabilen Fahrzeug-ID.
                          */
                         activeVehicle =
                             activeVehicleId,
 
-                        /*
-                         * VehicleScreen liefert ebenfalls
-                         * ausschließlich die Fahrzeug-ID zurück.
-                         */
                         onActiveVehicle = {
                             selectedVehicleId ->
 
@@ -230,15 +224,9 @@ fun AutoCheckApp() {
                                 selectedVehicle != null
                             ) {
 
-                                /*
-                                 * Zentrale aktive ID ändern.
-                                 */
                                 activeVehicleId =
                                     selectedVehicle.id
 
-                                /*
-                                 * Dauerhaft speichern.
-                                 */
                                 store.setActiveVehicleId(
                                     selectedVehicle.id
                                 )
@@ -254,12 +242,6 @@ fun AutoCheckApp() {
                                 vehicle,
                                 oldName ->
 
-                            /*
-                             * Primär über die stabile ID suchen.
-                             *
-                             * Fallback über den Namen bleibt für
-                             * bestehende ältere Fahrzeuge erhalten.
-                             */
                             val index =
                                 vehicles.indexOfFirst {
                                     it.id ==
@@ -280,9 +262,6 @@ fun AutoCheckApp() {
                                 val oldVehicle =
                                     vehicles[index]
 
-                                /*
-                                 * Fahrzeug aktualisieren.
-                                 */
                                 vehicles[index] =
                                     vehicle
 
@@ -306,24 +285,18 @@ fun AutoCheckApp() {
                                 vehicles.size < 5
                             ) {
 
-                                /*
-                                 * Neues Fahrzeug hinzufügen.
-                                 */
                                 vehicles.add(
                                     vehicle
                                 )
                             }
 
-                            /*
-                             * Fahrzeugliste speichern.
-                             */
                             store.save(
                                 vehicles
                             )
 
                             /*
-                             * Das gespeicherte Fahrzeug ist
-                             * eindeutig das aktive Fahrzeug.
+                             * Gespeichertes Fahrzeug wird
+                             * automatisch aktives Fahrzeug.
                              */
                             activeVehicleId =
                                 vehicle.id
@@ -345,38 +318,27 @@ fun AutoCheckApp() {
                                 vehicle.id ==
                                     activeVehicleId
 
-                            /*
-                             * Fahrzeug entfernen.
-                             */
                             vehicles.remove(
                                 vehicle
                             )
 
-                            /*
-                             * Zugehörige Daten entfernen.
-                             */
                             store.deleteVehicleData(
                                 vehicle.name
                             )
 
-                            /*
-                             * Pickerl-Erinnerung entfernen.
-                             */
                             cancelPickerlReminder(
                                 context,
                                 vehicle.name
                             )
 
-                            /*
-                             * Fahrzeugliste speichern.
-                             */
                             store.save(
                                 vehicles
                             )
 
                             /*
-                             * Wurde das aktive Fahrzeug gelöscht,
-                             * wird genau ein neues Fahrzeug aktiv.
+                             * Wenn das aktive Fahrzeug gelöscht
+                             * wurde, wird genau ein anderes Fahrzeug
+                             * aktiv.
                              */
                             if (
                                 wasActive
@@ -414,11 +376,16 @@ fun AutoCheckApp() {
                  * REPARATUREN
                  * ==================================================
                  *
-                 * Diese Screens arbeiten momentan noch mit
-                 * dem Fahrzeugnamen.
+                 * WICHTIG:
                  *
-                 * Sie bekommen aber ausschließlich den Namen
-                 * des zentral aktiven Fahrzeugs.
+                 * RepairScreen bekommt hier ab sofort NICHT
+                 * mehr die komplette Fahrzeugliste.
+                 *
+                 * Es wird ausschließlich das aktuell aktive
+                 * Fahrzeug übergeben.
+                 *
+                 * Dadurch kann die Reparaturseite nicht mehr
+                 * auf ein anderes Fahrzeug wechseln.
                  */
                 Screen.REPARATUREN ->
 
@@ -427,32 +394,34 @@ fun AutoCheckApp() {
                         store =
                             store,
 
+                        /*
+                         * Nur das zentrale aktive Fahrzeug.
+                         */
                         vehicles =
-                            vehicles,
+                            if (
+                                activeVehicle != null
+                            ) {
+                                listOf(
+                                    activeVehicle
+                                )
+                            } else {
+                                emptyList()
+                            },
 
                         activeVehicle =
                             activeVehicleName,
 
+                        /*
+                         * Reparaturen dürfen das aktive Fahrzeug
+                         * NICHT selbst verändern.
+                         *
+                         * Die einzige Stelle für den Wechsel
+                         * bleibt "Mein Auto".
+                         */
                         onActiveVehicle = {
-                            selectedName ->
-
-                            val selectedVehicle =
-                                vehicles.firstOrNull {
-                                    it.name ==
-                                        selectedName
-                                }
-
-                            if (
-                                selectedVehicle != null
-                            ) {
-
-                                activeVehicleId =
-                                    selectedVehicle.id
-
-                                store.setActiveVehicleId(
-                                    selectedVehicle.id
-                                )
-                            }
+                            // Keine Änderung.
+                            // Aktives Fahrzeug wird ausschließlich
+                            // in Mein Auto geändert.
                         },
 
                         onVisited = {
@@ -467,6 +436,9 @@ fun AutoCheckApp() {
                  * ==================================================
                  * PICKERL
                  * ==================================================
+                 *
+                 * Auch hier bekommt das Menü nur noch das
+                 * zentrale aktive Fahrzeug.
                  */
                 Screen.PICKERL ->
 
@@ -476,31 +448,22 @@ fun AutoCheckApp() {
                             store,
 
                         vehicles =
-                            vehicles,
+                            if (
+                                activeVehicle != null
+                            ) {
+                                listOf(
+                                    activeVehicle
+                                )
+                            } else {
+                                emptyList()
+                            },
 
                         activeVehicle =
                             activeVehicleName,
 
                         onActiveVehicle = {
-                            selectedName ->
-
-                            val selectedVehicle =
-                                vehicles.firstOrNull {
-                                    it.name ==
-                                        selectedName
-                                }
-
-                            if (
-                                selectedVehicle != null
-                            ) {
-
-                                activeVehicleId =
-                                    selectedVehicle.id
-
-                                store.setActiveVehicleId(
-                                    selectedVehicle.id
-                                )
-                            }
+                            // Aktives Fahrzeug wird ausschließlich
+                            // in "Mein Auto" geändert.
                         },
 
                         onVisited = {
@@ -524,31 +487,22 @@ fun AutoCheckApp() {
                             store,
 
                         vehicles =
-                            vehicles,
+                            if (
+                                activeVehicle != null
+                            ) {
+                                listOf(
+                                    activeVehicle
+                                )
+                            } else {
+                                emptyList()
+                            },
 
                         activeVehicle =
                             activeVehicleName,
 
                         onActiveVehicle = {
-                            selectedName ->
-
-                            val selectedVehicle =
-                                vehicles.firstOrNull {
-                                    it.name ==
-                                        selectedName
-                                }
-
-                            if (
-                                selectedVehicle != null
-                            ) {
-
-                                activeVehicleId =
-                                    selectedVehicle.id
-
-                                store.setActiveVehicleId(
-                                    selectedVehicle.id
-                                )
-                            }
+                            // Aktives Fahrzeug wird ausschließlich
+                            // in "Mein Auto" geändert.
                         },
 
                         onVisited = {
@@ -572,31 +526,22 @@ fun AutoCheckApp() {
                             store,
 
                         vehicles =
-                            vehicles,
+                            if (
+                                activeVehicle != null
+                            ) {
+                                listOf(
+                                    activeVehicle
+                                )
+                            } else {
+                                emptyList()
+                            },
 
                         activeVehicle =
                             activeVehicleName,
 
                         onActiveVehicle = {
-                            selectedName ->
-
-                            val selectedVehicle =
-                                vehicles.firstOrNull {
-                                    it.name ==
-                                        selectedName
-                                }
-
-                            if (
-                                selectedVehicle != null
-                            ) {
-
-                                activeVehicleId =
-                                    selectedVehicle.id
-
-                                store.setActiveVehicleId(
-                                    selectedVehicle.id
-                                )
-                            }
+                            // Aktives Fahrzeug wird ausschließlich
+                            // in "Mein Auto" geändert.
                         },
 
                         onVisited = {
@@ -620,31 +565,22 @@ fun AutoCheckApp() {
                             store,
 
                         vehicles =
-                            vehicles,
+                            if (
+                                activeVehicle != null
+                            ) {
+                                listOf(
+                                    activeVehicle
+                                )
+                            } else {
+                                emptyList()
+                            },
 
                         activeVehicle =
                             activeVehicleName,
 
                         onActiveVehicle = {
-                            selectedName ->
-
-                            val selectedVehicle =
-                                vehicles.firstOrNull {
-                                    it.name ==
-                                        selectedName
-                                }
-
-                            if (
-                                selectedVehicle != null
-                            ) {
-
-                                activeVehicleId =
-                                    selectedVehicle.id
-
-                                store.setActiveVehicleId(
-                                    selectedVehicle.id
-                                )
-                            }
+                            // Aktives Fahrzeug wird ausschließlich
+                            // in "Mein Auto" geändert.
                         },
 
                         onVisited = {
