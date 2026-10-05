@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -46,21 +48,6 @@ fun VehicleScreen(
     onDelete: (Vehicle) -> Unit
 ) {
 
-    /*
-     * ============================================================
-     * HINWEIS ZUR AKTIV-KENNUNG
-     * ============================================================
-     *
-     * Der Parameter activeVehicle enthält in der neuen Logik
-     * die stabile Vehicle-ID.
-     *
-     * Die Umstellung von AutoCheckApp auf die ID erfolgt im
-     * nächsten Schritt.
-     *
-     * Für die Übergangsphase bleibt die Signatur bewusst gleich,
-     * damit dieses File alleine bereits kompiliert.
-     */
-
     var adding by remember {
         mutableStateOf(false)
     }
@@ -77,11 +64,23 @@ fun VehicleScreen(
         mutableStateOf("")
     }
 
+    var vehicleType by remember {
+        mutableStateOf("PKW")
+    }
+
     var make by remember {
         mutableStateOf("")
     }
 
     var model by remember {
+        mutableStateOf("")
+    }
+
+    var motorization by remember {
+        mutableStateOf("")
+    }
+
+    var power by remember {
         mutableStateOf("")
     }
 
@@ -100,6 +99,22 @@ fun VehicleScreen(
     var imageUri by remember {
         mutableStateOf("")
     }
+
+    var vehicleTypeExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    val vehicleTypes =
+        listOf(
+            "PKW",
+            "WOHNMOBIL",
+            "MOTORRAD",
+            "QUAD",
+            "MOPED",
+            "NUTZFAHRZEUG",
+            "LKW",
+            "BAUMASCHINE"
+        )
 
     val context =
         LocalContext.current
@@ -283,7 +298,7 @@ fun VehicleScreen(
 
                                 Text(
 
-                                    "${vehicle.make} ${vehicle.model} ${vehicle.year}"
+                                    "${vehicle.vehicleType} • ${vehicle.make} ${vehicle.model}"
                                         .trim(),
 
                                     color =
@@ -291,6 +306,51 @@ fun VehicleScreen(
                                             0xFFB8BEC8
                                         )
                                 )
+
+                                if (
+                                    vehicle.motorization.isNotBlank()
+                                ) {
+
+                                    Text(
+
+                                        "Motorisierung: ${vehicle.motorization}",
+
+                                        color =
+                                            Color(
+                                                0xFFB8BEC8
+                                            )
+                                    )
+                                }
+
+                                if (
+                                    vehicle.power.isNotBlank()
+                                ) {
+
+                                    Text(
+
+                                        "PS/KW: ${vehicle.power}",
+
+                                        color =
+                                            Color(
+                                                0xFFB8BEC8
+                                            )
+                                    )
+                                }
+
+                                if (
+                                    vehicle.year.isNotBlank()
+                                ) {
+
+                                    Text(
+
+                                        "Baujahr: ${vehicle.year}",
+
+                                        color =
+                                            Color(
+                                                0xFFB8BEC8
+                                            )
+                                    )
+                                }
 
                                 if (
                                     vehicle.plate.isNotBlank()
@@ -345,17 +405,6 @@ fun VehicleScreen(
                                 )
                         ) {
 
-                            /*
-                             * WICHTIG:
-                             *
-                             * Der Vergleich erfolgt ausschließlich über
-                             * vehicle.id.
-                             *
-                             * Damit kann niemals ein zweites Fahrzeug
-                             * wegen desselben Namens ebenfalls als
-                             * "Aktiv" angezeigt werden.
-                             */
-
                             Button(
 
                                 onClick = {
@@ -384,11 +433,6 @@ fun VehicleScreen(
 
                                 onClick = {
 
-                                    /*
-                                     * Beim Bearbeiten merken wir uns
-                                     * ausdrücklich die stabile ID.
-                                     */
-
                                     editingVehicleId =
                                         vehicle.id
 
@@ -398,11 +442,22 @@ fun VehicleScreen(
                                     name =
                                         vehicle.name
 
+                                    vehicleType =
+                                        vehicle.vehicleType.ifBlank {
+                                            "PKW"
+                                        }
+
                                     make =
                                         vehicle.make
 
                                     model =
                                         vehicle.model
+
+                                    motorization =
+                                        vehicle.motorization
+
+                                    power =
+                                        vehicle.power
 
                                     year =
                                         vehicle.year
@@ -519,25 +574,57 @@ fun VehicleScreen(
                              * ==================================================
                              */
 
-                            OutlinedTextField(
+                            OutlinedButton(
 
-                                value =
-                                    name,
+                                onClick = {
 
-                                onValueChange = {
-                                    name =
-                                        it
-                                },
-
-                                label = {
-                                    Text(
-                                        "Bezeichnung"
-                                    )
+                                    vehicleTypeExpanded =
+                                        true
                                 },
 
                                 modifier =
                                     Modifier.fillMaxWidth()
-                            )
+                            ) {
+
+                                Text(
+                                    "Bezeichnung: $vehicleType"
+                                )
+                            }
+
+                            DropdownMenu(
+
+                                expanded =
+                                    vehicleTypeExpanded,
+
+                                onDismissRequest = {
+
+                                    vehicleTypeExpanded =
+                                        false
+                                }
+
+                            ) {
+
+                                vehicleTypes.forEach { type ->
+
+                                    DropdownMenuItem(
+
+                                        text = {
+                                            Text(
+                                                type
+                                            )
+                                        },
+
+                                        onClick = {
+
+                                            vehicleType =
+                                                type
+
+                                            vehicleTypeExpanded =
+                                                false
+                                        }
+                                    )
+                                }
+                            }
 
                             /*
                              * ==================================================
@@ -584,6 +671,60 @@ fun VehicleScreen(
                                 label = {
                                     Text(
                                         "Modell"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                            )
+
+                            /*
+                             * ==================================================
+                             * MOTORISIERUNG
+                             * DIREKT UNTER MODELL
+                             * ==================================================
+                             */
+
+                            OutlinedTextField(
+
+                                value =
+                                    motorization,
+
+                                onValueChange = {
+                                    motorization =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Motorisierung"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                            )
+
+                            /*
+                             * ==================================================
+                             * PS / KW
+                             * DIREKT UNTER MOTORISIERUNG
+                             * ==================================================
+                             */
+
+                            OutlinedTextField(
+
+                                value =
+                                    power,
+
+                                onValueChange = {
+                                    power =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "PS/KW"
                                     )
                                 },
 
@@ -734,18 +875,6 @@ fun VehicleScreen(
 
                                     onClick = {
 
-                                        /*
-                                         * ==================================================
-                                         * ENTSCHEIDEND:
-                                         *
-                                         * Beim Bearbeiten wird die bestehende
-                                         * Fahrzeug-ID weiterverwendet.
-                                         *
-                                         * Nur bei einem NEUEN Fahrzeug erzeugt
-                                         * Vehicle automatisch eine neue UUID.
-                                         * ==================================================
-                                         */
-
                                         val vehicleToSave =
 
                                             if (
@@ -760,11 +889,20 @@ fun VehicleScreen(
                                                     name =
                                                         name.trim(),
 
+                                                    vehicleType =
+                                                        vehicleType,
+
                                                     make =
                                                         make.trim(),
 
                                                     model =
                                                         model.trim(),
+
+                                                    motorization =
+                                                        motorization.trim(),
+
+                                                    power =
+                                                        power.trim(),
 
                                                     year =
                                                         year.trim(),
@@ -786,11 +924,20 @@ fun VehicleScreen(
                                                     name =
                                                         name.trim(),
 
+                                                    vehicleType =
+                                                        vehicleType,
+
                                                     make =
                                                         make.trim(),
 
                                                     model =
                                                         model.trim(),
+
+                                                    motorization =
+                                                        motorization.trim(),
+
+                                                    power =
+                                                        power.trim(),
 
                                                     year =
                                                         year.trim(),
@@ -826,10 +973,19 @@ fun VehicleScreen(
                                         name =
                                             ""
 
+                                        vehicleType =
+                                            "PKW"
+
                                         make =
                                             ""
 
                                         model =
+                                            ""
+
+                                        motorization =
+                                            ""
+
+                                        power =
                                             ""
 
                                         year =
@@ -871,10 +1027,19 @@ fun VehicleScreen(
                                         name =
                                             ""
 
+                                        vehicleType =
+                                            "PKW"
+
                                         make =
                                             ""
 
                                         model =
+                                            ""
+
+                                        motorization =
+                                            ""
+
+                                        power =
                                             ""
 
                                         year =
@@ -930,10 +1095,19 @@ fun VehicleScreen(
                     name =
                         ""
 
+                    vehicleType =
+                        "PKW"
+
                     make =
                         ""
 
                     model =
+                        ""
+
+                    motorization =
+                        ""
+
+                    power =
                         ""
 
                     year =
