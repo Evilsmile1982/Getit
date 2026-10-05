@@ -1,7 +1,16 @@
 package de.autocheck.app
 
+import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +18,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -28,20 +39,48 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
+import java.util.Locale
 
-private const val MAINTENANCE_V2_PREFIX =
+/*
+ * ============================================================
+ * WARTUNGSDATEN
+ * ============================================================
+ *
+ * Jeder gespeicherte Wartungseintrag ist unabhängig.
+ *
+ * Dadurch sind beispielsweise möglich:
+ *
+ * Ölwechsel 06/2024
+ * Ölwechsel 08/2025
+ * Ölwechsel 09/2026
+ *
+ * ohne dass ein vorhandener Eintrag überschrieben wird.
+ */
+
+private const val MAINTENANCE_ENTRY_V3 =
+    "[WARTUNG_ENTRY_V3]"
+
+private const val OLD_MAINTENANCE_V2 =
     "[WARTUNGSPLAN_V2]"
 
-private const val OLD_MAINTENANCE_PREFIX =
+private const val OLD_MAINTENANCE =
     "[WARTUNGEN]"
 
-private const val OLD_MAINTENANCE_SEPARATOR =
+private const val OLD_SEPARATOR =
     "||"
 
+/*
+ * Feste Wartungspunkte.
+ */
 private val standardMaintenanceItems =
     listOf(
         "ZAHNRIEMEN MIT WASSERPUMPE",
@@ -50,7 +89,9 @@ private val standardMaintenanceItems =
         "LUFTFILTER",
         "KRAFTSTOFFFILTER",
         "INNENRAUMFILTER",
-        "BATTERIE"
+        "BATTERIE",
+        "BREMSFLÜSSIGKEIT",
+        "KÜHLFLÜSSIGKEIT"
     )
 
 private val maintenanceMonths =
@@ -58,217 +99,520 @@ private val maintenanceMonths =
         it.toString()
     }
 
+/*
+ * ============================================================
+ * ENTWURF EINES WARTUNGSEINTRAGS
+ * ============================================================
+ */
+
 private data class MaintenanceDraftItem(
     val name: String,
     val selected: Boolean = false,
     val month: String = "",
     val year: String = "",
     val mileage: String = "",
+    val used: String = "",
+    val partNumber: String = "",
+    val materialCost: String = "",
+    val laborCost: String = "",
+    val imageUri: String = "",
     val custom: Boolean = false
 )
 
-private data class DecodedMaintenance(
-    val items: List<MaintenanceDraftItem>,
+/*
+ * ============================================================
+ * GESPEICHERTER WARTUNGSEINTRAG FÜR DIE ANZEIGE
+ * ============================================================
+ */
+
+private data class MaintenanceHistoryItem(
+    val id: Long,
+    val vehicleId: String,
+    val vehicleName: String,
+    val name: String,
+    val month: String,
+    val year: String,
+    val mileage: String,
+    val used: String,
+    val partNumber: String,
+    val materialCost: Double,
+    val laborCost: Double,
+    val totalCost: Double,
+    val imageUri: String,
+    val workshop: String,
     val notes: String
 )
 
-private fun encodeMaintenanceNotes(
-    items: List<MaintenanceDraftItem>,
+/*
+ * ============================================================
+ * ZAHLEN
+ * ============================================================
+ */
+
+private fun parseMoney(
+    value: String
+): Double {
+
+    return value
+        .trim()
+        .replace(
+            "€",
+            ""
+        )
+        .replace(
+            " ",
+            ""
+        )
+        .replace(
+            ".",
+            ""
+        )
+        .replace(
+            ",",
+            "."
+        )
+        .toDoubleOrNull()
+        ?: 0.0
+}
+
+private fun money(
+    value: Double
+): String {
+
+    return String.format(
+        Locale.GERMANY,
+        "%.2f €",
+        value
+    )
+}
+
+/*
+ * ============================================================
+ * SPEICHERN EINES EINZELNEN WARTUNGSEINTRAGS
+ * ============================================================
+ */
+
+private fun encodeMaintenanceEntry(
+    vehicleId: String,
+    item: MaintenanceDraftItem,
     notes: String
 ): String {
 
-    val array =
-        JSONArray()
+    val json =
+        JSONObject()
 
-    items
-        .filter {
-            it.selected &&
-                it.name.isNotBlank()
-        }
-        .forEach { item ->
+    json.put(
+        "vehicleId",
+        vehicleId
+    )
 
-            val json =
-                JSONObject()
+    json.put(
+        "name",
+        item.name.trim()
+    )
 
-            json.put(
-                "name",
-                item.name.trim()
-            )
+    json.put(
+        "month",
+        item.month.trim()
+    )
 
-            json.put(
-                "month",
-                item.month.trim()
-            )
+    json.put(
+        "year",
+        item.year.trim()
+    )
 
-            json.put(
-                "year",
-                item.year.trim()
-            )
+    json.put(
+        "mileage",
+        item.mileage.trim()
+    )
 
-            json.put(
-                "mileage",
-                item.mileage.trim()
-            )
+    json.put(
+        "used",
+        item.used.trim()
+    )
 
-            json.put(
-                "custom",
-                item.custom
-            )
+    json.put(
+        "partNumber",
+        item.partNumber.trim()
+    )
 
-            array.put(
-                json
-            )
-        }
+    json.put(
+        "materialCost",
+        item.materialCost.trim()
+    )
 
-    return buildString {
+    json.put(
+        "laborCost",
+        item.laborCost.trim()
+    )
 
-        append(
-            MAINTENANCE_V2_PREFIX
-        )
+    json.put(
+        "imageUri",
+        item.imageUri.trim()
+    )
 
-        append(
-            array.toString()
-        )
+    json.put(
+        "custom",
+        item.custom
+    )
 
-        append(
-            "\n"
-        )
+    json.put(
+        "notes",
+        notes.trim()
+    )
 
-        append(
-            notes.trim()
-        )
-    }
+    return MAINTENANCE_ENTRY_V3 +
+        json.toString()
 }
 
-private fun decodeMaintenanceNotes(
-    storedNotes: String,
-    legacyDate: String,
-    legacyMileage: String
-): DecodedMaintenance {
+/*
+ * ============================================================
+ * AUS EINEM ALTEN EINTRAG EIN ITEM ERZEUGEN
+ * ============================================================
+ */
+
+private fun decodeMaintenanceEntry(
+    entry: Maintenance,
+    fallbackVehicleId: String
+): List<MaintenanceHistoryItem> {
+
+    val notes =
+        entry.notes.trim()
+
+    /*
+     * ------------------------------------------------------------
+     * NEUES FORMAT
+     * ------------------------------------------------------------
+     */
 
     if (
-        storedNotes.startsWith(
-            MAINTENANCE_V2_PREFIX
+        notes.startsWith(
+            MAINTENANCE_ENTRY_V3
         )
     ) {
 
-        val rest =
-            storedNotes.removePrefix(
-                MAINTENANCE_V2_PREFIX
+        return try {
+
+            val json =
+                JSONObject(
+                    notes.removePrefix(
+                        MAINTENANCE_ENTRY_V3
+                    )
+                )
+
+            val vehicleId =
+                json.optString(
+                    "vehicleId",
+                    fallbackVehicleId
+                )
+
+            val name =
+                json.optString(
+                    "name",
+                    "Wartung"
+                )
+
+            val month =
+                json.optString(
+                    "month",
+                    ""
+                )
+
+            val year =
+                json.optString(
+                    "year",
+                    ""
+                )
+
+            val mileage =
+                json.optString(
+                    "mileage",
+                    entry.mileage
+                )
+
+            val used =
+                json.optString(
+                    "used",
+                    ""
+                )
+
+            val partNumber =
+                json.optString(
+                    "partNumber",
+                    ""
+                )
+
+            val material =
+                parseMoney(
+                    json.optString(
+                        "materialCost",
+                        entry.cost
+                    )
+                )
+
+            val labor =
+                parseMoney(
+                    json.optString(
+                        "laborCost",
+                        "0"
+                    )
+                )
+
+            val imageUri =
+                json.optString(
+                    "imageUri",
+                    ""
+                )
+
+            val freeNotes =
+                json.optString(
+                    "notes",
+                    ""
+                )
+
+            listOf(
+                MaintenanceHistoryItem(
+                    id =
+                        entry.id,
+
+                    vehicleId =
+                        vehicleId,
+
+                    vehicleName =
+                        entry.vehicle,
+
+                    name =
+                        name,
+
+                    month =
+                        month,
+
+                    year =
+                        year,
+
+                    mileage =
+                        mileage,
+
+                    used =
+                        used,
+
+                    partNumber =
+                        partNumber,
+
+                    materialCost =
+                        material,
+
+                    laborCost =
+                        labor,
+
+                    totalCost =
+                        material + labor,
+
+                    imageUri =
+                        imageUri,
+
+                    workshop =
+                        entry.workshop,
+
+                    notes =
+                        freeNotes
+                )
             )
 
-        val parts =
-            rest.split(
-                "\n",
-                limit = 2
-            )
+        } catch (
+            _: Exception
+        ) {
 
-        val jsonText =
-            parts
-                .firstOrNull()
-                ?.trim()
-                ?: ""
+            emptyList()
+        }
+    }
 
-        val notes =
-            if (
-                parts.size > 1
-            ) {
-                parts[1].trim()
-            } else {
-                ""
-            }
+    /*
+     * ------------------------------------------------------------
+     * ALTES WARTUNGSPLAN-V2-FORMAT
+     * ------------------------------------------------------------
+     *
+     * Alte Daten werden weiterhin angezeigt.
+     */
 
-        val result =
-            mutableListOf<MaintenanceDraftItem>()
+    if (
+        notes.startsWith(
+            OLD_MAINTENANCE_V2
+        )
+    ) {
 
-        try {
+        return try {
+
+            val rest =
+                notes.removePrefix(
+                    OLD_MAINTENANCE_V2
+                )
+
+            val parts =
+                rest.split(
+                    "\n",
+                    limit = 2
+                )
+
+            val jsonText =
+                parts
+                    .firstOrNull()
+                    ?.trim()
+                    ?: ""
+
+            val freeNotes =
+                if (
+                    parts.size > 1
+                ) {
+                    parts[1].trim()
+                } else {
+                    ""
+                }
 
             val array =
                 JSONArray(
                     jsonText
                 )
 
-            for (
-                index in
-                0 until array.length()
-            ) {
+            val names =
+                buildList {
 
-                val json =
-                    array.getJSONObject(
-                        index
-                    )
+                    for (
+                        index in
+                        0 until array.length()
+                    ) {
 
-                val name =
-                    json.optString(
-                        "name",
-                        ""
-                    )
+                        val json =
+                            array.getJSONObject(
+                                index
+                            )
 
-                if (
-                    name.isBlank()
-                ) {
-                    continue
+                        val name =
+                            json.optString(
+                                "name",
+                                ""
+                            )
+
+                        if (
+                            name.isNotBlank()
+                        ) {
+                            add(
+                                name
+                            )
+                        }
+                    }
                 }
 
-                result.add(
-                    MaintenanceDraftItem(
-                        name =
-                            name,
-                        selected =
-                            true,
-                        month =
-                            json.optString(
-                                "month",
-                                ""
-                            ),
-                        year =
-                            json.optString(
-                                "year",
-                                ""
-                            ),
-                        mileage =
-                            json.optString(
-                                "mileage",
-                                ""
-                            ),
-                        custom =
-                            json.optBoolean(
-                                "custom",
-                                false
-                            )
+            val first =
+                if (
+                    array.length() > 0
+                ) {
+                    array.getJSONObject(
+                        0
                     )
+                } else {
+                    null
+                }
+
+            val month =
+                first?.optString(
+                    "month",
+                    ""
+                ) ?: ""
+
+            val year =
+                first?.optString(
+                    "year",
+                    ""
+                ) ?: ""
+
+            val mileage =
+                first?.optString(
+                    "mileage",
+                    entry.mileage
+                ) ?: entry.mileage
+
+            val total =
+                parseMoney(
+                    entry.cost
                 )
-            }
+
+            listOf(
+                MaintenanceHistoryItem(
+                    id =
+                        entry.id,
+
+                    vehicleId =
+                        fallbackVehicleId,
+
+                    vehicleName =
+                        entry.vehicle,
+
+                    name =
+                        names.joinToString(
+                            " + "
+                        ).ifBlank {
+                            "Wartung"
+                        },
+
+                    month =
+                        month,
+
+                    year =
+                        year,
+
+                    mileage =
+                        mileage,
+
+                    used =
+                        "",
+
+                    partNumber =
+                        "",
+
+                    materialCost =
+                        total,
+
+                    laborCost =
+                        0.0,
+
+                    totalCost =
+                        total,
+
+                    imageUri =
+                        "",
+
+                    workshop =
+                        entry.workshop,
+
+                    notes =
+                        freeNotes
+                )
+            )
 
         } catch (
             _: Exception
         ) {
 
-            return DecodedMaintenance(
-                items =
-                    emptyList(),
-                notes =
-                    notes
-            )
+            emptyList()
         }
-
-        return DecodedMaintenance(
-            items =
-                result,
-            notes =
-                notes
-        )
     }
 
+    /*
+     * ------------------------------------------------------------
+     * SEHR ALTES FORMAT
+     * ------------------------------------------------------------
+     */
+
     if (
-        storedNotes.startsWith(
-            OLD_MAINTENANCE_PREFIX
+        notes.startsWith(
+            OLD_MAINTENANCE
         )
     ) {
 
         val rest =
-            storedNotes.removePrefix(
-                OLD_MAINTENANCE_PREFIX
+            notes.removePrefix(
+                OLD_MAINTENANCE
             )
 
         val parts =
@@ -277,13 +621,13 @@ private fun decodeMaintenanceNotes(
                 limit = 2
             )
 
-        val itemPart =
+        val itemText =
             parts
                 .firstOrNull()
                 ?.trim()
                 ?: ""
 
-        val notes =
+        val freeNotes =
             if (
                 parts.size > 1
             ) {
@@ -292,127 +636,149 @@ private fun decodeMaintenanceNotes(
                 ""
             }
 
-        val oldItems =
-            if (
-                itemPart.isBlank()
-            ) {
-                emptyList()
-            } else {
-                itemPart
-                    .split(
-                        OLD_MAINTENANCE_SEPARATOR
-                    )
-                    .map {
-                        it.trim()
-                    }
-                    .filter {
-                        it.isNotBlank()
-                    }
-            }
-
-        val result =
-            oldItems.map { itemName ->
-
-                MaintenanceDraftItem(
-                    name =
-                        itemName,
-                    selected =
-                        true,
-                    month =
-                        legacyMonth(
-                            legacyDate
-                        ),
-                    year =
-                        legacyYear(
-                            legacyDate
-                        ),
-                    mileage =
-                        legacyMileage,
-                    custom =
-                        !standardMaintenanceItems.contains(
-                            itemName
-                        )
+        val names =
+            itemText
+                .split(
+                    OLD_SEPARATOR
                 )
-            }
+                .map {
+                    it.trim()
+                }
+                .filter {
+                    it.isNotBlank()
+                }
 
-        return DecodedMaintenance(
-            items =
-                result,
+        return listOf(
+            MaintenanceHistoryItem(
+                id =
+                    entry.id,
+
+                vehicleId =
+                    fallbackVehicleId,
+
+                vehicleName =
+                    entry.vehicle,
+
+                name =
+                    names.joinToString(
+                        " + "
+                    ).ifBlank {
+                        "Wartung"
+                    },
+
+                month =
+                    legacyMonth(
+                        entry.date
+                    ),
+
+                year =
+                    legacyYear(
+                        entry.date
+                    ),
+
+                mileage =
+                    entry.mileage,
+
+                used =
+                    "",
+
+                partNumber =
+                    "",
+
+                materialCost =
+                    parseMoney(
+                        entry.cost
+                    ),
+
+                laborCost =
+                    0.0,
+
+                totalCost =
+                    parseMoney(
+                        entry.cost
+                    ),
+
+                imageUri =
+                    "",
+
+                workshop =
+                    entry.workshop,
+
+                notes =
+                    freeNotes
+            )
+        )
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * ALTES FREIES NOTIZFELD
+     * ------------------------------------------------------------
+     */
+
+    return listOf(
+        MaintenanceHistoryItem(
+            id =
+                entry.id,
+
+            vehicleId =
+                fallbackVehicleId,
+
+            vehicleName =
+                entry.vehicle,
+
+            name =
+                "Wartung",
+
+            month =
+                legacyMonth(
+                    entry.date
+                ),
+
+            year =
+                legacyYear(
+                    entry.date
+                ),
+
+            mileage =
+                entry.mileage,
+
+            used =
+                "",
+
+            partNumber =
+                "",
+
+            materialCost =
+                parseMoney(
+                    entry.cost
+                ),
+
+            laborCost =
+                0.0,
+
+            totalCost =
+                parseMoney(
+                    entry.cost
+                ),
+
+            imageUri =
+                "",
+
+            workshop =
+                entry.workshop,
+
             notes =
                 notes
         )
-    }
-
-    if (
-        storedNotes.isNotBlank()
-    ) {
-
-        return DecodedMaintenance(
-            items =
-                listOf(
-                    MaintenanceDraftItem(
-                        name =
-                            "Wartung",
-                        selected =
-                            true,
-                        month =
-                            legacyMonth(
-                                legacyDate
-                            ),
-                        year =
-                            legacyYear(
-                                legacyDate
-                            ),
-                        mileage =
-                            legacyMileage,
-                        custom =
-                            true
-                    )
-                ),
-            notes =
-                storedNotes.trim()
-        )
-    }
-
-    if (
-        legacyDate.isNotBlank() ||
-        legacyMileage.isNotBlank()
-    ) {
-
-        return DecodedMaintenance(
-            items =
-                listOf(
-                    MaintenanceDraftItem(
-                        name =
-                            "Wartung",
-                        selected =
-                            true,
-                        month =
-                            legacyMonth(
-                                legacyDate
-                            ),
-                        year =
-                            legacyYear(
-                                legacyDate
-                            ),
-                        mileage =
-                            legacyMileage,
-                        custom =
-                            true
-                    )
-                ),
-            notes =
-                ""
-        )
-    }
-
-    return DecodedMaintenance(
-        items =
-            emptyList(),
-        notes =
-            ""
     )
 }
+
+/*
+ * ============================================================
+ * ALTE DATUMSFUNKTIONEN
+ * ============================================================
+ */
 
 private fun legacyMonth(
     date: String
@@ -429,6 +795,7 @@ private fun legacyMonth(
 
     val parts =
         when {
+
             value.contains(".") ->
                 value.split(".")
 
@@ -479,6 +846,7 @@ private fun legacyYear(
 
     val parts =
         when {
+
             value.contains(".") ->
                 value.split(".")
 
@@ -508,6 +876,459 @@ private fun legacyYear(
     }
 }
 
+/*
+ * ============================================================
+ * BILD LADEN
+ * ============================================================
+ */
+
+private fun loadBitmap(
+    context: Context,
+    uriString: String
+): Bitmap? {
+
+    if (
+        uriString.isBlank()
+    ) {
+        return null
+    }
+
+    return try {
+
+        val uri =
+            Uri.parse(
+                uriString
+            )
+
+        context.contentResolver
+            .openInputStream(
+                uri
+            )
+            ?.use {
+                BitmapFactory.decodeStream(
+                    it
+                )
+            }
+
+    } catch (
+        _: Exception
+    ) {
+        null
+    }
+}
+
+/*
+ * ============================================================
+ * PDF ERSTELLEN
+ * ============================================================
+ */
+
+private fun createMaintenancePdf(
+    context: Context,
+    vehicle: Vehicle?,
+    entries: List<MaintenanceHistoryItem>,
+    includeImages: Boolean
+): ByteArray {
+
+    val document =
+        PdfDocument()
+
+    val pageWidth =
+        595
+
+    val pageHeight =
+        842
+
+    var pageNumber =
+        1
+
+    var page =
+        document.startPage(
+            PdfDocument.PageInfo.Builder(
+                pageWidth,
+                pageHeight,
+                pageNumber
+            ).create()
+        )
+
+    var canvas =
+        page.canvas
+
+    val paint =
+        Paint(
+            Paint.ANTI_ALIAS_FLAG
+        )
+
+    paint.textSize =
+        18f
+
+    paint.isFakeBoldText =
+        true
+
+    var y =
+        40f
+
+    fun newPage() {
+
+        document.finishPage(
+            page
+        )
+
+        pageNumber +=
+            1
+
+        page =
+            document.startPage(
+                PdfDocument.PageInfo.Builder(
+                    pageWidth,
+                    pageHeight,
+                    pageNumber
+                ).create()
+            )
+
+        canvas =
+            page.canvas
+
+        y =
+            40f
+    }
+
+    fun line() {
+
+        paint.isFakeBoldText =
+            false
+
+        paint.textSize =
+            10f
+
+        canvas.drawText(
+            "------------------------------------------------",
+            40f,
+            y,
+            paint
+        )
+
+        y +=
+            18f
+    }
+
+    fun text(
+        value: String,
+        bold: Boolean = false,
+        size: Float = 11f
+    ) {
+
+        if (
+            y > pageHeight - 45
+        ) {
+            newPage()
+        }
+
+        paint.textSize =
+            size
+
+        paint.isFakeBoldText =
+            bold
+
+        canvas.drawText(
+            value,
+            40f,
+            y,
+            paint
+        )
+
+        y +=
+            size + 7f
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * KOPF
+     * ------------------------------------------------------------
+     */
+
+    text(
+        "AUTOCHECK – WARTUNGSHISTORIE",
+        bold = true,
+        size = 18f
+    )
+
+    y +=
+        5f
+
+    if (
+        vehicle != null
+    ) {
+
+        text(
+            "${vehicle.make} ${vehicle.model}",
+            bold = true,
+            size = 14f
+        )
+
+        if (
+            vehicle.year.isNotBlank()
+        ) {
+            text(
+                "Baujahr: ${vehicle.year}"
+            )
+        }
+
+        if (
+            vehicle.plate.isNotBlank()
+        ) {
+            text(
+                "Kennzeichen: ${vehicle.plate}"
+            )
+        }
+    }
+
+    y +=
+        5f
+
+    line()
+
+    /*
+     * ------------------------------------------------------------
+     * SORTIERUNG
+     * ------------------------------------------------------------
+     */
+
+    val sorted =
+        entries.sortedWith(
+            compareByDescending<MaintenanceHistoryItem> {
+                it.year.toIntOrNull()
+                    ?: 0
+            }.thenByDescending {
+                it.month.toIntOrNull()
+                    ?: 0
+            }
+        )
+
+    var total =
+        0.0
+
+    sorted.forEach { entry ->
+
+        if (
+            y > pageHeight - 130
+        ) {
+            newPage()
+        }
+
+        text(
+            entry.name,
+            bold = true,
+            size = 13f
+        )
+
+        val dateText =
+            if (
+                entry.month.isNotBlank() &&
+                entry.year.isNotBlank()
+            ) {
+                "%02d/%s".format(
+                    Locale.GERMANY,
+                    entry.month.toIntOrNull()
+                        ?: 0,
+                    entry.year
+                )
+            } else if (
+                entry.year.isNotBlank()
+            ) {
+                entry.year
+            } else {
+                "Datum nicht angegeben"
+            }
+
+        text(
+            dateText
+        )
+
+        if (
+            entry.mileage.isNotBlank()
+        ) {
+            text(
+                "${entry.mileage} km"
+            )
+        }
+
+        if (
+            entry.used.isNotBlank()
+        ) {
+            text(
+                "Verwendet: ${entry.used}"
+            )
+        }
+
+        if (
+            entry.partNumber.isNotBlank()
+        ) {
+            text(
+                "Teilenummer: ${entry.partNumber}"
+            )
+        }
+
+        if (
+            entry.workshop.isNotBlank()
+        ) {
+            text(
+                "Werkstatt: ${entry.workshop}"
+            )
+        }
+
+        if (
+            entry.materialCost > 0.0
+        ) {
+            text(
+                "Material: ${money(entry.materialCost)}"
+            )
+        }
+
+        if (
+            entry.laborCost > 0.0
+        ) {
+            text(
+                "Arbeitskosten: ${money(entry.laborCost)}"
+            )
+        }
+
+        text(
+            "Gesamtkosten: ${money(entry.totalCost)}",
+            bold = true
+        )
+
+        total +=
+            entry.totalCost
+
+        if (
+            includeImages &&
+            entry.imageUri.isNotBlank()
+        ) {
+
+            val bitmap =
+                loadBitmap(
+                    context,
+                    entry.imageUri
+                )
+
+            if (
+                bitmap != null
+            ) {
+
+                if (
+                    y > pageHeight - 250
+                ) {
+                    newPage()
+                }
+
+                val maxWidth =
+                    480
+
+                val maxHeight =
+                    180
+
+                val scale =
+                    minOf(
+                        maxWidth.toFloat() /
+                            bitmap.width,
+                        maxHeight.toFloat() /
+                            bitmap.height
+                    )
+
+                val width =
+                    (
+                        bitmap.width *
+                            scale
+                        ).toInt()
+
+                val height =
+                    (
+                        bitmap.height *
+                            scale
+                        ).toInt()
+
+                val left =
+                    (
+                        pageWidth -
+                            width
+                        ) / 2
+
+                canvas.drawBitmap(
+                    bitmap,
+                    null,
+                    android.graphics.Rect(
+                        left,
+                        y.toInt(),
+                        left + width,
+                        y.toInt() + height
+                    ),
+                    paint
+                )
+
+                y +=
+                    height + 15f
+            }
+        }
+
+        if (
+            entry.notes.isNotBlank()
+        ) {
+
+            text(
+                "Notiz: ${entry.notes}"
+            )
+        }
+
+        line()
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * GESAMTSUMME
+     * ------------------------------------------------------------
+     */
+
+    if (
+        y > pageHeight - 80
+    ) {
+        newPage()
+    }
+
+    text(
+        "GESAMTINVESTITION",
+        bold = true,
+        size = 15f
+    )
+
+    text(
+        money(total),
+        bold = true,
+        size = 17f
+    )
+
+    document.finishPage(
+        page
+    )
+
+    val output =
+        ByteArrayOutputStream()
+
+    document.writeTo(
+        output
+    )
+
+    document.close()
+
+    return output.toByteArray()
+}
+
+/*
+ * ============================================================
+ * HAUPTSCREEN
+ * ============================================================
+ */
+
 @Composable
 fun MaintenanceScreen(
     store: VehicleStore,
@@ -517,11 +1338,32 @@ fun MaintenanceScreen(
     onVisited: () -> Unit
 ) {
 
+    val context =
+        LocalContext.current
+
     LaunchedEffect(
         Unit
     ) {
         onVisited()
     }
+
+    /*
+     * Aktives Fahrzeug.
+     *
+     * Die neue Wartungsstruktur verwendet zusätzlich
+     * die stabile Vehicle-ID.
+     */
+    val currentVehicle =
+        vehicles.firstOrNull()
+
+    val activeVehicleId =
+        currentVehicle?.id ?: ""
+
+    /*
+     * ============================================================
+     * FORMULAR
+     * ============================================================
+     */
 
     var showForm by remember {
         mutableStateOf(
@@ -536,15 +1378,14 @@ fun MaintenanceScreen(
     }
 
     var draftItems by remember {
+
         mutableStateOf(
+
             standardMaintenanceItems.map {
+
                 MaintenanceDraftItem(
                     name =
-                        it,
-                    selected =
-                        false,
-                    custom =
-                        false
+                        it
                 )
             }
         )
@@ -556,19 +1397,13 @@ fun MaintenanceScreen(
         )
     }
 
-    var notes by remember {
-        mutableStateOf(
-            ""
-        )
-    }
-
-    var cost by remember {
-        mutableStateOf(
-            ""
-        )
-    }
-
     var workshop by remember {
+        mutableStateOf(
+            ""
+        )
+    }
+
+    var notes by remember {
         mutableStateOf(
             ""
         )
@@ -580,11 +1415,208 @@ fun MaintenanceScreen(
         )
     }
 
-    val vehicleEntries =
-        entries.filter {
-            it.vehicle ==
-                activeVehicle
+    /*
+     * ============================================================
+     * BILD-AUSWAHL
+     * ============================================================
+     */
+
+    var imageTargetIndex by remember {
+        mutableStateOf<Int?>(
+            null
+        )
+    }
+
+    val imageLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
+
+            val index =
+                imageTargetIndex
+
+            if (
+                uri != null &&
+                index != null
+            ) {
+
+                try {
+
+                    context.contentResolver
+                        .takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+
+                } catch (
+                    _: SecurityException
+                ) {
+                    // Provider unterstützt eventuell
+                    // keine persistente Berechtigung.
+                }
+
+                if (
+                    index in
+                    draftItems.indices
+                ) {
+
+                    val updated =
+                        draftItems.toMutableList()
+
+                    updated[index] =
+                        updated[index].copy(
+                            imageUri =
+                                uri.toString()
+                        )
+
+                    draftItems =
+                        updated
+                }
+            }
+
+            imageTargetIndex =
+                null
         }
+
+    /*
+     * ============================================================
+     * PDF
+     * ============================================================
+     */
+
+    var pdfIncludeImages by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    var pendingPdfEntries by remember {
+        mutableStateOf(
+            emptyList<MaintenanceHistoryItem>()
+        )
+    }
+
+    val pdfLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument(
+                "application/pdf"
+            )
+        ) { uri ->
+
+            if (
+                uri != null &&
+                pendingPdfEntries.isNotEmpty()
+            ) {
+
+                try {
+
+                    val bytes =
+                        createMaintenancePdf(
+                            context =
+                                context,
+
+                            vehicle =
+                                currentVehicle,
+
+                            entries =
+                                pendingPdfEntries,
+
+                            includeImages =
+                                pdfIncludeImages
+                        )
+
+                    context.contentResolver
+                        .openOutputStream(
+                            uri
+                        )
+                        ?.use { output ->
+
+                            output.write(
+                                bytes
+                            )
+
+                            output.flush()
+                        }
+
+                } catch (
+                    _: Exception
+                ) {
+                    // Datei konnte nicht geschrieben werden.
+                }
+            }
+
+            pendingPdfEntries =
+                emptyList()
+        }
+
+    /*
+     * ============================================================
+     * HISTORIE
+     * ============================================================
+     */
+
+    val history =
+        buildList {
+
+            entries.forEach { entry ->
+
+                val decoded =
+                    decodeMaintenanceEntry(
+                        entry =
+                            entry,
+
+                        fallbackVehicleId =
+                            activeVehicleId
+                    )
+
+                addAll(
+                    decoded
+                        .filter { item ->
+
+                            /*
+                             * Neue Einträge werden über Vehicle-ID
+                             * zugeordnet.
+                             *
+                             * Alte Einträge werden weiterhin
+                             * über den bisherigen Fahrzeugnamen
+                             * erkannt.
+                             */
+                            if (
+                                item.vehicleId.isNotBlank()
+                            ) {
+
+                                item.vehicleId ==
+                                    activeVehicleId
+
+                            } else {
+
+                                entry.vehicle ==
+                                    activeVehicle
+                            }
+                        }
+                )
+            }
+        }
+            .sortedWith(
+                compareByDescending<MaintenanceHistoryItem> {
+                    it.year.toIntOrNull()
+                        ?: 0
+                }.thenByDescending {
+                    it.month.toIntOrNull()
+                        ?: 0
+                }
+            )
+
+    val totalInvestment =
+        history.sumOf {
+            it.totalCost
+        }
+
+    /*
+     * ============================================================
+     * FORM RESET
+     * ============================================================
+     */
 
     fun resetForm() {
 
@@ -593,31 +1625,31 @@ fun MaintenanceScreen(
 
         draftItems =
             standardMaintenanceItems.map {
+
                 MaintenanceDraftItem(
                     name =
-                        it,
-                    selected =
-                        false,
-                    custom =
-                        false
+                        it
                 )
             }
 
         customItemName =
             ""
 
-        notes =
-            ""
-
-        cost =
-            ""
-
         workshop =
+            ""
+
+        notes =
             ""
 
         showForm =
             false
     }
+
+    /*
+     * ============================================================
+     * NEUER EINTRAG
+     * ============================================================
+     */
 
     fun startNewEntry() {
 
@@ -626,111 +1658,359 @@ fun MaintenanceScreen(
 
         draftItems =
             standardMaintenanceItems.map {
+
                 MaintenanceDraftItem(
                     name =
-                        it,
-                    selected =
-                        false,
-                    custom =
-                        false
+                        it
                 )
             }
 
         customItemName =
             ""
 
-        notes =
-            ""
-
-        cost =
-            ""
-
         workshop =
+            ""
+
+        notes =
             ""
 
         showForm =
             true
     }
+
+    /*
+     * ============================================================
+     * BEARBEITEN
+     * ============================================================
+     */
 
     fun editEntry(
-        entry: Maintenance
+        historyItem: MaintenanceHistoryItem
     ) {
 
-        val decoded =
-            decodeMaintenanceNotes(
-                storedNotes =
-                    entry.notes,
-                legacyDate =
-                    entry.date,
-                legacyMileage =
-                    entry.mileage
+        val item =
+            MaintenanceDraftItem(
+
+                name =
+                    historyItem.name,
+
+                selected =
+                    true,
+
+                month =
+                    historyItem.month,
+
+                year =
+                    historyItem.year,
+
+                mileage =
+                    historyItem.mileage,
+
+                used =
+                    historyItem.used,
+
+                partNumber =
+                    historyItem.partNumber,
+
+                materialCost =
+                    if (
+                        historyItem.materialCost > 0
+                    ) {
+                        historyItem.materialCost
+                            .toString()
+                    } else {
+                        ""
+                    },
+
+                laborCost =
+                    if (
+                        historyItem.laborCost > 0
+                    ) {
+                        historyItem.laborCost
+                            .toString()
+                    } else {
+                        ""
+                    },
+
+                imageUri =
+                    historyItem.imageUri,
+
+                custom =
+                    !standardMaintenanceItems.contains(
+                        historyItem.name
+                    )
             )
 
-        val savedStandard =
-            decoded.items.filter {
-                standardMaintenanceItems.contains(
-                    it.name
-                )
-            }
-
-        val customItems =
-            decoded.items.filter {
-                !standardMaintenanceItems.contains(
-                    it.name
-                )
-            }
-
-        val rebuiltStandard =
-            standardMaintenanceItems.map {
-                standardName ->
-
-                savedStandard.firstOrNull {
-                    it.name ==
-                        standardName
-                }
-                    ?: MaintenanceDraftItem(
-                        name =
-                            standardName,
-                        selected =
-                            false,
-                        custom =
-                            false
-                    )
-            }
-
         draftItems =
-            rebuiltStandard +
-                customItems
+            if (
+                item.custom
+            ) {
 
-        customItemName =
-            ""
+                standardMaintenanceItems.map {
+                    MaintenanceDraftItem(
+                        name =
+                            it
+                    )
+                } + item
 
-        notes =
-            decoded.notes
+            } else {
 
-        cost =
-            entry.cost
+                standardMaintenanceItems.map {
+                    if (
+                        it == item.name
+                    ) {
+                        item
+                    } else {
+                        MaintenanceDraftItem(
+                            name =
+                                it
+                        )
+                    }
+                }
+            }
 
         workshop =
-            entry.workshop
+            historyItem.workshop
+
+        notes =
+            historyItem.notes
 
         editingId =
-            entry.id
+            historyItem.id
 
         showForm =
             true
     }
+
+    /*
+     * ============================================================
+     * LÖSCHEN
+     * ============================================================
+     */
+
+    fun deleteEntry(
+        historyItem: MaintenanceHistoryItem
+    ) {
+
+        entries =
+            entries.filterNot {
+                it.id ==
+                    historyItem.id
+            }
+
+        store.saveMaintenance(
+            entries
+        )
+    }
+
+    /*
+     * ============================================================
+     * SPEICHERN
+     * ============================================================
+     */
+
+    fun saveForm() {
+
+        val selected =
+            draftItems.filter {
+                it.selected &&
+                    it.name.isNotBlank()
+            }
+
+        if (
+            selected.isEmpty()
+        ) {
+            return
+        }
+
+        /*
+         * --------------------------------------------------------
+         * BEARBEITEN
+         * --------------------------------------------------------
+         */
+
+        if (
+            editingId != null
+        ) {
+
+            val item =
+                selected.first()
+
+            val updatedEntry =
+                Maintenance(
+
+                    id =
+                        editingId!!,
+
+                    vehicle =
+                        activeVehicle,
+
+                    date =
+                        if (
+                            item.month.isNotBlank() &&
+                            item.year.isNotBlank()
+                        ) {
+                            "%02d/%s".format(
+                                Locale.GERMANY,
+                                item.month.toIntOrNull()
+                                    ?: 0,
+                                item.year
+                            )
+                        } else {
+                            ""
+                        },
+
+                    mileage =
+                        item.mileage.trim(),
+
+                    cost =
+                        (
+                            parseMoney(
+                                item.materialCost
+                            ) +
+                                parseMoney(
+                                    item.laborCost
+                                )
+                            ).toString(),
+
+                    workshop =
+                        workshop.trim(),
+
+                    notes =
+                        encodeMaintenanceEntry(
+                            vehicleId =
+                                activeVehicleId,
+
+                            item =
+                                item,
+
+                            notes =
+                                notes
+                        )
+                )
+
+            entries =
+                entries.map {
+
+                    if (
+                        it.id ==
+                            editingId
+                    ) {
+                        updatedEntry
+                    } else {
+                        it
+                    }
+                }
+
+            store.saveMaintenance(
+                entries
+            )
+
+            resetForm()
+
+            return
+        }
+
+        /*
+         * --------------------------------------------------------
+         * NEUE EINTRÄGE
+         * --------------------------------------------------------
+         *
+         * Jeder ausgewählte Wartungspunkt wird zu einem
+         * eigenen Datensatz.
+         */
+
+        val now =
+            System.currentTimeMillis()
+
+        val newEntries =
+            selected.mapIndexed { index, item ->
+
+                Maintenance(
+
+                    id =
+                        now + index,
+
+                    vehicle =
+                        activeVehicle,
+
+                    date =
+                        if (
+                            item.month.isNotBlank() &&
+                            item.year.isNotBlank()
+                        ) {
+                            "%02d/%s".format(
+                                Locale.GERMANY,
+                                item.month.toIntOrNull()
+                                    ?: 0,
+                                item.year
+                            )
+                        } else {
+                            ""
+                        },
+
+                    mileage =
+                        item.mileage.trim(),
+
+                    cost =
+                        (
+                            parseMoney(
+                                item.materialCost
+                            ) +
+                                parseMoney(
+                                    item.laborCost
+                                )
+                            ).toString(),
+
+                    workshop =
+                        workshop.trim(),
+
+                    notes =
+                        encodeMaintenanceEntry(
+                            vehicleId =
+                                activeVehicleId,
+
+                            item =
+                                item,
+
+                            notes =
+                                notes
+                        )
+                )
+            }
+
+        entries =
+            entries + newEntries
+
+        store.saveMaintenance(
+            entries
+        )
+
+        resetForm()
+    }
+
+    /*
+     * ============================================================
+     * UI
+     * ============================================================
+     */
 
     Column(
         modifier =
             Modifier.fillMaxSize()
     ) {
 
+        /*
+         * Fahrzeugauswahl bleibt erhalten.
+         */
+
         VehicleSelector(
             vehicles =
                 vehicles,
+
             activeVehicle =
                 activeVehicle,
+
             onSelected =
                 onActiveVehicle
         )
@@ -746,10 +2026,27 @@ fun MaintenanceScreen(
             vehicles.isEmpty()
         ) {
 
+            Text(
+                "Kein Fahrzeug vorhanden.",
+                color =
+                    Color.White,
+                modifier =
+                    Modifier.padding(
+                        16.dp
+                    )
+            )
+
             return@Column
         }
 
+        /*
+         * ========================================================
+         * HISTORIE
+         * ========================================================
+         */
+
         LazyColumn(
+
             modifier =
                 Modifier.weight(
                     1f
@@ -761,16 +2058,195 @@ fun MaintenanceScreen(
                 )
         ) {
 
-            if (
-                vehicleEntries.isEmpty() &&
-                !showForm
-            ) {
+            /*
+             * ----------------------------------------------------
+             * GESAMTBILD
+             * ----------------------------------------------------
+             */
 
-                item {
+            item {
 
-                    EmptyMaintenanceCard()
+                Card(
+
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                Color(
+                                    0xFF11141A
+                                )
+                        ),
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                ) {
+
+                    Column(
+                        Modifier.padding(
+                            16.dp
+                        )
+                    ) {
+
+                        Text(
+                            "WARTUNGSHISTORIE",
+                            color =
+                                Color.White,
+                            fontSize =
+                                18.sp,
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+                        Spacer(
+                            Modifier.height(
+                                6.dp
+                            )
+                        )
+
+                        Text(
+                            "Gesamte bisherige Investition",
+                            color =
+                                Color(
+                                    0xFFB8BEC8
+                                )
+                        )
+
+                        Spacer(
+                            Modifier.height(
+                                4.dp
+                            )
+                        )
+
+                        Text(
+                            money(
+                                totalInvestment
+                            ),
+                            color =
+                                Color(
+                                    0xFFD4AF37
+                                ),
+                            fontSize =
+                                22.sp,
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+                    }
                 }
             }
+
+            /*
+             * ----------------------------------------------------
+             * PDF
+             * ----------------------------------------------------
+             */
+
+            item {
+
+                Row(
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+
+                    Button(
+
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
+
+                        onClick = {
+
+                            if (
+                                history.isNotEmpty()
+                            ) {
+
+                                pdfIncludeImages =
+                                    false
+
+                                pendingPdfEntries =
+                                    history
+
+                                pdfLauncher.launch(
+                                    "Wartungshistorie.pdf"
+                                )
+                            }
+                        }
+
+                    ) {
+
+                        Text(
+                            "PDF"
+                        )
+                    }
+
+                    OutlinedButton(
+
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
+
+                        onClick = {
+
+                            if (
+                                history.isNotEmpty()
+                            ) {
+
+                                pdfIncludeImages =
+                                    true
+
+                                pendingPdfEntries =
+                                    history
+
+                                pdfLauncher.launch(
+                                    "Wartungshistorie_mit_Bildern.pdf"
+                                )
+                            }
+                        }
+
+                    ) {
+
+                        Text(
+                            "PDF + Bilder"
+                        )
+                    }
+                }
+            }
+
+            /*
+             * ----------------------------------------------------
+             * NEUE WARTUNG
+             * ----------------------------------------------------
+             */
+
+            item {
+
+                Button(
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    onClick =
+                        ::startNewEntry
+
+                ) {
+
+                    Text(
+                        "Wartung hinzufügen"
+                    )
+                }
+            }
+
+            /*
+             * ----------------------------------------------------
+             * FORMULAR
+             * ----------------------------------------------------
+             */
 
             if (
                 showForm
@@ -778,614 +2254,408 @@ fun MaintenanceScreen(
 
                 item {
 
-                    MaintenanceFormCard(
-                        draftItems =
-                            draftItems,
+                    Card(
 
-                        onDraftItemsChanged = {
-                            draftItems =
-                                it
-                        },
-
-                        customItemName =
-                            customItemName,
-
-                        onCustomItemNameChanged = {
-                            customItemName =
-                                it
-                        },
-
-                        onAddCustomItem = {
-
-                            val name =
-                                customItemName.trim()
-
-                            if (
-                                name.isNotBlank()
-                            ) {
-
-                                val alreadyExists =
-                                    draftItems.any {
-                                        it.name.equals(
-                                            name,
-                                            ignoreCase =
-                                                true
-                                        )
-                                    }
-
-                                if (
-                                    !alreadyExists
-                                ) {
-
-                                    draftItems =
-                                        draftItems +
-                                            MaintenanceDraftItem(
-                                                name =
-                                                    name,
-                                                selected =
-                                                    true,
-                                                custom =
-                                                    true
-                                            )
-                                }
-
-                                customItemName =
-                                    ""
-                            }
-                        },
-
-                        cost =
-                            cost,
-
-                        onCostChanged = {
-                            cost =
-                                it
-                        },
-
-                        workshop =
-                            workshop,
-
-                        onWorkshopChanged = {
-                            workshop =
-                                it
-                        },
-
-                        notes =
-                            notes,
-
-                        onNotesChanged = {
-                            notes =
-                                it
-                        },
-
-                        isEditing =
-                            editingId != null,
-
-                        onSave = {
-
-                            val selected =
-                                draftItems.filter {
-                                    it.selected &&
-                                        it.name.isNotBlank()
-                                }
-
-                            if (
-                                selected.isNotEmpty()
-                            ) {
-
-                                val newEntry =
-                                    Maintenance(
-                                        id =
-                                            editingId
-                                                ?: System
-                                                    .currentTimeMillis(),
-
-                                        vehicle =
-                                            activeVehicle,
-
-                                        date =
-                                            "",
-
-                                        mileage =
-                                            "",
-
-                                        cost =
-                                            cost.trim(),
-
-                                        workshop =
-                                            workshop.trim(),
-
-                                        notes =
-                                            encodeMaintenanceNotes(
-                                                items =
-                                                    selected,
-                                                notes =
-                                                    notes
-                                            )
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor =
+                                    Color(
+                                        0xFF11141A
                                     )
+                            ),
 
-                                val updatedEntries =
+                        modifier =
+                            Modifier.fillMaxWidth()
+                    ) {
+
+                        Column(
+
+                            Modifier.padding(
+                                16.dp
+                            ),
+
+                            verticalArrangement =
+                                Arrangement.spacedBy(
+                                    8.dp
+                                )
+                        ) {
+
+                            Text(
+                                if (
+                                    editingId != null
+                                ) {
+                                    "Wartung bearbeiten"
+                                } else {
+                                    "Neue Wartung"
+                                },
+                                color =
+                                    Color.White,
+                                fontSize =
+                                    18.sp,
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+
+                            /*
+                             * ==================================================
+                             * FESTE WARTUNGEN
+                             * ==================================================
+                             */
+
+                            draftItems.forEachIndexed { index, item ->
+
+                                MaintenanceDraftCard(
+
+                                    item =
+                                        item,
+
+                                    onItemChanged = {
+                                        updated ->
+
+                                        val list =
+                                            draftItems
+                                                .toMutableList()
+
+                                        list[index] =
+                                            updated
+
+                                        draftItems =
+                                            list
+                                    },
+
+                                    onChooseImage = {
+
+                                        imageTargetIndex =
+                                            index
+
+                                        imageLauncher.launch(
+                                            arrayOf(
+                                                "image/*"
+                                            )
+                                        )
+                                    },
+
+                                    onRemoveImage = {
+
+                                        val list =
+                                            draftItems
+                                                .toMutableList()
+
+                                        list[index] =
+                                            list[index]
+                                                .copy(
+                                                    imageUri =
+                                                        ""
+                                                )
+
+                                        draftItems =
+                                            list
+                                    }
+                                )
+                            }
+
+                            /*
+                             * ==================================================
+                             * EIGENE WARTUNG
+                             * ==================================================
+                             */
+
+                            OutlinedTextField(
+
+                                value =
+                                    customItemName,
+
+                                onValueChange = {
+                                    customItemName =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Eigene Wartung"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                            )
+
+                            Button(
+
+                                onClick = {
+
+                                    val customName =
+                                        customItemName.trim()
+
                                     if (
-                                        editingId != null
+                                        customName.isNotBlank()
                                     ) {
 
-                                        entries.map {
-                                            current ->
-
-                                            if (
-                                                current.id ==
-                                                    editingId
-                                            ) {
-                                                newEntry
-                                            } else {
-                                                current
+                                        val exists =
+                                            draftItems.any {
+                                                it.name.equals(
+                                                    customName,
+                                                    ignoreCase =
+                                                        true
+                                                )
                                             }
+
+                                        if (
+                                            !exists
+                                        ) {
+
+                                            draftItems =
+                                                draftItems +
+                                                    MaintenanceDraftItem(
+                                                        name =
+                                                            customName,
+                                                        selected =
+                                                            true,
+                                                        custom =
+                                                            true
+                                                    )
                                         }
 
-                                    } else {
-
-                                        entries +
-                                            newEntry
+                                        customItemName =
+                                            ""
                                     }
+                                },
 
-                                entries =
-                                    updatedEntries
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                            ) {
 
-                                store.saveMaintenance(
-                                    updatedEntries
+                                Text(
+                                    "Eigene Wartung hinzufügen"
                                 )
-
-                                resetForm()
                             }
-                        },
 
-                        onCancel = {
-                            resetForm()
-                        },
+                            /*
+                             * ==================================================
+                             * WERKSTATT
+                             * ==================================================
+                             */
 
-                        onRemoveCustomItem = {
-                            itemToRemove ->
+                            OutlinedTextField(
 
-                            draftItems =
-                                draftItems.filterNot {
-                                    it.name ==
-                                        itemToRemove.name &&
-                                        it.custom
-                                }
-                        }
-                    )
-                }
+                                value =
+                                    workshop,
 
-            } else {
+                                onValueChange = {
+                                    workshop =
+                                        it
+                                },
 
-                items(
-                    vehicleEntries
-                ) { entry ->
+                                label = {
+                                    Text(
+                                        "Werkstatt"
+                                    )
+                                },
 
-                    MaintenanceSummaryCard(
-                        entry =
-                            entry,
-
-                        onEdit = {
-                            editEntry(
-                                entry
+                                modifier =
+                                    Modifier.fillMaxWidth()
                             )
-                        },
 
-                        onDelete = {
+                            /*
+                             * ==================================================
+                             * NOTIZ
+                             * ==================================================
+                             */
 
-                            val updatedEntries =
-                                entries.filterNot {
-                                    it.id ==
-                                        entry.id
+                            OutlinedTextField(
+
+                                value =
+                                    notes,
+
+                                onValueChange = {
+                                    notes =
+                                        it
+                                },
+
+                                label = {
+                                    Text(
+                                        "Notiz"
+                                    )
+                                },
+
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                            )
+
+                            /*
+                             * ==================================================
+                             * AKTIONEN
+                             * ==================================================
+                             */
+
+                            Row(
+
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        8.dp
+                                    )
+                            ) {
+
+                                Button(
+
+                                    modifier =
+                                        Modifier.weight(
+                                            1f
+                                        ),
+
+                                    onClick =
+                                        ::saveForm
+
+                                ) {
+
+                                    Text(
+                                        "Alles speichern"
+                                    )
                                 }
 
-                            entries =
-                                updatedEntries
+                                OutlinedButton(
 
-                            store.saveMaintenance(
-                                updatedEntries
-                            )
+                                    modifier =
+                                        Modifier.weight(
+                                            1f
+                                        ),
+
+                                    onClick =
+                                        ::resetForm
+
+                                ) {
+
+                                    Text(
+                                        "Abbrechen"
+                                    )
+                                }
+                            }
                         }
-                    )
+                    }
                 }
             }
-        }
 
-        if (
-            !showForm
-        ) {
+            /*
+             * ----------------------------------------------------
+             * LEER
+             * ----------------------------------------------------
+             */
 
-            Button(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            top = 8.dp
-                        ),
-
-                onClick = {
-                    startNewEntry()
-                }
+            if (
+                history.isEmpty() &&
+                !showForm
             ) {
 
-                Text(
-                    "Wartung hinzufügen"
+                item {
+
+                    Card(
+
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor =
+                                    Color(
+                                        0xFF11141A
+                                    )
+                            ),
+
+                        modifier =
+                            Modifier.fillMaxWidth()
+                    ) {
+
+                        Text(
+
+                            "Noch keine Wartungen gespeichert.",
+
+                            color =
+                                Color(
+                                    0xFFB8BEC8
+                                ),
+
+                            modifier =
+                                Modifier.padding(
+                                    16.dp
+                                )
+                        )
+                    }
+                }
+            }
+
+            /*
+             * ----------------------------------------------------
+             * HISTORIE
+             * ----------------------------------------------------
+             */
+
+            items(
+                history,
+                key = {
+                    "${it.id}_${it.name}"
+                }
+            ) { item ->
+
+                MaintenanceHistoryCard(
+
+                    item =
+                        item,
+
+                    onEdit = {
+                        editEntry(
+                            item
+                        )
+                    },
+
+                    onDelete = {
+                        deleteEntry(
+                            item
+                        )
+                    }
                 )
             }
         }
     }
 }
 
+/*
+ * ============================================================
+ * FORMULAR-KARTE
+ * ============================================================
+ */
+
 @Composable
-private fun MaintenanceFormCard(
-    draftItems:
-        List<MaintenanceDraftItem>,
-
-    onDraftItemsChanged:
-        (List<MaintenanceDraftItem>) -> Unit,
-
-    customItemName:
-        String,
-
-    onCustomItemNameChanged:
-        (String) -> Unit,
-
-    onAddCustomItem:
-        () -> Unit,
-
-    cost:
-        String,
-
-    onCostChanged:
-        (String) -> Unit,
-
-    workshop:
-        String,
-
-    onWorkshopChanged:
-        (String) -> Unit,
-
-    notes:
-        String,
-
-    onNotesChanged:
-        (String) -> Unit,
-
-    isEditing:
-        Boolean,
-
-    onSave:
-        () -> Unit,
-
-    onCancel:
-        () -> Unit,
-
-    onRemoveCustomItem:
-        (MaintenanceDraftItem) -> Unit
+private fun MaintenanceDraftCard(
+    item: MaintenanceDraftItem,
+    onItemChanged: (MaintenanceDraftItem) -> Unit,
+    onChooseImage: () -> Unit,
+    onRemoveImage: () -> Unit
 ) {
 
-    val selectedCount =
-        draftItems.count {
-            it.selected
-        }
-
     Card(
-        modifier =
-            Modifier.fillMaxWidth(),
 
         colors =
             CardDefaults.cardColors(
                 containerColor =
                     Color(
-                        0xFF11141A
+                        0xFF1A1E26
                     )
-            )
-    ) {
+            ),
 
-        Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
-        ) {
-
-            Text(
-                if (
-                    isEditing
-                ) {
-                    "Wartung ändern"
-                } else {
-                    "Neue Wartung"
-                }
-            )
-
-            Text(
-                "Wartungsarbeiten"
-            )
-
-            Text(
-                "Jede Wartung bekommt ihren eigenen Monat, ihr eigenes Jahr und optional den Kilometerstand."
-            )
-
-            draftItems.forEachIndexed {
-                index,
-                item ->
-
-                MaintenanceItemEditor(
-                    item =
-                        item,
-
-                    onItemChanged = {
-                        changedItem ->
-
-                        val updated =
-                            draftItems.toMutableList()
-
-                        updated[index] =
-                            changedItem
-
-                        onDraftItemsChanged(
-                            updated
-                        )
-                    },
-
-                    onRemove =
-                        if (
-                            item.custom
-                        ) {
-                            {
-                                onRemoveCustomItem(
-                                    item
-                                )
-                            }
-                        } else {
-                            null
-                        }
-                )
-            }
-
-            Card(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            Color(
-                                0xFF191D24
-                            )
-                    )
-            ) {
-
-                Column(
-                    modifier =
-                        Modifier.padding(
-                            12.dp
-                        ),
-
-                    verticalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp
-                        )
-                ) {
-
-                    Text(
-                        "Eigene Wartung"
-                    )
-
-                    OutlinedTextField(
-                        value =
-                            customItemName,
-
-                        onValueChange =
-                            onCustomItemNameChanged,
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        label = {
-                            Text(
-                                "Bezeichnung"
-                            )
-                        },
-
-                        placeholder = {
-                            Text(
-                                "z. B. Bremsflüssigkeit"
-                            )
-                        },
-
-                        singleLine =
-                            true
-                    )
-
-                    Button(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        onClick =
-                            onAddCustomItem
-                    ) {
-
-                        Text(
-                            "Eigene Wartung hinzufügen"
-                        )
-                    }
-                }
-            }
-
-            Text(
-                "Allgemeine Angaben"
-            )
-
-            OutlinedTextField(
-                value =
-                    cost,
-
-                onValueChange =
-                    onCostChanged,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text(
-                        "Kosten"
-                    )
-                },
-
-                singleLine =
-                    true
-            )
-
-            OutlinedTextField(
-                value =
-                    workshop,
-
-                onValueChange =
-                    onWorkshopChanged,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text(
-                        "Werkstatt"
-                    )
-                },
-
-                singleLine =
-                    true
-            )
-
-            OutlinedTextField(
-                value =
-                    notes,
-
-                onValueChange =
-                    onNotesChanged,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text(
-                        "Notizen"
-                    )
-                }
-            )
-
-            Text(
-                "Ausgewählte Wartungen: $selectedCount"
-            )
-
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    onClick =
-                        onCancel
-                ) {
-
-                    Text(
-                        "Abbrechen"
-                    )
-                }
-
-                Button(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    enabled =
-                        selectedCount > 0,
-
-                    onClick =
-                        onSave
-                ) {
-
-                    Text(
-                        "Alles speichern"
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MaintenanceItemEditor(
-    item:
-        MaintenanceDraftItem,
-
-    onItemChanged:
-        (MaintenanceDraftItem) -> Unit,
-
-    onRemove:
-        (() -> Unit)?
-) {
-
-    Card(
         modifier =
-            Modifier.fillMaxWidth(),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (
-                        item.selected
-                    ) {
-                        Color(
-                            0xFF191D24
-                        )
-                    } else {
-                        Color(
-                            0xFF11141A
-                        )
-                    }
-            )
+            Modifier.fillMaxWidth()
     ) {
 
         Column(
-            modifier =
-                Modifier.padding(
-                    10.dp
-                ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
-                )
+            Modifier.padding(
+                12.dp
+            )
         ) {
 
             Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
                 verticalAlignment =
                     Alignment.CenterVertically
             ) {
 
                 Checkbox(
+
                     checked =
                         item.selected,
 
@@ -1402,268 +2672,349 @@ private fun MaintenanceItemEditor(
                 )
 
                 Text(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    text =
-                        item.name
+                    item.name,
+                    color =
+                        Color.White,
+                    fontWeight =
+                        FontWeight.Bold
                 )
-
-                if (
-                    onRemove != null
-                ) {
-
-                    OutlinedButton(
-                        onClick =
-                            onRemove
-                    ) {
-
-                        Text(
-                            "Entfernen"
-                        )
-                    }
-                }
             }
 
             if (
                 item.selected
             ) {
 
-                Text(
-                    "Monat, Jahr und Kilometerstand"
-                )
+                /*
+                 * Monat
+                 */
 
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp
-                        ),
-
-                    verticalAlignment =
-                        Alignment.CenterVertically
+                var monthExpanded by remember(
+                    item.name
                 ) {
-
-                    MonthDropdown(
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            ),
-
-                        month =
-                            item.month,
-
-                        onMonthChanged = {
-                            newMonth ->
-
-                            onItemChanged(
-                                item.copy(
-                                    month =
-                                        newMonth
-                                )
-                            )
-                        }
-                    )
-
-                    OutlinedTextField(
-                        value =
-                            item.year,
-
-                        onValueChange = {
-                            value ->
-
-                            val filtered =
-                                value
-                                    .filter {
-                                        it.isDigit()
-                                    }
-                                    .take(
-                                        4
-                                    )
-
-                            onItemChanged(
-                                item.copy(
-                                    year =
-                                        filtered
-                                )
-                            )
-                        },
-
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            ),
-
-                        label = {
-                            Text(
-                                "Jahr"
-                            )
-                        },
-
-                        placeholder = {
-                            Text(
-                                "2025"
-                            )
-                        },
-
-                        singleLine =
-                            true
+                    mutableStateOf(
+                        false
                     )
                 }
 
+                OutlinedButton(
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    onClick = {
+
+                        monthExpanded =
+                            true
+                    }
+
+                ) {
+
+                    Text(
+
+                        if (
+                            item.month.isBlank()
+                        ) {
+                            "Monat auswählen"
+                        } else {
+                            "Monat: ${item.month}"
+                        }
+                    )
+                }
+
+                DropdownMenu(
+
+                    expanded =
+                        monthExpanded,
+
+                    onDismissRequest = {
+
+                        monthExpanded =
+                            false
+                    }
+
+                ) {
+
+                    maintenanceMonths.forEach { month ->
+
+                        DropdownMenuItem(
+
+                            text = {
+                                Text(
+                                    month
+                                )
+                            },
+
+                            onClick = {
+
+                                onItemChanged(
+                                    item.copy(
+                                        month =
+                                            month
+                                    )
+                                )
+
+                                monthExpanded =
+                                    false
+                            }
+                        )
+                    }
+                }
+
+                /*
+                 * Jahr
+                 */
+
                 OutlinedTextField(
+
+                    value =
+                        item.year,
+
+                    onValueChange = {
+
+                        onItemChanged(
+                            item.copy(
+                                year =
+                                    it.filter {
+                                        character ->
+                                        character.isDigit()
+                                    }
+                            )
+                        )
+                    },
+
+                    label = {
+                        Text(
+                            "Jahr"
+                        )
+                    },
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                /*
+                 * Kilometerstand
+                 */
+
+                OutlinedTextField(
+
                     value =
                         item.mileage,
 
                     onValueChange = {
-                        value ->
-
-                        val filtered =
-                            value.filter {
-                                it.isDigit()
-                            }
 
                         onItemChanged(
                             item.copy(
                                 mileage =
-                                    filtered
+                                    it.filter {
+                                        character ->
+                                        character.isDigit()
+                                    }
                             )
                         )
                     },
 
+                    label = {
+                        Text(
+                            "Kilometerstand optional"
+                        )
+                    },
+
                     modifier =
-                        Modifier.fillMaxWidth(),
+                        Modifier.fillMaxWidth()
+                )
+
+                /*
+                 * Verwendet
+                 */
+
+                OutlinedTextField(
+
+                    value =
+                        item.used,
+
+                    onValueChange = {
+
+                        onItemChanged(
+                            item.copy(
+                                used =
+                                    it
+                            )
+                        )
+                    },
 
                     label = {
                         Text(
-                            "Kilometerstand (optional)"
+                            "Verwendet / Material"
                         )
                     },
 
-                    placeholder = {
-                        Text(
-                            "225000"
-                        )
-                    },
-
-                    singleLine =
-                        true
+                    modifier =
+                        Modifier.fillMaxWidth()
                 )
-            }
-        }
-    }
-}
 
-@Composable
-private fun MonthDropdown(
-    modifier:
-        Modifier,
+                /*
+                 * Teilenummer
+                 */
 
-    month:
-        String,
+                OutlinedTextField(
 
-    onMonthChanged:
-        (String) -> Unit
-) {
+                    value =
+                        item.partNumber,
 
-    var expanded by remember {
-        mutableStateOf(
-            false
-        )
-    }
+                    onValueChange = {
 
-    Box(
-        modifier =
-            modifier
-    ) {
+                        onItemChanged(
+                            item.copy(
+                                partNumber =
+                                    it
+                            )
+                        )
+                    },
 
-        OutlinedButton(
-            modifier =
-                Modifier.fillMaxWidth(),
+                    label = {
+                        Text(
+                            "Teilenummer optional"
+                        )
+                    },
 
-            onClick = {
-                expanded =
-                    true
-            }
-        ) {
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
 
-            Text(
-                if (
-                    month.isBlank()
+                /*
+                 * Materialkosten
+                 */
+
+                OutlinedTextField(
+
+                    value =
+                        item.materialCost,
+
+                    onValueChange = {
+
+                        onItemChanged(
+                            item.copy(
+                                materialCost =
+                                    it
+                            )
+                        )
+                    },
+
+                    label = {
+                        Text(
+                            "Materialkosten €"
+                        )
+                    },
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                /*
+                 * Arbeitskosten
+                 */
+
+                OutlinedTextField(
+
+                    value =
+                        item.laborCost,
+
+                    onValueChange = {
+
+                        onItemChanged(
+                            item.copy(
+                                laborCost =
+                                    it
+                            )
+                        )
+                    },
+
+                    label = {
+                        Text(
+                            "Arbeitskosten €"
+                        )
+                    },
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                /*
+                 * Bild
+                 */
+
+                OutlinedButton(
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    onClick =
+                        onChooseImage
+
                 ) {
-                    "Monat"
-                } else {
-                    month
+
+                    Text(
+                        if (
+                            item.imageUri.isBlank()
+                        ) {
+                            "Bild hinzufügen"
+                        } else {
+                            "Bild ändern"
+                        }
+                    )
                 }
-            )
-        }
 
-        DropdownMenu(
-            expanded =
-                expanded,
+                if (
+                    item.imageUri.isNotBlank()
+                ) {
 
-            onDismissRequest = {
-                expanded =
-                    false
-            }
-        ) {
+                    MaintenanceImage(
+                        uri =
+                            item.imageUri,
 
-            maintenanceMonths.forEach {
-                option ->
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(
+                                    150.dp
+                                )
+                    )
 
-                DropdownMenuItem(
-                    text = {
+                    OutlinedButton(
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        onClick =
+                            onRemoveImage
+
+                    ) {
+
                         Text(
-                            option
+                            "Bild entfernen"
                         )
-                    },
-
-                    onClick = {
-
-                        onMonthChanged(
-                            option
-                        )
-
-                        expanded =
-                            false
                     }
-                )
+                }
             }
         }
     }
 }
 
+/*
+ * ============================================================
+ * HISTORIEN-KARTE
+ * ============================================================
+ */
+
 @Composable
-private fun MaintenanceSummaryCard(
-    entry:
-        Maintenance,
-
-    onEdit:
-        () -> Unit,
-
-    onDelete:
-        () -> Unit
+private fun MaintenanceHistoryCard(
+    item: MaintenanceHistoryItem,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
-
-    val decoded =
-        decodeMaintenanceNotes(
-            storedNotes =
-                entry.notes,
-
-            legacyDate =
-                entry.date,
-
-            legacyMileage =
-                entry.mileage
-        )
 
     Card(
-        modifier =
-            Modifier.fillMaxWidth(),
 
         colors =
             CardDefaults.cardColors(
@@ -1671,82 +3022,188 @@ private fun MaintenanceSummaryCard(
                     Color(
                         0xFF11141A
                     )
-            )
+            ),
+
+        modifier =
+            Modifier.fillMaxWidth()
     ) {
 
         Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
-                )
+            Modifier.padding(
+                16.dp
+            )
         ) {
 
             Text(
-                "Gesamtbild"
+
+                item.name,
+
+                color =
+                    Color.White,
+
+                fontSize =
+                    18.sp,
+
+                fontWeight =
+                    FontWeight.Bold
             )
+
+            Spacer(
+                Modifier.height(
+                    4.dp
+                )
+            )
+
+            if (
+                item.month.isNotBlank() &&
+                item.year.isNotBlank()
+            ) {
+
+                Text(
+
+                    "%02d/%s".format(
+                        Locale.GERMANY,
+                        item.month.toIntOrNull()
+                            ?: 0,
+                        item.year
+                    ),
+
+                    color =
+                        Color(
+                            0xFFD4AF37
+                        )
+                )
+            }
+
+            if (
+                item.mileage.isNotBlank()
+            ) {
+
+                Text(
+                    "${item.mileage} km",
+                    color =
+                        Color(
+                            0xFFB8BEC8
+                        )
+                )
+            }
+
+            if (
+                item.used.isNotBlank()
+            ) {
+
+                Text(
+                    "Verwendet: ${item.used}",
+                    color =
+                        Color.White
+                )
+            }
+
+            if (
+                item.partNumber.isNotBlank()
+            ) {
+
+                Text(
+                    "Teilenummer: ${item.partNumber}",
+                    color =
+                        Color(
+                            0xFFB8BEC8
+                        )
+                )
+            }
+
+            if (
+                item.materialCost > 0
+            ) {
+
+                Text(
+                    "Material: ${money(item.materialCost)}",
+                    color =
+                        Color.White
+                )
+            }
+
+            if (
+                item.laborCost > 0
+            ) {
+
+                Text(
+                    "Arbeitskosten: ${money(item.laborCost)}",
+                    color =
+                        Color.White
+                )
+            }
 
             Text(
-                "Fahrzeug: ${entry.vehicle}"
+
+                "Gesamtkosten: ${money(item.totalCost)}",
+
+                color =
+                    Color(
+                        0xFFD4AF37
+                    ),
+
+                fontWeight =
+                    FontWeight.Bold
             )
 
             if (
-                decoded.items.isNotEmpty()
+                item.workshop.isNotBlank()
             ) {
 
-                decoded.items
-                    .filter {
-                        it.selected
-                    }
-                    .forEach { item ->
-
-                        MaintenanceSummaryRow(
-                            item =
-                                item
+                Text(
+                    "Werkstatt: ${item.workshop}",
+                    color =
+                        Color(
+                            0xFFB8BEC8
                         )
-                    }
-
-            } else {
-
-                Text(
-                    "Keine einzelnen Wartungspunkte eingetragen."
                 )
             }
 
             if (
-                entry.cost.isNotBlank()
+                item.notes.isNotBlank()
             ) {
 
                 Text(
-                    "Kosten: ${entry.cost}"
+                    "Notiz: ${item.notes}",
+                    color =
+                        Color(
+                            0xFFB8BEC8
+                        )
                 )
             }
 
             if (
-                entry.workshop.isNotBlank()
+                item.imageUri.isNotBlank()
             ) {
 
-                Text(
-                    "Werkstatt: ${entry.workshop}"
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
+
+                MaintenanceImage(
+
+                    uri =
+                        item.imageUri,
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                160.dp
+                            )
                 )
             }
 
-            if (
-                decoded.notes.isNotBlank()
-            ) {
-
-                Text(
-                    "Notizen: ${decoded.notes}"
+            Spacer(
+                Modifier.height(
+                    10.dp
                 )
-            }
+            )
 
             Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
 
                 horizontalArrangement =
                     Arrangement.spacedBy(
@@ -1755,6 +3212,7 @@ private fun MaintenanceSummaryCard(
             ) {
 
                 OutlinedButton(
+
                     modifier =
                         Modifier.weight(
                             1f
@@ -1762,14 +3220,16 @@ private fun MaintenanceSummaryCard(
 
                     onClick =
                         onEdit
+
                 ) {
 
                     Text(
-                        "Ändern"
+                        "Bearbeiten"
                     )
                 }
 
                 OutlinedButton(
+
                     modifier =
                         Modifier.weight(
                             1f
@@ -1777,6 +3237,7 @@ private fun MaintenanceSummaryCard(
 
                     onClick =
                         onDelete
+
                 ) {
 
                     Text(
@@ -1788,80 +3249,44 @@ private fun MaintenanceSummaryCard(
     }
 }
 
+/*
+ * ============================================================
+ * BILD-ANZEIGE
+ * ============================================================
+ */
+
 @Composable
-private fun MaintenanceSummaryRow(
-    item:
-        MaintenanceDraftItem
+private fun MaintenanceImage(
+    uri: String,
+    modifier: Modifier
 ) {
 
-    val dateText =
-        when {
+    val context =
+        LocalContext.current
 
-            item.month.isNotBlank() &&
-                item.year.isNotBlank() ->
-                "${item.month}/${item.year}"
+    val bitmap =
+        remember(uri) {
 
-            item.year.isNotBlank() ->
-                item.year
-
-            item.month.isNotBlank() ->
-                "Monat ${item.month}"
-
-            else ->
-                "Datum nicht eingetragen"
-        }
-
-    val mileageText =
-        if (
-            item.mileage.isNotBlank()
-        ) {
-            " · ${item.mileage} km"
-        } else {
-            ""
-        }
-
-    Text(
-        "• ${item.name}: $dateText$mileageText"
-    )
-}
-
-@Composable
-private fun EmptyMaintenanceCard() {
-
-    Card(
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(
-                        0xFF11141A
-                    )
+            loadBitmap(
+                context,
+                uri
             )
+        }
+
+    if (
+        bitmap != null
     ) {
 
-        Column(
+        Image(
+
+            bitmap =
+                bitmap.asImageBitmap(),
+
+            contentDescription =
+                "Wartungsbild",
+
             modifier =
-                Modifier.padding(
-                    20.dp
-                )
-        ) {
-
-            Text(
-                "Noch keine Wartung gespeichert."
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        6.dp
-                    )
-            )
-
-            Text(
-                "Über „Wartung hinzufügen“ kannst du die erste Wartung erfassen."
-            )
-        }
+                modifier
+        )
     }
 }
