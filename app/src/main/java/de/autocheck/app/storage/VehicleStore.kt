@@ -108,6 +108,7 @@ class VehicleStore(
             var needsMigration = false
 
             for (i in vehicles.indices) {
+
                 val storedId =
                     array
                         .optJSONObject(i)
@@ -236,9 +237,6 @@ class VehicleStore(
     /*
      * ------------------------------------------------------------
      * BISHERIGE NAMENS-FUNKTIONEN
-     *
-     * Diese bleiben vorerst erhalten, damit die bestehende App
-     * während der Umstellung weiterhin funktioniert.
      * ------------------------------------------------------------
      */
 
@@ -300,7 +298,7 @@ class VehicleStore(
 
     /*
      * ------------------------------------------------------------
-     * NEUE ID-BASIERTE AKTIVE FAHRZEUGAUSWAHL
+     * ID-BASIERTE AKTIVE FAHRZEUGAUSWAHL
      * ------------------------------------------------------------
      */
 
@@ -364,8 +362,6 @@ class VehicleStore(
 
         /*
          * Es existiert immer nur genau EINE globale activeVehicleId.
-         * Ein zweites aktives Fahrzeug ist dadurch technisch
-         * ausgeschlossen.
          */
         prefs.edit()
             .putString(
@@ -404,6 +400,53 @@ class VehicleStore(
                 val o =
                     array.getJSONObject(i)
 
+                /*
+                 * Neue Ersatzteilliste.
+                 *
+                 * Alte Reparaturen besitzen dieses Feld noch nicht.
+                 * In diesem Fall bleibt die Liste leer und die alten
+                 * Daten werden trotzdem vollständig geladen.
+                 */
+                val partsArray =
+                    o.optJSONArray(
+                        "parts"
+                    )
+
+                val parts =
+                    buildList {
+
+                        if (partsArray != null) {
+
+                            for (
+                                partIndex in
+                                0 until partsArray.length()
+                            ) {
+
+                                val partObject =
+                                    partsArray.optJSONObject(
+                                        partIndex
+                                    )
+
+                                if (partObject != null) {
+
+                                    add(
+                                        RepairPart(
+                                            name =
+                                                partObject.optString(
+                                                    "name"
+                                                ),
+
+                                            cost =
+                                                partObject.optString(
+                                                    "cost"
+                                                )
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                 add(
                     Repair(
                         id =
@@ -431,6 +474,26 @@ class VehicleStore(
                                 "description"
                             ),
 
+                        repairDescription =
+                            o.optString(
+                                "repairDescription",
+                                ""
+                            ),
+
+                        parts =
+                            parts,
+
+                        laborCost =
+                            o.optString(
+                                "laborCost",
+                                ""
+                            ),
+
+                        /*
+                         * Das alte Kostenfeld bleibt erhalten.
+                         * Dadurch gehen vorhandene Reparaturdaten
+                         * nicht verloren.
+                         */
                         cost =
                             o.optString(
                                 "cost"
@@ -439,6 +502,18 @@ class VehicleStore(
                         workshop =
                             o.optString(
                                 "workshop"
+                            ),
+
+                        beforeImageUri =
+                            o.optString(
+                                "beforeImageUri",
+                                ""
+                            ),
+
+                        afterImageUri =
+                            o.optString(
+                                "afterImageUri",
+                                ""
                             )
                     )
                 )
@@ -453,44 +528,93 @@ class VehicleStore(
         val array =
             JSONArray()
 
-        list.forEach {
+        list.forEach { repair ->
+
+            val partsArray =
+                JSONArray()
+
+            repair.parts.forEach { part ->
+
+                partsArray.put(
+                    JSONObject().apply {
+
+                        put(
+                            "name",
+                            part.name
+                        )
+
+                        put(
+                            "cost",
+                            part.cost
+                        )
+                    }
+                )
+            }
 
             array.put(
                 JSONObject().apply {
 
                     put(
                         "id",
-                        it.id
+                        repair.id
                     )
 
                     put(
                         "vehicle",
-                        it.vehicle
+                        repair.vehicle
                     )
 
                     put(
                         "date",
-                        it.date
+                        repair.date
                     )
 
                     put(
                         "mileage",
-                        it.mileage
+                        repair.mileage
                     )
 
                     put(
                         "description",
-                        it.description
+                        repair.description
                     )
 
                     put(
+                        "repairDescription",
+                        repair.repairDescription
+                    )
+
+                    put(
+                        "parts",
+                        partsArray
+                    )
+
+                    put(
+                        "laborCost",
+                        repair.laborCost
+                    )
+
+                    /*
+                     * Altes Feld bleibt bewusst bestehen.
+                     */
+                    put(
                         "cost",
-                        it.cost
+                        repair.cost
                     )
 
                     put(
                         "workshop",
-                        it.workshop
+                        repair.workshop
+                    )
+
+                    put(
+                        "beforeImageUri",
+                        repair.beforeImageUri
+                    )
+
+                    put(
+                        "afterImageUri",
+                        repair.afterImageUri
                     )
                 }
             )
