@@ -45,7 +45,8 @@ fun AutoCheckApp() {
      * EINZIGE QUELLE FÜR DAS AKTIVE FAHRZEUG
      * ============================================================
      *
-     * Die ID ist stabil und unabhängig vom Fahrzeugnamen.
+     * Ab jetzt wird ausschließlich die stabile Vehicle-ID
+     * verwendet.
      */
     var activeVehicleId by remember {
 
@@ -55,8 +56,7 @@ fun AutoCheckApp() {
     }
 
     /*
-     * Das aktuell aktive Fahrzeug wird immer über seine ID
-     * ermittelt.
+     * Aktives Fahrzeug anhand der stabilen ID bestimmen.
      */
     val activeVehicle =
         vehicles.firstOrNull {
@@ -64,9 +64,11 @@ fun AutoCheckApp() {
         }
 
     /*
-     * Die bestehenden Untermenüs arbeiten momentan noch mit
-     * dem Fahrzeugnamen. Der Name wird deshalb ausschließlich
-     * aus dem zentral aktiven Fahrzeug abgeleitet.
+     * Die bestehenden Untermenüs arbeiten weiterhin mit dem
+     * Fahrzeugnamen.
+     *
+     * Der Name wird ausschließlich aus dem zentral aktiven
+     * Fahrzeug abgeleitet.
      */
     val activeVehicleName =
         activeVehicle?.name ?: ""
@@ -85,7 +87,7 @@ fun AutoCheckApp() {
 
     /*
      * ============================================================
-     * START / AKTIVES FAHRZEUG SICHERSTELLEN
+     * START
      * ============================================================
      */
     LaunchedEffect(Unit) {
@@ -98,8 +100,8 @@ fun AutoCheckApp() {
         homeReady = true
 
         /*
-         * Falls kein gültiges aktives Fahrzeug vorhanden ist,
-         * wird automatisch das erste Fahrzeug aktiviert.
+         * Falls keine gültige aktive ID gespeichert ist,
+         * wird automatisch das erste Fahrzeug aktiv.
          */
         if (
             vehicles.isNotEmpty() &&
@@ -131,6 +133,7 @@ fun AutoCheckApp() {
     ) {
 
         HomeScreen(
+
             visible =
                 homeReady,
 
@@ -202,43 +205,51 @@ fun AutoCheckApp() {
                             vehicles,
 
                         /*
-                         * Vorübergehend wird hier weiterhin der
-                         * Name übergeben. Im nächsten Schritt
-                         * stellen wir VehicleScreen selbst auf ID
-                         * um.
+                         * WICHTIG:
+                         *
+                         * VehicleScreen arbeitet jetzt direkt
+                         * mit der stabilen Fahrzeug-ID.
                          */
                         activeVehicle =
-                            activeVehicleName,
+                            activeVehicleId,
 
+                        /*
+                         * VehicleScreen liefert ebenfalls
+                         * ausschließlich die Fahrzeug-ID zurück.
+                         */
                         onActiveVehicle = {
-                            selectedName ->
+                            selectedVehicleId ->
 
-                            /*
-                             * Den Namen niemals direkt als
-                             * dauerhafte aktive Kennung verwenden.
-                             *
-                             * Wir suchen das Fahrzeug und speichern
-                             * anschließend ausschließlich seine ID.
-                             */
                             val selectedVehicle =
                                 vehicles.firstOrNull {
-                                    it.name ==
-                                        selectedName
+                                    it.id ==
+                                        selectedVehicleId
                                 }
 
                             if (
                                 selectedVehicle != null
                             ) {
 
+                                /*
+                                 * Zentrale aktive ID ändern.
+                                 */
                                 activeVehicleId =
                                     selectedVehicle.id
 
+                                /*
+                                 * Dauerhaft speichern.
+                                 */
                                 store.setActiveVehicleId(
                                     selectedVehicle.id
                                 )
                             }
                         },
 
+                        /*
+                         * ==================================================
+                         * FAHRZEUG SPEICHERN
+                         * ==================================================
+                         */
                         onSave = {
                                 vehicle,
                                 oldName ->
@@ -246,8 +257,8 @@ fun AutoCheckApp() {
                             /*
                              * Primär über die stabile ID suchen.
                              *
-                             * Fallback über den alten Namen ist
-                             * wichtig für bereits vorhandene Daten.
+                             * Fallback über den Namen bleibt für
+                             * bestehende ältere Fahrzeuge erhalten.
                              */
                             val index =
                                 vehicles.indexOfFirst {
@@ -269,14 +280,15 @@ fun AutoCheckApp() {
                                 val oldVehicle =
                                     vehicles[index]
 
+                                /*
+                                 * Fahrzeug aktualisieren.
+                                 */
                                 vehicles[index] =
                                     vehicle
 
                                 /*
-                                 * Bestehende Reparatur-/Wartungs-/
-                                 * Pickerl-/Reifendaten werden bei
-                                 * einer Namensänderung weiterhin
-                                 * übernommen.
+                                 * Bestehende Daten bei einer
+                                 * Namensänderung übernehmen.
                                  */
                                 if (
                                     oldVehicle.name !=
@@ -295,7 +307,7 @@ fun AutoCheckApp() {
                             ) {
 
                                 /*
-                                 * Neues Fahrzeug.
+                                 * Neues Fahrzeug hinzufügen.
                                  */
                                 vehicles.add(
                                     vehicle
@@ -303,15 +315,15 @@ fun AutoCheckApp() {
                             }
 
                             /*
-                             * Fahrzeugliste dauerhaft speichern.
+                             * Fahrzeugliste speichern.
                              */
                             store.save(
                                 vehicles
                             )
 
                             /*
-                             * Das gerade gespeicherte Fahrzeug
-                             * wird zum EINZIGEN aktiven Fahrzeug.
+                             * Das gespeicherte Fahrzeug ist
+                             * eindeutig das aktive Fahrzeug.
                              */
                             activeVehicleId =
                                 vehicle.id
@@ -321,6 +333,11 @@ fun AutoCheckApp() {
                             )
                         },
 
+                        /*
+                         * ==================================================
+                         * FAHRZEUG LÖSCHEN
+                         * ==================================================
+                         */
                         onDelete = {
                                 vehicle ->
 
@@ -329,21 +346,21 @@ fun AutoCheckApp() {
                                     activeVehicleId
 
                             /*
-                             * Fahrzeug aus der Liste entfernen.
+                             * Fahrzeug entfernen.
                              */
                             vehicles.remove(
                                 vehicle
                             )
 
                             /*
-                             * Zugehörige Daten löschen.
+                             * Zugehörige Daten entfernen.
                              */
                             store.deleteVehicleData(
                                 vehicle.name
                             )
 
                             /*
-                             * Pickerl-Erinnerung löschen.
+                             * Pickerl-Erinnerung entfernen.
                              */
                             cancelPickerlReminder(
                                 context,
@@ -351,17 +368,15 @@ fun AutoCheckApp() {
                             )
 
                             /*
-                             * Geänderte Fahrzeugliste dauerhaft
-                             * speichern.
+                             * Fahrzeugliste speichern.
                              */
                             store.save(
                                 vehicles
                             )
 
                             /*
-                             * Wenn das aktive Fahrzeug gelöscht
-                             * wurde, wird genau ein neues aktives
-                             * Fahrzeug bestimmt.
+                             * Wurde das aktive Fahrzeug gelöscht,
+                             * wird genau ein neues Fahrzeug aktiv.
                              */
                             if (
                                 wasActive
@@ -398,6 +413,12 @@ fun AutoCheckApp() {
                  * ==================================================
                  * REPARATUREN
                  * ==================================================
+                 *
+                 * Diese Screens arbeiten momentan noch mit
+                 * dem Fahrzeugnamen.
+                 *
+                 * Sie bekommen aber ausschließlich den Namen
+                 * des zentral aktiven Fahrzeugs.
                  */
                 Screen.REPARATUREN ->
 
