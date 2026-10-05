@@ -2567,7 +2567,9 @@ private fun RepairRecordCard(
                     Text(
                         "Gesamt",
                         color =
-                            Color.White,
+                            Color(
+                                0xFF4A90E2
+                            ),
                         fontWeight =
                             FontWeight.Bold,
                         modifier =
@@ -2607,7 +2609,7 @@ private fun RepairRecordCard(
                     }",
                     color =
                         Color(
-                            0xFFB8BEC8
+                            0xFF4A90E2
                         )
                 )
             }
@@ -2723,7 +2725,7 @@ private fun RepairDetailCard(
                 }",
                 color =
                     Color(
-                        0xFFB8BEC8
+                        0xFF4A90E2
                     )
             )
         }
