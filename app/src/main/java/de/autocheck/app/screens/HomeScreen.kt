@@ -335,7 +335,7 @@ fun HomeScreen(
 
             Text(
 
-                "AutoCheck • Verliere nicht die Übersicht",
+                "CARVITA – die Geschichte deiner Fahrzeuge",
 
                 color =
                     Muted,
