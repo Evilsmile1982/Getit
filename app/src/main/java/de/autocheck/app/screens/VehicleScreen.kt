@@ -1,29 +1,12 @@
 package de.autocheck.app
 
-import android.app.AlarmManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
-import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,58 +17,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CarRepair
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.TireRepair
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.autocheck.app.ui.AutoCheckTheme
-import org.json.JSONArray
-import org.json.JSONObject
-import java.time.LocalDate
-import java.time.ZoneId
+import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun VehicleScreen(
@@ -96,97 +46,101 @@ fun VehicleScreen(
     onDelete: (Vehicle) -> Unit
 ) {
 
+    /*
+     * ============================================================
+     * HINWEIS ZUR AKTIV-KENNUNG
+     * ============================================================
+     *
+     * Der Parameter activeVehicle enthält in der neuen Logik
+     * die stabile Vehicle-ID.
+     *
+     * Die Umstellung von AutoCheckApp auf die ID erfolgt im
+     * nächsten Schritt.
+     *
+     * Für die Übergangsphase bleibt die Signatur bewusst gleich,
+     * damit dieses File alleine bereits kompiliert.
+     */
+
     var adding by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
+    }
+
+    var editingVehicleId by remember {
+        mutableStateOf("")
     }
 
     var editingName by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var name by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var make by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var model by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var year by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var plate by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var vin by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var imageUri by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     val context =
         LocalContext.current
 
+    /*
+     * ============================================================
+     * BILD AUS GALERIE
+     * ============================================================
+     */
+
     val launcher =
-        androidx.activity.compose
-            .rememberLauncherForActivityResult(
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
 
-                ActivityResultContracts
-                    .OpenDocument()
+            if (uri != null) {
 
-            ) { uri ->
+                try {
 
-                if (
-                    uri != null
+                    context.contentResolver
+                        .takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+
+                } catch (
+                    _: SecurityException
                 ) {
-
-                    try {
-
-                        context
-                            .contentResolver
-                            .takePersistableUriPermission(
-
-                                uri,
-
-                                Intent
-                                    .FLAG_GRANT_READ_URI_PERMISSION
-                            )
-
-                    } catch (
-                        _: SecurityException
-                    ) {
-                    }
-
-                    imageUri =
-                        uri.toString()
+                    // Nicht jeder Provider erlaubt persistente Rechte.
                 }
+
+                imageUri =
+                    uri.toString()
             }
+        }
+
+    /*
+     * ============================================================
+     * HAUPTBEREICH
+     * ============================================================
+     */
 
     Column(
         modifier =
@@ -194,32 +148,29 @@ fun VehicleScreen(
     ) {
 
         Text(
-
             "${vehicles.size}/5 Fahrzeuge",
-
             color =
                 Color(0xFFB8BEC8),
-
             modifier =
                 Modifier.padding(
                     bottom = 12.dp
                 )
         )
 
-        if (
-            vehicles.isEmpty()
-        ) {
+        /*
+         * ========================================================
+         * KEINE FAHRZEUGE
+         * ========================================================
+         */
+
+        if (vehicles.isEmpty()) {
 
             Text(
-
                 "Noch kein Fahrzeug angelegt.",
-
                 color =
                     Color.White,
-
                 fontSize =
                     20.sp,
-
                 fontWeight =
                     FontWeight.Bold
             )
@@ -230,6 +181,12 @@ fun VehicleScreen(
                 )
             )
         }
+
+        /*
+         * ========================================================
+         * FAHRZEUGLISTE
+         * ========================================================
+         */
 
         LazyColumn(
 
@@ -245,19 +202,21 @@ fun VehicleScreen(
         ) {
 
             items(
-                vehicles
+                vehicles,
+                key = {
+                    it.id
+                }
             ) { vehicle ->
 
                 Card(
 
                     colors =
-                        CardDefaults
-                            .cardColors(
-                                containerColor =
-                                    Color(
-                                        0xFF11141A
-                                    )
-                            ),
+                        CardDefaults.cardColors(
+                            containerColor =
+                                Color(
+                                    0xFF11141A
+                                )
+                        ),
 
                     modifier =
                         Modifier.fillMaxWidth()
@@ -269,10 +228,17 @@ fun VehicleScreen(
                         )
                     ) {
 
+                        /*
+                         * ==================================================
+                         * FAHRZEUGKOPF
+                         * ==================================================
+                         */
+
                         Row(
 
                             verticalAlignment =
                                 Alignment.CenterVertically
+
                         ) {
 
                             VehicleImage(
@@ -298,6 +264,7 @@ fun VehicleScreen(
                                     Modifier.weight(
                                         1f
                                     )
+
                             ) {
 
                                 Text(
@@ -326,8 +293,7 @@ fun VehicleScreen(
                                 )
 
                                 if (
-                                    vehicle.plate
-                                        .isNotBlank()
+                                    vehicle.plate.isNotBlank()
                                 ) {
 
                                     Text(
@@ -340,8 +306,7 @@ fun VehicleScreen(
                                 }
 
                                 if (
-                                    vehicle.vin
-                                        .isNotBlank()
+                                    vehicle.vin.isNotBlank()
                                 ) {
 
                                     Text(
@@ -366,6 +331,12 @@ fun VehicleScreen(
                             )
                         )
 
+                        /*
+                         * ==================================================
+                         * AKTIV / BEARBEITEN
+                         * ==================================================
+                         */
+
                         Row(
 
                             horizontalArrangement =
@@ -374,12 +345,23 @@ fun VehicleScreen(
                                 )
                         ) {
 
+                            /*
+                             * WICHTIG:
+                             *
+                             * Der Vergleich erfolgt ausschließlich über
+                             * vehicle.id.
+                             *
+                             * Damit kann niemals ein zweites Fahrzeug
+                             * wegen desselben Namens ebenfalls als
+                             * "Aktiv" angezeigt werden.
+                             */
+
                             Button(
 
                                 onClick = {
 
                                     onActiveVehicle(
-                                        vehicle.name
+                                        vehicle.id
                                     )
                                 }
 
@@ -389,7 +371,7 @@ fun VehicleScreen(
 
                                     if (
                                         activeVehicle ==
-                                        vehicle.name
+                                        vehicle.id
                                     ) {
                                         "Aktiv"
                                     } else {
@@ -401,6 +383,14 @@ fun VehicleScreen(
                             OutlinedButton(
 
                                 onClick = {
+
+                                    /*
+                                     * Beim Bearbeiten merken wir uns
+                                     * ausdrücklich die stabile ID.
+                                     */
+
+                                    editingVehicleId =
+                                        vehicle.id
 
                                     editingName =
                                         vehicle.name
@@ -444,6 +434,12 @@ fun VehicleScreen(
                             )
                         )
 
+                        /*
+                         * ==================================================
+                         * FAHRZEUG LÖSCHEN
+                         * ==================================================
+                         */
+
                         OutlinedButton(
 
                             onClick = {
@@ -463,25 +459,29 @@ fun VehicleScreen(
                 }
             }
 
-            if (
-                adding
-            ) {
+            /*
+             * ========================================================
+             * FORMULAR
+             * ========================================================
+             */
+
+            if (adding) {
 
                 item {
 
                     Card(
 
                         colors =
-                            CardDefaults
-                                .cardColors(
-                                    containerColor =
-                                        Color(
-                                            0xFF11141A
-                                        )
-                                ),
+                            CardDefaults.cardColors(
+                                containerColor =
+                                    Color(
+                                        0xFF11141A
+                                    )
+                            ),
 
                         modifier =
                             Modifier.fillMaxWidth()
+
                     ) {
 
                         Column(
@@ -499,8 +499,7 @@ fun VehicleScreen(
                             Text(
 
                                 if (
-                                    editingName
-                                        .isBlank()
+                                    editingVehicleId.isBlank()
                                 ) {
                                     "Fahrzeug hinzufügen"
                                 } else {
@@ -514,11 +513,18 @@ fun VehicleScreen(
                                     FontWeight.Bold
                             )
 
+                            /*
+                             * ==================================================
+                             * BEZEICHNUNG
+                             * ==================================================
+                             */
+
                             OutlinedTextField(
 
-                                name,
+                                value =
+                                    name,
 
-                                {
+                                onValueChange = {
                                     name =
                                         it
                                 },
@@ -533,11 +539,18 @@ fun VehicleScreen(
                                     Modifier.fillMaxWidth()
                             )
 
+                            /*
+                             * ==================================================
+                             * MARKE
+                             * ==================================================
+                             */
+
                             OutlinedTextField(
 
-                                make,
+                                value =
+                                    make,
 
-                                {
+                                onValueChange = {
                                     make =
                                         it
                                 },
@@ -552,11 +565,18 @@ fun VehicleScreen(
                                     Modifier.fillMaxWidth()
                             )
 
+                            /*
+                             * ==================================================
+                             * MODELL
+                             * ==================================================
+                             */
+
                             OutlinedTextField(
 
-                                model,
+                                value =
+                                    model,
 
-                                {
+                                onValueChange = {
                                     model =
                                         it
                                 },
@@ -571,11 +591,18 @@ fun VehicleScreen(
                                     Modifier.fillMaxWidth()
                             )
 
+                            /*
+                             * ==================================================
+                             * BAUJAHR
+                             * ==================================================
+                             */
+
                             OutlinedTextField(
 
-                                year,
+                                value =
+                                    year,
 
-                                {
+                                onValueChange = {
                                     year =
                                         it
                                 },
@@ -590,11 +617,18 @@ fun VehicleScreen(
                                     Modifier.fillMaxWidth()
                             )
 
+                            /*
+                             * ==================================================
+                             * KENNZEICHEN
+                             * ==================================================
+                             */
+
                             OutlinedTextField(
 
-                                plate,
+                                value =
+                                    plate,
 
-                                {
+                                onValueChange = {
                                     plate =
                                         it
                                 },
@@ -609,11 +643,18 @@ fun VehicleScreen(
                                     Modifier.fillMaxWidth()
                             )
 
+                            /*
+                             * ==================================================
+                             * FIN / VIN
+                             * ==================================================
+                             */
+
                             OutlinedTextField(
 
-                                vin,
+                                value =
+                                    vin,
 
-                                {
+                                onValueChange = {
                                     vin =
                                         it
                                 },
@@ -627,6 +668,12 @@ fun VehicleScreen(
                                 modifier =
                                     Modifier.fillMaxWidth()
                             )
+
+                            /*
+                             * ==================================================
+                             * FAHRZEUGBILD
+                             * ==================================================
+                             */
 
                             OutlinedButton(
 
@@ -649,8 +696,7 @@ fun VehicleScreen(
                             }
 
                             if (
-                                imageUri
-                                    .isNotBlank()
+                                imageUri.isNotBlank()
                             ) {
 
                                 VehicleImage(
@@ -667,6 +713,12 @@ fun VehicleScreen(
                                 )
                             }
 
+                            /*
+                             * ==================================================
+                             * SPEICHERN / ABBRECHEN
+                             * ==================================================
+                             */
+
                             Row(
 
                                 horizontalArrangement =
@@ -678,39 +730,98 @@ fun VehicleScreen(
                                 Button(
 
                                     enabled =
-                                        name
-                                            .isNotBlank(),
+                                        name.isNotBlank(),
 
                                     onClick = {
 
+                                        /*
+                                         * ==================================================
+                                         * ENTSCHEIDEND:
+                                         *
+                                         * Beim Bearbeiten wird die bestehende
+                                         * Fahrzeug-ID weiterverwendet.
+                                         *
+                                         * Nur bei einem NEUEN Fahrzeug erzeugt
+                                         * Vehicle automatisch eine neue UUID.
+                                         * ==================================================
+                                         */
+
+                                        val vehicleToSave =
+
+                                            if (
+                                                editingVehicleId.isNotBlank()
+                                            ) {
+
+                                                Vehicle(
+
+                                                    id =
+                                                        editingVehicleId,
+
+                                                    name =
+                                                        name.trim(),
+
+                                                    make =
+                                                        make.trim(),
+
+                                                    model =
+                                                        model.trim(),
+
+                                                    year =
+                                                        year.trim(),
+
+                                                    plate =
+                                                        plate.trim(),
+
+                                                    vin =
+                                                        vin.trim(),
+
+                                                    imageUri =
+                                                        imageUri
+                                                )
+
+                                            } else {
+
+                                                Vehicle(
+
+                                                    name =
+                                                        name.trim(),
+
+                                                    make =
+                                                        make.trim(),
+
+                                                    model =
+                                                        model.trim(),
+
+                                                    year =
+                                                        year.trim(),
+
+                                                    plate =
+                                                        plate.trim(),
+
+                                                    vin =
+                                                        vin.trim(),
+
+                                                    imageUri =
+                                                        imageUri
+                                                )
+                                            }
+
                                         onSave(
 
-                                            Vehicle(
-
-                                                name =
-                                                    name.trim(),
-
-                                                make =
-                                                    make.trim(),
-
-                                                model =
-                                                    model.trim(),
-
-                                                year =
-                                                    year.trim(),
-
-                                                plate =
-                                                    plate.trim(),
-
-                                                vin =
-                                                    vin.trim(),
-
-                                                imageUri =
-                                                    imageUri
-                                            ),
+                                            vehicleToSave,
 
                                             editingName
                                         )
+
+                                        /*
+                                         * Formular zurücksetzen.
+                                         */
+
+                                        editingVehicleId =
+                                            ""
+
+                                        editingName =
+                                            ""
 
                                         name =
                                             ""
@@ -733,9 +844,6 @@ fun VehicleScreen(
                                         imageUri =
                                             ""
 
-                                        editingName =
-                                            ""
-
                                         adding =
                                             false
                                     }
@@ -754,7 +862,31 @@ fun VehicleScreen(
                                         adding =
                                             false
 
+                                        editingVehicleId =
+                                            ""
+
                                         editingName =
+                                            ""
+
+                                        name =
+                                            ""
+
+                                        make =
+                                            ""
+
+                                        model =
+                                            ""
+
+                                        year =
+                                            ""
+
+                                        plate =
+                                            ""
+
+                                        vin =
+                                            ""
+
+                                        imageUri =
                                             ""
                                     }
 
@@ -771,6 +903,12 @@ fun VehicleScreen(
             }
         }
 
+        /*
+         * ========================================================
+         * NEUES FAHRZEUG
+         * ========================================================
+         */
+
         if (
             !adding &&
             vehicles.size < 5
@@ -782,6 +920,9 @@ fun VehicleScreen(
                     Modifier.fillMaxWidth(),
 
                 onClick = {
+
+                    editingVehicleId =
+                        ""
 
                     editingName =
                         ""
