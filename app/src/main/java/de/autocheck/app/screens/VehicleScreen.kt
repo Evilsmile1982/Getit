@@ -863,14 +863,6 @@ fun VehicleScreen(
                                     )
                             ) {
 
-                                /*
-                                 * Speichern ist möglich, sobald
-                                 * Fahrzeugtyp, Marke und Modell
-                                 * vorhanden sind.
-                                 *
-                                 * Name wird bei einem neuen Fahrzeug
-                                 * automatisch erzeugt.
-                                 */
                                 Button(
 
                                     enabled =
@@ -885,11 +877,16 @@ fun VehicleScreen(
                                          * AUTOMATISCHER FAHRZEUGNAME
                                          * ==================================================
                                          *
-                                         * Die stabile Vehicle-ID bleibt
-                                         * die eigentliche Identität.
+                                         * PS/KW wird absichtlich NICHT
+                                         * in den Fahrzeugnamen aufgenommen.
                                          *
-                                         * Der Name dient nur als lesbare
-                                         * Bezeichnung.
+                                         * Dadurch lautet die Überschrift
+                                         * beispielsweise:
+                                         *
+                                         * PKW Volkswagen Golf 2001
+                                         *
+                                         * Die PS/KW bleiben separat
+                                         * im Fahrzeug gespeichert.
                                          */
 
                                         val generatedName =
@@ -897,8 +894,7 @@ fun VehicleScreen(
                                                 vehicleType,
                                                 make.trim(),
                                                 model.trim(),
-                                                year.trim(),
-                                                power.trim()
+                                                year.trim()
                                             )
                                                 .filter {
                                                     it.isNotBlank()
@@ -932,13 +928,7 @@ fun VehicleScreen(
                                                         editingVehicleId,
 
                                                     name =
-                                                        if (
-                                                            name.isNotBlank()
-                                                        ) {
-                                                            name.trim()
-                                                        } else {
-                                                            generatedName
-                                                        },
+                                                        generatedName,
 
                                                     vehicleType =
                                                         vehicleType,
