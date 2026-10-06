@@ -3,6 +3,8 @@ package de.autocheck.app
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,10 +34,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,7 +120,8 @@ fun VehicleScreen(
     }
 
     /*
-     * Fahrzeuge, deren Kaufpreis aktuell sichtbar ist.
+     * Kaufpreise, die in der Fahrzeugliste aktuell
+     * sichtbar sind.
      */
     var revealedPurchasePriceIds by remember {
         mutableStateOf(setOf<String>())
@@ -409,6 +416,10 @@ fun VehicleScreen(
                                  * ==================================================
                                  */
 
+                                val priceVisible =
+                                    revealedPurchasePriceIds
+                                        .contains(vehicle.id)
+
                                 Row(
                                     verticalAlignment =
                                         Alignment.CenterVertically
@@ -420,9 +431,15 @@ fun VehicleScreen(
                                             Color(0xFFB8BEC8)
                                     )
 
-                                    val priceVisible =
-                                        revealedPurchasePriceIds
-                                            .contains(vehicle.id)
+                                    /*
+                                     * Der Kaufpreis selbst ist antippbar.
+                                     *
+                                     * Versteckt:
+                                     * ******** €
+                                     *
+                                     * Sichtbar:
+                                     * 12500 €
+                                     */
 
                                     Text(
                                         if (
@@ -433,19 +450,47 @@ fun VehicleScreen(
                                         } else {
                                             "******** €"
                                         },
+
                                         color =
                                             Color.White,
+
                                         fontWeight =
-                                            FontWeight.Medium
+                                            FontWeight.Medium,
+
+                                        modifier =
+                                            Modifier.clickable {
+
+                                                revealedPurchasePriceIds =
+                                                    if (
+                                                        priceVisible
+                                                    ) {
+
+                                                        revealedPurchasePriceIds -
+                                                            vehicle.id
+
+                                                    } else {
+
+                                                        revealedPurchasePriceIds +
+                                                            vehicle.id
+                                                    }
+                                            }
                                     )
 
                                     Spacer(
                                         Modifier.width(
-                                            6.dp
+                                            10.dp
                                         )
                                     )
 
-                                    OutlinedButton(
+                                    /*
+                                     * Echtes gezeichnetes Auge.
+                                     * Kein Emoji und keine zusätzliche
+                                     * Icon-Abhängigkeit.
+                                     */
+
+                                    EyeIcon(
+                                        visible =
+                                            priceVisible,
 
                                         onClick = {
 
@@ -463,19 +508,7 @@ fun VehicleScreen(
                                                         vehicle.id
                                                 }
                                         }
-
-                                    ) {
-
-                                        Text(
-                                            if (
-                                                priceVisible
-                                            ) {
-                                                "🙈"
-                                            } else {
-                                                "👁"
-                                            }
-                                        )
-                                    }
+                                    )
                                 }
                             }
                         }
@@ -569,6 +602,9 @@ fun VehicleScreen(
                                     purchasePrice =
                                         vehicle.purchasePrice
 
+                                    /*
+                                     * Beim Öffnen immer versteckt.
+                                     */
                                     purchasePriceVisible =
                                         false
 
@@ -926,6 +962,10 @@ fun VehicleScreen(
 
                                 onValueChange = { value ->
 
+                                    /*
+                                     * Nur Zahlen, Punkt und Komma.
+                                     */
+
                                     purchasePrice =
                                         value.filter {
                                             it.isDigit() ||
@@ -954,6 +994,9 @@ fun VehicleScreen(
                                             KeyboardType.Decimal
                                     ),
 
+                                /*
+                                 * Eigene Sternchen-Maskierung.
+                                 */
                                 visualTransformation =
                                     if (
                                         purchasePriceVisible
@@ -963,31 +1006,21 @@ fun VehicleScreen(
 
                                     } else {
 
-                                        PasswordVisualTransformation()
+                                        AsteriskVisualTransformation
                                     },
 
                                 trailingIcon = {
 
-                                    OutlinedButton(
+                                    EyeIcon(
+                                        visible =
+                                            purchasePriceVisible,
 
                                         onClick = {
 
                                             purchasePriceVisible =
                                                 !purchasePriceVisible
                                         }
-
-                                    ) {
-
-                                        Text(
-                                            if (
-                                                purchasePriceVisible
-                                            ) {
-                                                "🙈"
-                                            } else {
-                                                "👁"
-                                            }
-                                        )
-                                    }
+                                    )
                                 },
 
                                 modifier =
@@ -1380,5 +1413,137 @@ fun VehicleScreen(
                 )
             }
         }
+    }
+}
+
+/*
+ * ================================================================
+ * EIGENES AUGEN-SYMBOL
+ * ================================================================
+ *
+ * Kein Emoji.
+ * Keine zusätzliche Material-Icon-Abhängigkeit.
+ */
+
+@Composable
+private fun EyeIcon(
+    visible: Boolean,
+    onClick: () -> Unit
+) {
+
+    Canvas(
+
+        modifier =
+            Modifier
+                .size(34.dp)
+                .clickable {
+                    onClick()
+                }
+
+    ) {
+
+        val eyeColor =
+            Color(0xFFB8BEC8)
+
+        val strokeWidth =
+            2.dp.toPx()
+
+        /*
+         * Auge
+         */
+        drawOval(
+
+            color =
+                eyeColor,
+
+            style =
+                Stroke(
+                    width =
+                        strokeWidth
+                )
+        )
+
+        /*
+         * Pupille
+         */
+        drawCircle(
+
+            color =
+                eyeColor,
+
+            radius =
+                4.dp.toPx()
+        )
+
+        /*
+         * Wenn der Preis sichtbar ist,
+         * wird das Auge durchgestrichen.
+         */
+        if (visible) {
+
+            drawLine(
+
+                color =
+                    eyeColor,
+
+                start =
+                    androidx.compose.ui.geometry.Offset(
+                        x = 4.dp.toPx(),
+                        y = 4.dp.toPx()
+                    ),
+
+                end =
+                    androidx.compose.ui.geometry.Offset(
+                        x =
+                            size.width -
+                                4.dp.toPx(),
+
+                        y =
+                            size.height -
+                                4.dp.toPx()
+                    ),
+
+                strokeWidth =
+                    strokeWidth,
+
+                cap =
+                    StrokeCap.Round
+            )
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * STERNCHEN-MASKIERUNG
+ * ================================================================
+ *
+ * Beispiel:
+ *
+ * 12500
+ *
+ * wird zu:
+ *
+ * *****
+ */
+
+private object AsteriskVisualTransformation :
+    VisualTransformation {
+
+    override fun filter(
+        text: AnnotatedString
+    ): TransformedText {
+
+        val maskedText =
+            AnnotatedString(
+                "*".repeat(
+                    text.text.length
+                )
+            )
+
+        return TransformedText(
+            maskedText,
+            OffsetMapping.Identity
+        )
     }
 }
