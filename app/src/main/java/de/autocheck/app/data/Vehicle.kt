@@ -16,19 +16,21 @@ data class Vehicle(
     val make: String,
     val model: String,
 
-    // Neue Fahrzeugdaten
+    // Motorisierung
     val motorization: String = "",
     val power: String = "",
 
+    // Baujahr
     val year: String,
 
+    // Weitere Fahrzeugdaten
     val plate: String = "",
     val vin: String = "",
 
     // Persönliches Fahrzeugbild
     val imageUri: String = "",
 
-    // Kaufpreis des Fahrzeugs
-    // Wird gespeichert, aber in der Oberfläche standardmäßig maskiert.
+    // Kaufpreis
+    // Wird in der Oberfläche standardmäßig verborgen angezeigt.
     val purchasePrice: String = ""
 )
