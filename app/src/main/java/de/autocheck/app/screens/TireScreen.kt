@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,9 +61,7 @@ fun TireScreen(
     onVisited: () -> Unit
 ) {
 
-    LaunchedEffect(
-        Unit
-    ) {
+    LaunchedEffect(Unit) {
         onVisited()
     }
 
@@ -75,256 +72,134 @@ fun TireScreen(
     }
 
     var showForm by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
     }
 
     var editingId by remember {
-        mutableStateOf<Long?>(
-            null
-        )
+        mutableStateOf<Long?>(null)
     }
 
     var season by remember {
-        mutableStateOf(
-            "Sommer"
-        )
+        mutableStateOf("Sommer")
     }
 
-    /*
-     * ============================================================
-     * FELGENART
-     * ============================================================
-     */
-
     var rimType by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var dimension by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var brand by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var dot by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var boltPattern by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var offset by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var purchaseMonth by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var purchaseYear by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var price by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var tread by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var condition by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     var storage by remember {
-        mutableStateOf(
-            ""
-        )
+        mutableStateOf("")
     }
 
     val vehicleTires =
         tires.filter {
-            it.vehicle ==
-                activeVehicle
+            it.vehicle == activeVehicle
         }
 
     val summerTire =
-        vehicleTires
-            .lastOrNull {
-                it.season.equals(
-                    "Sommer",
-                    ignoreCase =
-                        true
-                )
-            }
+        vehicleTires.lastOrNull {
+            it.season.equals(
+                "Sommer",
+                ignoreCase = true
+            )
+        }
 
     val winterTire =
-        vehicleTires
-            .lastOrNull {
-                it.season.equals(
-                    "Winter",
-                    ignoreCase =
-                        true
-                )
-            }
-
-    /*
-     * ============================================================
-     * FORMULAR ZURÜCKSETZEN
-     * ============================================================
-     */
+        vehicleTires.lastOrNull {
+            it.season.equals(
+                "Winter",
+                ignoreCase = true
+            )
+        }
 
     fun resetForm() {
-
-        showForm =
-            false
-
-        editingId =
-            null
-
-        season =
-            "Sommer"
-
-        rimType =
-            ""
-
-        dimension =
-            ""
-
-        brand =
-            ""
-
-        dot =
-            ""
-
-        boltPattern =
-            ""
-
-        offset =
-            ""
-
-        purchaseMonth =
-            ""
-
-        purchaseYear =
-            ""
-
-        price =
-            ""
-
-        tread =
-            ""
-
-        condition =
-            ""
-
-        storage =
-            ""
+        showForm = false
+        editingId = null
+        season = "Sommer"
+        rimType = ""
+        dimension = ""
+        brand = ""
+        dot = ""
+        boltPattern = ""
+        offset = ""
+        purchaseMonth = ""
+        purchaseYear = ""
+        price = ""
+        tread = ""
+        condition = ""
+        storage = ""
     }
-
-    /*
-     * ============================================================
-     * NEUEN REIFEN ANLEGEN
-     * ============================================================
-     */
 
     fun startNewTire(
         selectedSeason: String
     ) {
-
-        editingId =
-            null
-
-        season =
-            selectedSeason
-
-        rimType =
-            ""
-
-        dimension =
-            ""
-
-        brand =
-            ""
-
-        dot =
-            ""
-
-        boltPattern =
-            ""
-
-        offset =
-            ""
-
-        purchaseMonth =
-            ""
-
-        purchaseYear =
-            ""
-
-        price =
-            ""
-
-        tread =
-            ""
-
-        condition =
-            ""
-
-        storage =
-            ""
-
-        showForm =
-            true
+        editingId = null
+        season = selectedSeason
+        rimType = ""
+        dimension = ""
+        brand = ""
+        dot = ""
+        boltPattern = ""
+        offset = ""
+        purchaseMonth = ""
+        purchaseYear = ""
+        price = ""
+        tread = ""
+        condition = ""
+        storage = ""
+        showForm = true
     }
-
-    /*
-     * ============================================================
-     * REIFEN BEARBEITEN
-     * ============================================================
-     */
 
     fun editTire(
         tire: TireSet
     ) {
-
-        editingId =
-            tire.id
+        editingId = tire.id
 
         season =
             if (
                 tire.season.equals(
                     "Winter",
-                    ignoreCase =
-                        true
+                    ignoreCase = true
                 )
             ) {
                 "Winter"
@@ -332,57 +207,26 @@ fun TireScreen(
                 "Sommer"
             }
 
-        rimType =
-            tire.rimType
+        rimType = tire.rimType
+        dimension = tire.dimension
+        brand = tire.brand
+        dot = tire.dot
+        boltPattern = tire.boltPattern
+        offset = tire.offset
+        purchaseMonth = tire.purchaseMonth
+        purchaseYear = tire.purchaseYear
+        price = tire.price
+        tread = tire.tread
+        condition = tire.condition
+        storage = tire.storage
 
-        dimension =
-            tire.dimension
-
-        brand =
-            tire.brand
-
-        dot =
-            tire.dot
-
-        boltPattern =
-            tire.boltPattern
-
-        offset =
-            tire.offset
-
-        purchaseMonth =
-            tire.purchaseMonth
-
-        purchaseYear =
-            tire.purchaseYear
-
-        price =
-            tire.price
-
-        tread =
-            tire.tread
-
-        condition =
-            tire.condition
-
-        storage =
-            tire.storage
-
-        showForm =
-            true
+        showForm = true
     }
-
-    /*
-     * ============================================================
-     * REIFEN SPEICHERN
-     * ============================================================
-     */
 
     fun saveCurrentTire() {
 
         val newTire =
             TireSet(
-
                 id =
                     editingId
                         ?: System.currentTimeMillis(),
@@ -431,45 +275,34 @@ fun TireScreen(
             )
 
         val updated =
-            if (
-                editingId != null
-            ) {
+            if (editingId != null) {
 
-                tires.map {
-                    existing ->
+                tires.map { existing ->
 
                     if (
                         existing.id ==
                             editingId
                     ) {
-
                         newTire
-
                     } else {
-
                         existing
                     }
                 }
 
             } else {
 
-                tires
-                    .filterNot {
+                tires.filterNot {
 
-                        it.vehicle ==
-                            activeVehicle &&
-
+                    it.vehicle ==
+                        activeVehicle &&
                         it.season.equals(
                             season,
-                            ignoreCase =
-                                true
+                            ignoreCase = true
                         )
-                    } +
-                    newTire
+                } + newTire
             }
 
-        tires =
-            updated
+        tires = updated
 
         store.saveTires(
             updated
@@ -477,12 +310,6 @@ fun TireScreen(
 
         resetForm()
     }
-
-    /*
-     * ============================================================
-     * HAUPTBEREICH
-     * ============================================================
-     */
 
     Column(
         modifier =
@@ -502,44 +329,22 @@ fun TireScreen(
 
         Spacer(
             modifier =
-                Modifier.height(
-                    10.dp
-                )
+                Modifier.height(10.dp)
         )
 
-        if (
-            vehicles.isEmpty()
-        ) {
-
+        if (vehicles.isEmpty()) {
             return@Column
         }
 
         LazyColumn(
-
             modifier =
-                Modifier.weight(
-                    1f
-                ),
+                Modifier.weight(1f),
 
             verticalArrangement =
-                Arrangement.spacedBy(
-                    12.dp
-                )
+                Arrangement.spacedBy(12.dp)
         ) {
 
-            /*
-             * ========================================================
-             * REIFENKARTEN
-             * ========================================================
-             */
-
-            if (
-                !showForm
-            ) {
-
-                /*
-                 * SOMMERREIFEN
-                 */
+            if (!showForm) {
 
                 item {
 
@@ -554,7 +359,6 @@ fun TireScreen(
                             R.drawable.sommerreifen,
 
                         onAdd = {
-
                             startNewTire(
                                 "Sommer"
                             )
@@ -565,7 +369,6 @@ fun TireScreen(
                             if (
                                 summerTire != null
                             ) {
-
                                 editTire(
                                     summerTire
                                 )
@@ -596,10 +399,6 @@ fun TireScreen(
                     )
                 }
 
-                /*
-                 * WINTERREIFEN
-                 */
-
                 item {
 
                     TireSetCard(
@@ -613,7 +412,6 @@ fun TireScreen(
                             R.drawable.winterreifen,
 
                         onAdd = {
-
                             startNewTire(
                                 "Winter"
                             )
@@ -624,7 +422,6 @@ fun TireScreen(
                             if (
                                 winterTire != null
                             ) {
-
                                 editTire(
                                     winterTire
                                 )
@@ -657,12 +454,6 @@ fun TireScreen(
 
             } else {
 
-                /*
-                 * ====================================================
-                 * FORMULAR
-                 * ====================================================
-                 */
-
                 item {
 
                     TireFormCard(
@@ -671,104 +462,91 @@ fun TireScreen(
                             season,
 
                         onSeasonChanged = {
-                            season =
-                                it
+                            season = it
                         },
 
                         rimType =
                             rimType,
 
                         onRimTypeChanged = {
-                            rimType =
-                                it
+                            rimType = it
                         },
 
                         dimension =
                             dimension,
 
                         onDimensionChanged = {
-                            dimension =
-                                it
+                            dimension = it
                         },
 
                         brand =
                             brand,
 
                         onBrandChanged = {
-                            brand =
-                                it
+                            brand = it
                         },
 
                         dot =
                             dot,
 
                         onDotChanged = {
-                            dot =
-                                it
+                            dot = it
                         },
 
                         boltPattern =
                             boltPattern,
 
                         onBoltPatternChanged = {
-                            boltPattern =
-                                it
+                            boltPattern = it
                         },
 
                         offset =
                             offset,
 
                         onOffsetChanged = {
-                            offset =
-                                it
+                            offset = it
                         },
 
                         purchaseMonth =
                             purchaseMonth,
 
                         onPurchaseMonthChanged = {
-                            purchaseMonth =
-                                it
+                            purchaseMonth = it
                         },
 
                         purchaseYear =
                             purchaseYear,
 
                         onPurchaseYearChanged = {
-                            purchaseYear =
-                                it
+                            purchaseYear = it
                         },
 
                         price =
                             price,
 
                         onPriceChanged = {
-                            price =
-                                it
+                            price = it
                         },
 
                         tread =
                             tread,
 
                         onTreadChanged = {
-                            tread =
-                                it
+                            tread = it
                         },
 
                         condition =
                             condition,
 
                         onConditionChanged = {
-                            condition =
-                                it
+                            condition = it
                         },
 
                         storage =
                             storage,
 
                         onStorageChanged = {
-                            storage =
-                                it
+                            storage = it
                         },
 
                         isEditing =
@@ -786,18 +564,9 @@ fun TireScreen(
             }
         }
 
-        /*
-         * ========================================================
-         * REIFEN HINZUFÜGEN
-         * ========================================================
-         */
-
-        if (
-            !showForm
-        ) {
+        if (!showForm) {
 
             Button(
-
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -806,13 +575,11 @@ fun TireScreen(
                         ),
 
                 onClick = {
-
                     startNewTire(
                         "Sommer"
                     )
                 }
             ) {
-
                 Text(
                     "Reifen bearbeiten / hinzufügen"
                 )
@@ -821,91 +588,53 @@ fun TireScreen(
     }
 }
 
-/*
- * ================================================================
- * REIFENKARTE
- * ================================================================
- */
-
 @Composable
 private fun TireSetCard(
-    title:
-        String,
-
-    tire:
-        TireSet?,
-
-    imageRes:
-        Int,
-
-    onAdd:
-        () -> Unit,
-
-    onEdit:
-        () -> Unit,
-
-    onDelete:
-        () -> Unit
+    title: String,
+    tire: TireSet?,
+    imageRes: Int,
+    onAdd: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
 
-    /*
-     * NEU:
-     * Menü wird erst geöffnet, wenn der extra Button
-     * gedrückt wird.
-     */
     var menuExpanded by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
     }
 
     Card(
-
         modifier =
             Modifier.fillMaxWidth(),
 
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color(
-                        0xFF11141A
-                    )
+                    Color(0xFF11141A)
             )
     ) {
 
         Row(
-
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(
-                        12.dp
-                    ),
+                    .padding(12.dp),
 
             horizontalArrangement =
-                Arrangement.spacedBy(
-                    12.dp
-                ),
+                Arrangement.spacedBy(12.dp),
 
             verticalAlignment =
                 Alignment.Top
         ) {
 
             Column(
-
                 modifier =
-                    Modifier.weight(
-                        1f
-                    ),
+                    Modifier.weight(1f),
 
                 verticalArrangement =
-                    Arrangement.spacedBy(
-                        6.dp
-                    )
+                    Arrangement.spacedBy(6.dp)
             ) {
 
                 Text(
-
                     text =
                         title,
 
@@ -919,59 +648,30 @@ private fun TireSetCard(
                         if (
                             title.equals(
                                 "Sommerreifen",
-                                ignoreCase =
-                                    true
+                                ignoreCase = true
                             )
                         ) {
-
-                            Color(
-                                0xFF4CAF50
-                            )
-
-                        } else if (
-                            title.equals(
-                                "Winterreifen",
-                                ignoreCase =
-                                    true
-                            )
-                        ) {
-
-                            Color(
-                                0xFF4A90E2
-                            )
-
+                            Color(0xFF4CAF50)
                         } else {
-
-                            Color.White
+                            Color(0xFF64B5F6)
                         }
                 )
 
-                if (
-                    tire == null
-                ) {
+                if (tire == null) {
 
                     Text(
-
-                        "Noch keine Daten gespeichert.",
-
-                        color =
-                            Color(
-                                0xFFB8BEC8
-                            )
+                        "Noch keine Daten gespeichert."
                     )
 
                     Spacer(
                         modifier =
-                            Modifier.height(
-                                4.dp
-                            )
+                            Modifier.height(4.dp)
                     )
 
                     OutlinedButton(
                         onClick =
                             onAdd
                     ) {
-
                         Text(
                             "Daten hinzufügen"
                         )
@@ -979,14 +679,7 @@ private fun TireSetCard(
 
                 } else {
 
-                    /*
-                     * ==================================================
-                     * FELGENART
-                     * ==================================================
-                     */
-
                     TireDataLine(
-
                         label =
                             "Felgenart",
 
@@ -994,14 +687,7 @@ private fun TireSetCard(
                             tire.rimType
                     )
 
-                    /*
-                     * ==================================================
-                     * REIFENGRÖSSE
-                     * ==================================================
-                     */
-
                     TireDataLine(
-
                         label =
                             "Größe",
 
@@ -1010,7 +696,6 @@ private fun TireSetCard(
                     )
 
                     TireDataLine(
-
                         label =
                             "DOT",
 
@@ -1019,7 +704,6 @@ private fun TireSetCard(
                     )
 
                     TireDataLine(
-
                         label =
                             "Lochkreis",
 
@@ -1028,7 +712,6 @@ private fun TireSetCard(
                     )
 
                     TireDataLine(
-
                         label =
                             "Einpresstiefe",
 
@@ -1037,7 +720,6 @@ private fun TireSetCard(
                     )
 
                     TireDataLine(
-
                         label =
                             "Gekauft",
 
@@ -1049,7 +731,6 @@ private fun TireSetCard(
                     )
 
                     TireDataLine(
-
                         label =
                             "Preis",
 
@@ -1062,7 +743,6 @@ private fun TireSetCard(
                     ) {
 
                         TireDataLine(
-
                             label =
                                 "Marke",
 
@@ -1076,7 +756,6 @@ private fun TireSetCard(
                     ) {
 
                         TireDataLine(
-
                             label =
                                 "Profiltiefe",
 
@@ -1090,7 +769,6 @@ private fun TireSetCard(
                     ) {
 
                         TireDataLine(
-
                             label =
                                 "Zustand",
 
@@ -1104,7 +782,6 @@ private fun TireSetCard(
                     ) {
 
                         TireDataLine(
-
                             label =
                                 "Lagerung",
 
@@ -1115,59 +792,31 @@ private fun TireSetCard(
 
                     Spacer(
                         modifier =
-                            Modifier.height(
-                                4.dp
-                            )
+                            Modifier.height(4.dp)
                     )
-
-                    /*
-                     * ==================================================
-                     * SICHERES BEARBEITEN / LÖSCHEN MENÜ
-                     * ==================================================
-                     *
-                     * Früher waren hier zwei direkt anklickbare
-                     * Buttons:
-                     *
-                     * Ändern | Löschen
-                     *
-                     * Jetzt gibt es nur noch einen Button.
-                     * Erst nach dem Öffnen erscheint das Menü.
-                     */
 
                     Box {
 
                         OutlinedButton(
-
                             onClick = {
-
-                                menuExpanded =
-                                    true
+                                menuExpanded = true
                             }
                         ) {
-
                             Text(
                                 "☰  Bearbeiten / Löschen"
                             )
                         }
 
                         DropdownMenu(
-
                             expanded =
                                 menuExpanded,
 
                             onDismissRequest = {
-
-                                menuExpanded =
-                                    false
+                                menuExpanded = false
                             }
                         ) {
 
-                            /*
-                             * BEARBEITEN
-                             */
-
                             DropdownMenuItem(
-
                                 text = {
                                     Text(
                                         "Bearbeiten"
@@ -1183,12 +832,7 @@ private fun TireSetCard(
                                 }
                             )
 
-                            /*
-                             * LÖSCHEN
-                             */
-
                             DropdownMenuItem(
-
                                 text = {
                                     Text(
                                         "Löschen"
@@ -1209,7 +853,6 @@ private fun TireSetCard(
             }
 
             Image(
-
                 painter =
                     painterResource(
                         id =
@@ -1235,24 +878,13 @@ private fun TireSetCard(
     }
 }
 
-/*
- * ================================================================
- * DATENZEILE
- * ================================================================
- */
-
 @Composable
 private fun TireDataLine(
-    label:
-        String,
-
-    value:
-        String
+    label: String,
+    value: String
 ) {
 
-    if (
-        value.isBlank()
-    ) {
+    if (value.isBlank()) {
         return
     }
 
@@ -1262,7 +894,6 @@ private fun TireDataLine(
     ) {
 
         Text(
-
             text =
                 "$label: ",
 
@@ -1277,176 +908,103 @@ private fun TireDataLine(
     }
 }
 
-/*
- * ================================================================
- * KAUFDATUM
- * ================================================================
- */
-
 private fun purchaseDisplay(
-    month:
-        String,
-
-    year:
-        String
+    month: String,
+    year: String
 ): String {
 
     return when {
 
         month.isNotBlank() &&
-            year.isNotBlank() ->
-
+            year.isNotBlank() -> {
             "$month/$year"
+        }
 
-        year.isNotBlank() ->
-
+        year.isNotBlank() -> {
             year
+        }
 
-        month.isNotBlank() ->
-
+        month.isNotBlank() -> {
             month
+        }
 
-        else ->
-
+        else -> {
             ""
+        }
     }
 }
 
-/*
- * ================================================================
- * REIFEN-FORMULAR
- * ================================================================
- */
-
 @Composable
 private fun TireFormCard(
+    season: String,
+    onSeasonChanged: (String) -> Unit,
 
-    season:
-        String,
+    rimType: String,
+    onRimTypeChanged: (String) -> Unit,
 
-    onSeasonChanged:
-        (String) -> Unit,
+    dimension: String,
+    onDimensionChanged: (String) -> Unit,
 
-    rimType:
-        String,
+    brand: String,
+    onBrandChanged: (String) -> Unit,
 
-    onRimTypeChanged:
-        (String) -> Unit,
+    dot: String,
+    onDotChanged: (String) -> Unit,
 
-    dimension:
-        String,
+    boltPattern: String,
+    onBoltPatternChanged: (String) -> Unit,
 
-    onDimensionChanged:
-        (String) -> Unit,
+    offset: String,
+    onOffsetChanged: (String) -> Unit,
 
-    brand:
-        String,
+    purchaseMonth: String,
+    onPurchaseMonthChanged: (String) -> Unit,
 
-    onBrandChanged:
-        (String) -> Unit,
+    purchaseYear: String,
+    onPurchaseYearChanged: (String) -> Unit,
 
-    dot:
-        String,
+    price: String,
+    onPriceChanged: (String) -> Unit,
 
-    onDotChanged:
-        (String) -> Unit,
+    tread: String,
+    onTreadChanged: (String) -> Unit,
 
-    boltPattern:
-        String,
+    condition: String,
+    onConditionChanged: (String) -> Unit,
 
-    onBoltPatternChanged:
-        (String) -> Unit,
+    storage: String,
+    onStorageChanged: (String) -> Unit,
 
-    offset:
-        String,
+    isEditing: Boolean,
 
-    onOffsetChanged:
-        (String) -> Unit,
-
-    purchaseMonth:
-        String,
-
-    onPurchaseMonthChanged:
-        (String) -> Unit,
-
-    purchaseYear:
-        String,
-
-    onPurchaseYearChanged:
-        (String) -> Unit,
-
-    price:
-        String,
-
-    onPriceChanged:
-        (String) -> Unit,
-
-    tread:
-        String,
-
-    onTreadChanged:
-        (String) -> Unit,
-
-    condition:
-        String,
-
-    onConditionChanged:
-        (String) -> Unit,
-
-    storage:
-        String,
-
-    onStorageChanged:
-        (String) -> Unit,
-
-    isEditing:
-        Boolean,
-
-    onSave:
-        () -> Unit,
-
-    onCancel:
-        () -> Unit
+    onSave: () -> Unit,
+    onCancel: () -> Unit
 ) {
 
     Card(
-
         modifier =
             Modifier.fillMaxWidth(),
 
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    Color(
-                        0xFF11141A
-                    )
+                    Color(0xFF11141A)
             )
     ) {
 
         Column(
-
             modifier =
-                Modifier.padding(
-                    16.dp
-                ),
+                Modifier.padding(16.dp),
 
             verticalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
+                Arrangement.spacedBy(10.dp)
         ) {
 
             Text(
-
                 text =
-                    if (
-                        isEditing
-                    ) {
-
+                    if (isEditing) {
                         "Reifen ändern"
-
                     } else {
-
                         "Reifen hinzufügen"
                     },
 
@@ -1457,18 +1015,11 @@ private fun TireFormCard(
                     FontWeight.Bold
             )
 
-            /*
-             * ==================================================
-             * REIFENTYP
-             * ==================================================
-             */
-
             Text(
                 "Reifentyp"
             )
 
             TireSeasonDropdown(
-
                 season =
                     season,
 
@@ -1476,18 +1027,11 @@ private fun TireFormCard(
                     onSeasonChanged
             )
 
-            /*
-             * ==================================================
-             * FELGENART
-             * ==================================================
-             */
-
             Text(
                 "Felgenart"
             )
 
             TireRimTypeDropdown(
-
                 rimType =
                     rimType,
 
@@ -1495,14 +1039,7 @@ private fun TireFormCard(
                     onRimTypeChanged
             )
 
-            /*
-             * ==================================================
-             * REIFENGRÖSSE
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Größe",
 
@@ -1516,14 +1053,7 @@ private fun TireFormCard(
                     onDimensionChanged
             )
 
-            /*
-             * ==================================================
-             * MARKE
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Marke",
 
@@ -1537,14 +1067,7 @@ private fun TireFormCard(
                     onBrandChanged
             )
 
-            /*
-             * ==================================================
-             * DOT
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "DOT",
 
@@ -1558,14 +1081,7 @@ private fun TireFormCard(
                     onDotChanged
             )
 
-            /*
-             * ==================================================
-             * LOCHKREIS
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Lochkreis",
 
@@ -1579,14 +1095,7 @@ private fun TireFormCard(
                     onBoltPatternChanged
             )
 
-            /*
-             * ==================================================
-             * EINPRESSTIEFE
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Einpresstiefe",
 
@@ -1600,33 +1109,21 @@ private fun TireFormCard(
                     onOffsetChanged
             )
 
-            /*
-             * ==================================================
-             * GEKAUFT
-             * ==================================================
-             */
-
             Text(
                 "Gekauft"
             )
 
             Row(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
+                    Arrangement.spacedBy(8.dp)
             ) {
 
                 TireMonthDropdown(
-
                     modifier =
-                        Modifier.weight(
-                            1f
-                        ),
+                        Modifier.weight(1f),
 
                     month =
                         purchaseMonth,
@@ -1636,29 +1133,22 @@ private fun TireFormCard(
                 )
 
                 OutlinedTextField(
-
                     value =
                         purchaseYear,
 
-                    onValueChange = {
-                        value ->
+                    onValueChange = { value ->
 
                         onPurchaseYearChanged(
-
                             value
                                 .filter {
                                     it.isDigit()
                                 }
-                                .take(
-                                    4
-                                )
+                                .take(4)
                         )
                     },
 
                     modifier =
-                        Modifier.weight(
-                            1f
-                        ),
+                        Modifier.weight(1f),
 
                     label = {
                         Text(
@@ -1677,14 +1167,7 @@ private fun TireFormCard(
                 )
             }
 
-            /*
-             * ==================================================
-             * PREIS
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Preis",
 
@@ -1698,14 +1181,7 @@ private fun TireFormCard(
                     onPriceChanged
             )
 
-            /*
-             * ==================================================
-             * PROFILTIEFE
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Profiltiefe",
 
@@ -1719,14 +1195,7 @@ private fun TireFormCard(
                     onTreadChanged
             )
 
-            /*
-             * ==================================================
-             * ZUSTAND
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Zustand",
 
@@ -1740,14 +1209,7 @@ private fun TireFormCard(
                     onConditionChanged
             )
 
-            /*
-             * ==================================================
-             * LAGERUNG
-             * ==================================================
-             */
-
             TireTextField(
-
                 label =
                     "Lagerung",
 
@@ -1761,29 +1223,17 @@ private fun TireFormCard(
                     onStorageChanged
             )
 
-            /*
-             * ==================================================
-             * ABBRECHEN / SPEICHERN
-             * ==================================================
-             */
-
             Row(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
+                    Arrangement.spacedBy(8.dp)
             ) {
 
                 OutlinedButton(
-
                     modifier =
-                        Modifier.weight(
-                            1f
-                        ),
+                        Modifier.weight(1f),
 
                     onClick =
                         onCancel
@@ -1795,26 +1245,17 @@ private fun TireFormCard(
                 }
 
                 Button(
-
                     modifier =
-                        Modifier.weight(
-                            1f
-                        ),
+                        Modifier.weight(1f),
 
                     onClick =
                         onSave
                 ) {
 
                     Text(
-
-                        if (
-                            isEditing
-                        ) {
-
+                        if (isEditing) {
                             "Änderung speichern"
-
                         } else {
-
                             "Speichern"
                         }
                     )
@@ -1824,30 +1265,15 @@ private fun TireFormCard(
     }
 }
 
-/*
- * ================================================================
- * TEXTFELD
- * ================================================================
- */
-
 @Composable
 private fun TireTextField(
-
-    label:
-        String,
-
-    value:
-        String,
-
-    placeholder:
-        String,
-
-    onValueChanged:
-        (String) -> Unit
+    label: String,
+    value: String,
+    placeholder: String,
+    onValueChanged: (String) -> Unit
 ) {
 
     OutlinedTextField(
-
         value =
             value,
 
@@ -1874,26 +1300,14 @@ private fun TireTextField(
     )
 }
 
-/*
- * ================================================================
- * REIFENTYP AUSWAHL
- * ================================================================
- */
-
 @Composable
 private fun TireSeasonDropdown(
-
-    season:
-        String,
-
-    onSeasonChanged:
-        (String) -> Unit
+    season: String,
+    onSeasonChanged: (String) -> Unit
 ) {
 
     var expanded by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
     }
 
     Box(
@@ -1902,13 +1316,11 @@ private fun TireSeasonDropdown(
     ) {
 
         OutlinedButton(
-
             modifier =
                 Modifier.fillMaxWidth(),
 
             onClick = {
-                expanded =
-                    true
+                expanded = true
             }
         ) {
 
@@ -1918,21 +1330,17 @@ private fun TireSeasonDropdown(
         }
 
         DropdownMenu(
-
             expanded =
                 expanded,
 
             onDismissRequest = {
-                expanded =
-                    false
+                expanded = false
             }
         ) {
 
-            tireSeasons.forEach {
-                option ->
+            tireSeasons.forEach { option ->
 
                 DropdownMenuItem(
-
                     text = {
                         Text(
                             option
@@ -1945,8 +1353,7 @@ private fun TireSeasonDropdown(
                             option
                         )
 
-                        expanded =
-                            false
+                        expanded = false
                     }
                 )
             }
@@ -1954,26 +1361,14 @@ private fun TireSeasonDropdown(
     }
 }
 
-/*
- * ================================================================
- * FELGENART AUSWAHL
- * ================================================================
- */
-
 @Composable
 private fun TireRimTypeDropdown(
-
-    rimType:
-        String,
-
-    onRimTypeChanged:
-        (String) -> Unit
+    rimType: String,
+    onRimTypeChanged: (String) -> Unit
 ) {
 
     var expanded by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
     }
 
     Box(
@@ -1982,86 +1377,64 @@ private fun TireRimTypeDropdown(
     ) {
 
         OutlinedButton(
-
             modifier =
-    Modifier.fillMaxWidth(),
-
-onClick = {
-    expanded =
-        true
-}
-) {
-
-    Text(
-        if (
-            rimType.isBlank()
-        ) {
-            "Felgenart auswählen"
-        } else {
-            rimType
-        }
-    )
-}
-
-DropdownMenu(
-
-    expanded =
-        expanded,
-
-    onDismissRequest = {
-        expanded =
-            false
-    }
-) {
-
-    tireRimTypes.forEach {
-        option ->
-
-        DropdownMenuItem(
-
-            text = {
-                Text(
-                    option
-                )
-            },
+                Modifier.fillMaxWidth(),
 
             onClick = {
-
-                onRimTypeChanged(
-                    option
-                )
-
-                expanded =
-                    false
+                expanded = true
             }
-        )
+        ) {
+
+            Text(
+                if (rimType.isBlank()) {
+                    "Felgenart auswählen"
+                } else {
+                    rimType
+                }
+            )
+        }
+
+        DropdownMenu(
+            expanded =
+                expanded,
+
+            onDismissRequest = {
+                expanded = false
+            }
+        ) {
+
+            tireRimTypes.forEach { option ->
+
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            option
+                        )
+                    },
+
+                    onClick = {
+
+                        onRimTypeChanged(
+                            option
+                        )
+
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
-}
-
-/*
- * ================================================================
- * KAUFMONAT AUSWAHL
- * ================================================================
- */
 
 @Composable
 private fun TireMonthDropdown(
-
-    modifier:
-        Modifier = Modifier,
-
-    month:
-        String,
-
-    onMonthChanged:
-        (String) -> Unit
+    modifier: Modifier = Modifier,
+    month: String,
+    onMonthChanged: (String) -> Unit
 ) {
 
     var expanded by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
     }
 
     Box(
@@ -2070,46 +1443,35 @@ private fun TireMonthDropdown(
     ) {
 
         OutlinedButton(
-
             modifier =
                 Modifier.fillMaxWidth(),
 
             onClick = {
-                expanded =
-                    true
+                expanded = true
             }
         ) {
 
             Text(
-                if (
-                    month.isBlank()
-                ) {
-
+                if (month.isBlank()) {
                     "Monat"
-
                 } else {
-
                     month
                 }
             )
         }
 
         DropdownMenu(
-
             expanded =
                 expanded,
 
             onDismissRequest = {
-                expanded =
-                    false
+                expanded = false
             }
         ) {
 
-            tireMonths.forEach {
-                option ->
+            tireMonths.forEach { option ->
 
                 DropdownMenuItem(
-
                     text = {
                         Text(
                             option
@@ -2119,14 +1481,3 @@ private fun TireMonthDropdown(
                     onClick = {
 
                         onMonthChanged(
-                            option
-                        )
-
-                        expanded =
-                            false
-                    }
-                )
-            }
-        }
-    }
-}
