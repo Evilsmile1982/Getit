@@ -169,9 +169,7 @@ fun HomeScreen(
                 ),
 
         verticalArrangement =
-            Arrangement.spacedBy(
-                14.dp
-            )
+            Arrangement.Center
     ) {
 
         item {
