@@ -1984,9 +1984,6 @@ private fun TireRimTypeDropdown(
         OutlinedButton(
 
             modifier =
-                Modifier.fill
-
-            modifier =
     Modifier.fillMaxWidth(),
 
 onClick = {
