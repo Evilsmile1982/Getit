@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -174,26 +175,47 @@ fun HomeScreen(
 
         item {
 
-            Image(
+            AnimatedVisibility(
 
-                painter =
-                    painterResource(
-                        R.drawable.bild_4
-                    ),
+                visible =
+                    visible,
 
-                contentDescription =
-                    "AutoCheck",
+                enter =
+                    slideInVertically(
 
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(
-                            72.dp
+                        animationSpec =
+                            tween(
+                                2000
+                            ),
+
+                        initialOffsetY = {
+                            fullHeight ->
+                            -fullHeight
+                        }
+                    )
+            ) {
+
+                Image(
+
+                    painter =
+                        painterResource(
+                            R.drawable.bild_4
                         ),
 
-                contentScale =
-                    ContentScale.Fit
-            )
+                    contentDescription =
+                        "AutoCheck",
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                72.dp
+                            ),
+
+                    contentScale =
+                        ContentScale.Fit
+                )
+            }
         }
 
         item {
@@ -276,7 +298,7 @@ fun HomeScreen(
 
                                 animationSpec =
                                     tween(
-                                        2500
+                                        2000
                                     ),
 
                                 initialOffsetX = {
