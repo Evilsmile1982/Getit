@@ -31,6 +31,5 @@ data class Vehicle(
     val imageUri: String = "",
 
     // Kaufpreis
-    // Wird in der Oberfläche standardmäßig verborgen angezeigt.
     val purchasePrice: String = ""
 )
