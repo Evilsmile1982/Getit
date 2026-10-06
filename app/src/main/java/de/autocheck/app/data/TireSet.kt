@@ -4,6 +4,11 @@ data class TireSet(
     val id: Long,
     val vehicle: String,
     val season: String,
+
+    // Felgenart:
+    // "Alufelgen" oder "Stahlfelgen"
+    val rimType: String = "",
+
     val dimension: String,
     val brand: String,
     val dot: String,
@@ -11,7 +16,7 @@ data class TireSet(
     val condition: String,
     val storage: String,
 
-    // Neue Angaben für den Reifenbereich
+    // Weitere Angaben für den Reifenbereich
     val boltPattern: String = "",
     val offset: String = "",
     val purchaseMonth: String = "",
