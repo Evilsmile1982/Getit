@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -332,14 +331,6 @@ fun TireScreen(
             } else {
                 "Sommer"
             }
-
-        /*
-         * Felgenart aus dem gespeicherten
-         * Reifen laden.
-         *
-         * Alte Reifen ohne dieses Feld
-         * bleiben einfach leer.
-         */
 
         rimType =
             tire.rimType
@@ -684,11 +675,6 @@ fun TireScreen(
                                 it
                         },
 
-                        /*
-                         * NEU:
-                         * FELGENART
-                         */
-
                         rimType =
                             rimType,
 
@@ -862,6 +848,17 @@ private fun TireSetCard(
         () -> Unit
 ) {
 
+    /*
+     * NEU:
+     * Menü wird erst geöffnet, wenn der extra Button
+     * gedrückt wird.
+     */
+    var menuExpanded by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
     Card(
 
         modifier =
@@ -986,12 +983,6 @@ private fun TireSetCard(
                      * ==================================================
                      * FELGENART
                      * ==================================================
-                     *
-                     * Wird nur angezeigt, wenn ein Wert
-                     * gespeichert wurde.
-                     *
-                     * Alte Reifen ohne Felgenart
-                     * bleiben damit kompatibel.
                      */
 
                     TireDataLine(
@@ -1129,31 +1120,88 @@ private fun TireSetCard(
                             )
                     )
 
-                    Row(
+                    /*
+                     * ==================================================
+                     * SICHERES BEARBEITEN / LÖSCHEN MENÜ
+                     * ==================================================
+                     *
+                     * Früher waren hier zwei direkt anklickbare
+                     * Buttons:
+                     *
+                     * Ändern | Löschen
+                     *
+                     * Jetzt gibt es nur noch einen Button.
+                     * Erst nach dem Öffnen erscheint das Menü.
+                     */
 
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                6.dp
-                            )
-                    ) {
+                    Box {
 
                         OutlinedButton(
-                            onClick =
-                                onEdit
+
+                            onClick = {
+
+                                menuExpanded =
+                                    true
+                            }
                         ) {
 
                             Text(
-                                "Ändern"
+                                "☰  Bearbeiten / Löschen"
                             )
                         }
 
-                        OutlinedButton(
-                            onClick =
-                                onDelete
+                        DropdownMenu(
+
+                            expanded =
+                                menuExpanded,
+
+                            onDismissRequest = {
+
+                                menuExpanded =
+                                    false
+                            }
                         ) {
 
-                            Text(
-                                "Löschen"
+                            /*
+                             * BEARBEITEN
+                             */
+
+                            DropdownMenuItem(
+
+                                text = {
+                                    Text(
+                                        "Bearbeiten"
+                                    )
+                                },
+
+                                onClick = {
+
+                                    menuExpanded =
+                                        false
+
+                                    onEdit()
+                                }
+                            )
+
+                            /*
+                             * LÖSCHEN
+                             */
+
+                            DropdownMenuItem(
+
+                                text = {
+                                    Text(
+                                        "Löschen"
+                                    )
+                                },
+
+                                onClick = {
+
+                                    menuExpanded =
+                                        false
+
+                                    onDelete()
+                                }
                             )
                         }
                     }
@@ -1278,11 +1326,6 @@ private fun TireFormCard(
 
     onSeasonChanged:
         (String) -> Unit,
-
-    /*
-     * NEU:
-     * FELGENART
-     */
 
     rimType:
         String,
@@ -1435,10 +1478,8 @@ private fun TireFormCard(
 
             /*
              * ==================================================
-             * NEU: FELGENART
+             * FELGENART
              * ==================================================
-             *
-             * Steht absichtlich VOR der Reifengröße.
              */
 
             Text(
@@ -1943,155 +1984,4 @@ private fun TireRimTypeDropdown(
         OutlinedButton(
 
             modifier =
-                Modifier.fillMaxWidth(),
-
-            onClick = {
-                expanded =
-                    true
-            }
-        ) {
-
-            Text(
-
-                if (
-                    rimType.isBlank()
-                ) {
-
-                    "Felgenart auswählen"
-
-                } else {
-
-                    rimType
-                }
-            )
-        }
-
-        DropdownMenu(
-
-            expanded =
-                expanded,
-
-            onDismissRequest = {
-                expanded =
-                    false
-            }
-        ) {
-
-            tireRimTypes.forEach {
-                option ->
-
-                DropdownMenuItem(
-
-                    text = {
-                        Text(
-                            option
-                        )
-                    },
-
-                    onClick = {
-
-                        onRimTypeChanged(
-                            option
-                        )
-
-                        expanded =
-                            false
-                    }
-                )
-            }
-        }
-    }
-}
-
-/*
- * ================================================================
- * MONAT AUSWAHL
- * ================================================================
- */
-
-@Composable
-private fun TireMonthDropdown(
-
-    modifier:
-        Modifier,
-
-    month:
-        String,
-
-    onMonthChanged:
-        (String) -> Unit
-) {
-
-    var expanded by remember {
-        mutableStateOf(
-            false
-        )
-    }
-
-    Box(
-        modifier =
-            modifier
-    ) {
-
-        OutlinedButton(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            onClick = {
-                expanded =
-                    true
-            }
-        ) {
-
-            Text(
-
-                if (
-                    month.isBlank()
-                ) {
-
-                    "Monat"
-
-                } else {
-
-                    month
-                }
-            )
-        }
-
-        DropdownMenu(
-
-            expanded =
-                expanded,
-
-            onDismissRequest = {
-                expanded =
-                    false
-            }
-        ) {
-
-            tireMonths.forEach {
-                option ->
-
-                DropdownMenuItem(
-
-                    text = {
-                        Text(
-                            option
-                        )
-                    },
-
-                    onClick = {
-
-                        onMonthChanged(
-                            option
-                        )
-
-                        expanded =
-                            false
-                    }
-                )
-            }
-        }
-    }
-}
+                Modifier.fill
