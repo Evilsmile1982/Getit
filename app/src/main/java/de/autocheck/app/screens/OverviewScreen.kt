@@ -1,6 +1,5 @@
 package de.autocheck.app
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,14 +7,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.Text
+import androidx.compose.material3.CardForm
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +25,7 @@ private val overviewPickerlFormatter =
         "MM/yyyy"
     )
 
-private fun overviewPickerlMonthYear(
+private fun formatPickerlMonthYear(
     value: String
 ): String {
 
@@ -55,7 +51,12 @@ private fun overviewPickerlMonthYear(
         try {
 
             LocalDate
-                .parse(text.substring(0, 10))
+                .parse(
+                    text.substring(
+                        0,
+                        10
+                    )
+                )
                 .format(
                     overviewPickerlFormatter
                 )
@@ -64,95 +65,6 @@ private fun overviewPickerlMonthYear(
 
             "nicht eingetragen"
         }
-    }
-}
-
-private fun overviewPickerlText(
-    lastDate: String?,
-    nextDate: String?
-): AnnotatedString {
-
-    val ab =
-        overviewPickerlMonthYear(
-            lastDate ?: ""
-        )
-
-    val bis =
-        overviewPickerlMonthYear(
-            nextDate ?: ""
-        )
-
-    return buildAnnotatedString {
-
-        append(
-            "Nächste Überprüfung"
-        )
-
-        addStyle(
-            style =
-                SpanStyle(
-                    color =
-                        Color(
-                            0xFFB05CFF
-                        ),
-                    fontWeight =
-                        FontWeight.Bold
-                ),
-            start = 0,
-            end =
-                "Nächste Überprüfung"
-                    .length
-        )
-
-        append(
-            " ab "
-        )
-
-        val abStart =
-            length
-
-        append(
-            ab
-        )
-
-        addStyle(
-            style =
-                SpanStyle(
-                    color =
-                        Color(
-                            0xFF4CAF50
-                        )
-                ),
-            start =
-                abStart,
-            end =
-                length
-        )
-
-        append(
-            " bis "
-        )
-
-        val bisStart =
-            length
-
-        append(
-            bis
-        )
-
-        addStyle(
-            style =
-                SpanStyle(
-                    color =
-                        Color(
-                            0xFFF44336
-                        )
-                ),
-            start =
-                bisStart,
-            end =
-                length
-        )
     }
 }
 
@@ -165,9 +77,7 @@ fun OverviewScreen(
     onVisited: () -> Unit
 ) {
 
-    LaunchedEffect(
-        Unit
-    ) {
+    LaunchedEffect(Unit) {
         onVisited()
     }
 
@@ -206,26 +116,19 @@ fun OverviewScreen(
             }
 
     Column(
-        modifier =
-            Modifier.fillMaxSize()
+        Modifier.fillMaxSize()
     ) {
 
         VehicleSelector(
-            vehicles =
-                vehicles,
-
-            activeVehicle =
-                activeVehicle,
-
-            onSelected =
-                onActiveVehicle
+            vehicles,
+            activeVehicle,
+            onActiveVehicle
         )
 
         Spacer(
-            modifier =
-                Modifier.height(
-                    10.dp
-                )
+            Modifier.height(
+                10.dp
+            )
         )
 
         if (
@@ -254,10 +157,9 @@ fun OverviewScreen(
 
                 CardForm {
 
-                    Text(
+                    androidx.compose.material3.Text(
 
-                        text =
-                            vehicle.name,
+                        vehicle.name,
 
                         color =
                             Color.White,
@@ -269,11 +171,10 @@ fun OverviewScreen(
                             FontWeight.Bold
                     )
 
-                    Text(
+                    androidx.compose.material3.Text(
 
-                        text =
-                            "${vehicle.make} ${vehicle.model} ${vehicle.year}"
-                                .trim(),
+                        "${vehicle.make} ${vehicle.model} ${vehicle.year}"
+                            .trim(),
 
                         color =
                             Muted
@@ -284,10 +185,9 @@ fun OverviewScreen(
                             .isNotBlank()
                     ) {
 
-                        Text(
+                        androidx.compose.material3.Text(
 
-                            text =
-                                "Kennzeichen: ${vehicle.plate}",
+                            "Kennzeichen: ${vehicle.plate}",
 
                             color =
                                 Color.White
@@ -299,10 +199,9 @@ fun OverviewScreen(
                             .isNotBlank()
                     ) {
 
-                        Text(
+                        androidx.compose.material3.Text(
 
-                            text =
-                                "FIN/VIN: ${vehicle.vin}",
+                            "FIN/VIN: ${vehicle.vin}",
 
                             color =
                                 Color.White
@@ -310,48 +209,99 @@ fun OverviewScreen(
                     }
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                8.dp
+                        Modifier.height(
+                            8.dp
+                        )
+                    )
+
+                    androidx.compose.material3.Text(
+                        "Reparaturen: $repairs",
+                        color =
+                            Color.White
+                    )
+
+                    androidx.compose.material3.Text(
+                        "Wartungen: $maintenance",
+                        color =
+                            Color.White
+                    )
+
+                    androidx.compose.material3.Text(
+                        "Reifensätze: $tires",
+                        color =
+                            Color.White
+                    )
+
+                    val pickerText =
+                        buildAnnotatedString {
+
+                            val title =
+                                "Nächste Überprüfung"
+
+                            append(
+                                title
                             )
-                    )
 
-                    Text(
+                            addStyle(
 
-                        text =
-                            "Reparaturen: $repairs",
+                                style =
+                                    SpanStyle(
 
-                        color =
-                            Color.White
-                    )
+                                        color =
+                                            Color(
+                                                0xFFB05CFF
+                                            ),
 
-                    Text(
+                                        fontWeight =
+                                            FontWeight.Bold
+                                    ),
 
-                        text =
-                            "Wartungen: $maintenance",
+                                start =
+                                    0,
 
-                        color =
-                            Color.White
-                    )
-
-                    Text(
-
-                        text =
-                            "Reifensätze: $tires",
-
-                        color =
-                            Color.White
-                    )
-
-                    Text(
-
-                        text =
-                            overviewPickerlText(
-                                lastDate =
-                                    pickerl?.lastDate,
-                                nextDate =
-                                    pickerl?.nextDate
+                                end =
+                                    title.length
                             )
+
+                            append(
+                                " bis "
+                            )
+
+                            val dateStart =
+                                length
+
+                            append(
+
+                                formatPickerlMonthYear(
+
+                                    pickerl
+                                        ?.nextDate
+                                        ?: ""
+                                )
+                            )
+
+                            addStyle(
+
+                                style =
+                                    SpanStyle(
+
+                                        color =
+                                            Color(
+                                                0xFFF44336
+                                            )
+                                    ),
+
+                                start =
+                                    dateStart,
+
+                                end =
+                                    length
+                            )
+                        }
+
+                    androidx.compose.material3.Text(
+                        text =
+                            pickerText
                     )
                 }
             }
