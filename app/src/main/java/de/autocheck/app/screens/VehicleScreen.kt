@@ -15,16 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -118,8 +113,13 @@ fun VehicleScreen(
         mutableStateOf(false)
     }
 
-    // Welche Kaufpreise in der Fahrzeugliste sichtbar sind.
-    // Standardmäßig ist jeder Kaufpreis verborgen.
+    /*
+     * Kaufpreise in der Fahrzeugliste.
+     *
+     * Standardmäßig ist kein Kaufpreis sichtbar.
+     * Durch Antippen des Auges kann der Preis
+     * für das jeweilige Fahrzeug angezeigt werden.
+     */
     var revealedPurchasePriceIds by remember {
         mutableStateOf(setOf<String>())
     }
@@ -411,15 +411,6 @@ fun VehicleScreen(
                                  * ==================================================
                                  * KAUFPREIS
                                  * ==================================================
-                                 *
-                                 * Der Kaufpreis wird grundsätzlich
-                                 * mit Sternchen angezeigt.
-                                 *
-                                 * Antippen des Auges:
-                                 *   ******** €  ->  12.500 € 
-                                 *
-                                 * Erneutes Antippen:
-                                 *   12.500 €   ->  ******** €
                                  */
 
                                 Row(
@@ -433,13 +424,13 @@ fun VehicleScreen(
                                             Color(0xFFB8BEC8)
                                     )
 
-                                    val purchasePriceVisibleInList =
+                                    val priceVisible =
                                         revealedPurchasePriceIds
                                             .contains(vehicle.id)
 
                                     Text(
                                         if (
-                                            purchasePriceVisibleInList &&
+                                            priceVisible &&
                                             vehicle.purchasePrice.isNotBlank()
                                         ) {
                                             "${vehicle.purchasePrice} €"
@@ -452,13 +443,27 @@ fun VehicleScreen(
                                             FontWeight.Medium
                                     )
 
-                                    IconButton(
+                                    Spacer(
+                                        Modifier.width(
+                                            6.dp
+                                        )
+                                    )
+
+                                    /*
+                                     * Statt der Material-Icon-Bibliothek
+                                     * verwenden wir bewusst normale Zeichen.
+                                     *
+                                     * Dadurch wird keine zusätzliche
+                                     * Dependency benötigt.
+                                     */
+
+                                    OutlinedButton(
 
                                         onClick = {
 
                                             revealedPurchasePriceIds =
                                                 if (
-                                                    purchasePriceVisibleInList
+                                                    priceVisible
                                                 ) {
 
                                                     revealedPurchasePriceIds -
@@ -473,28 +478,14 @@ fun VehicleScreen(
 
                                     ) {
 
-                                        Icon(
-
-                                            imageVector =
-                                                if (
-                                                    purchasePriceVisibleInList
-                                                ) {
-                                                    Icons.Outlined.VisibilityOff
-                                                } else {
-                                                    Icons.Outlined.Visibility
-                                                },
-
-                                            contentDescription =
-                                                if (
-                                                    purchasePriceVisibleInList
-                                                ) {
-                                                    "Kaufpreis verbergen"
-                                                } else {
-                                                    "Kaufpreis anzeigen"
-                                                },
-
-                                            tint =
-                                                Color(0xFFB8BEC8)
+                                        Text(
+                                            if (
+                                                priceVisible
+                                            ) {
+                                                "🙈"
+                                            } else {
+                                                "👁"
+                                            }
                                         )
                                     }
                                 }
@@ -587,13 +578,13 @@ fun VehicleScreen(
                                     imageUri =
                                         vehicle.imageUri
 
-                                    // Kaufpreis laden
                                     purchasePrice =
                                         vehicle.purchasePrice
 
-                                    // Beim Öffnen des
-                                    // Bearbeitungsformulars
-                                    // zunächst immer verborgen.
+                                    /*
+                                     * Kaufpreis beim Öffnen
+                                     * immer zuerst verborgen.
+                                     */
                                     purchasePriceVisible =
                                         false
 
@@ -629,8 +620,6 @@ fun VehicleScreen(
                                     vehicle
                                 )
 
-                                // Sicherheitshalber auch
-                                // aus der Anzeige-Liste entfernen.
                                 revealedPurchasePriceIds =
                                     revealedPurchasePriceIds -
                                         vehicle.id
@@ -954,16 +943,8 @@ fun VehicleScreen(
                                 onValueChange = { value ->
 
                                     /*
-                                     * Erlaubt werden Zahlen,
-                                     * Komma und Punkt.
-                                     *
-                                     * Dadurch sind z. B.
-                                     *
-                                     * 12500
-                                     * 12500,50
-                                     * 12.500,50
-                                     *
-                                     * möglich.
+                                     * Nur Zahlen, Punkt und Komma
+                                     * zulassen.
                                      */
 
                                     purchasePrice =
@@ -998,14 +979,22 @@ fun VehicleScreen(
                                     if (
                                         purchasePriceVisible
                                     ) {
+
                                         VisualTransformation.None
+
                                     } else {
+
                                         PasswordVisualTransformation()
                                     },
 
                                 trailingIcon = {
 
-                                    IconButton(
+                                    /*
+                                     * Normales Zeichen statt
+                                     * Material Icon.
+                                     */
+
+                                    OutlinedButton(
 
                                         onClick = {
 
@@ -1015,25 +1004,14 @@ fun VehicleScreen(
 
                                     ) {
 
-                                        Icon(
-
-                                            imageVector =
-                                                if (
-                                                    purchasePriceVisible
-                                                ) {
-                                                    Icons.Outlined.VisibilityOff
-                                                } else {
-                                                    Icons.Outlined.Visibility
-                                                },
-
-                                            contentDescription =
-                                                if (
-                                                    purchasePriceVisible
-                                                ) {
-                                                    "Kaufpreis verbergen"
-                                                } else {
-                                                    "Kaufpreis anzeigen"
-                                                }
+                                        Text(
+                                            if (
+                                                purchasePriceVisible
+                                            ) {
+                                                "🙈"
+                                            } else {
+                                                "👁"
+                                            }
                                         )
                                     }
                                 },
@@ -1087,364 +1065,4 @@ fun VehicleScreen(
                             }
 
                             /*
-                             * ==================================================
-                             * SPEICHERN / ABBRECHEN
-                             * ==================================================
-                             */
-
-                            Row(
-
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(
-                                        8.dp
-                                    )
-                            ) {
-
-                                Button(
-
-                                    enabled =
-                                        vehicleType.isNotBlank() &&
-                                        make.isNotBlank() &&
-                                        model.isNotBlank(),
-
-                                    onClick = {
-
-                                        /*
-                                         * ==================================================
-                                         * AUTOMATISCHER FAHRZEUGNAME
-                                         * ==================================================
-                                         *
-                                         * PS/KW und Kaufpreis werden
-                                         * NICHT in den Fahrzeugnamen
-                                         * aufgenommen.
-                                         */
-
-                                        val generatedName =
-                                            listOf(
-                                                vehicleType,
-                                                make.trim(),
-                                                model.trim(),
-                                                year.trim()
-                                            )
-                                                .filter {
-                                                    it.isNotBlank()
-                                                }
-                                                .joinToString(
-                                                    " "
-                                                )
-
-                                        /*
-                                         * ==================================================
-                                         * FAHRZEUG SPEICHERN
-                                         * ==================================================
-                                         */
-
-                                        val vehicleToSave =
-
-                                            if (
-                                                editingVehicleId.isNotBlank()
-                                            ) {
-
-                                                /*
-                                                 * BEARBEITEN
-                                                 *
-                                                 * Die bestehende ID bleibt
-                                                 * vollständig erhalten.
-                                                 */
-
-                                                Vehicle(
-
-                                                    id =
-                                                        editingVehicleId,
-
-                                                    name =
-                                                        generatedName,
-
-                                                    vehicleType =
-                                                        vehicleType,
-
-                                                    make =
-                                                        make.trim(),
-
-                                                    model =
-                                                        model.trim(),
-
-                                                    motorization =
-                                                        motorization.trim(),
-
-                                                    power =
-                                                        power.trim(),
-
-                                                    year =
-                                                        year.trim(),
-
-                                                    plate =
-                                                        plate.trim(),
-
-                                                    vin =
-                                                        vin.trim(),
-
-                                                    imageUri =
-                                                        imageUri,
-
-                                                    purchasePrice =
-                                                        purchasePrice.trim()
-                                                )
-
-                                            } else {
-
-                                                /*
-                                                 * NEUES FAHRZEUG
-                                                 *
-                                                 * Vehicle erzeugt automatisch
-                                                 * eine neue stabile UUID.
-                                                 */
-
-                                                Vehicle(
-
-                                                    name =
-                                                        generatedName,
-
-                                                    vehicleType =
-                                                        vehicleType,
-
-                                                    make =
-                                                        make.trim(),
-
-                                                    model =
-                                                        model.trim(),
-
-                                                    motorization =
-                                                        motorization.trim(),
-
-                                                    power =
-                                                        power.trim(),
-
-                                                    year =
-                                                        year.trim(),
-
-                                                    plate =
-                                                        plate.trim(),
-
-                                                    vin =
-                                                        vin.trim(),
-
-                                                    imageUri =
-                                                        imageUri,
-
-                                                    purchasePrice =
-                                                        purchasePrice.trim()
-                                                )
-                                            }
-
-                                        onSave(
-
-                                            vehicleToSave,
-
-                                            editingName
-                                        )
-
-                                        /*
-                                         * ==================================================
-                                         * FORMULAR ZURÜCKSETZEN
-                                         * ==================================================
-                                         */
-
-                                        editingVehicleId =
-                                            ""
-
-                                        editingName =
-                                            ""
-
-                                        name =
-                                            ""
-
-                                        vehicleType =
-                                            "PKW"
-
-                                        make =
-                                            ""
-
-                                        model =
-                                            ""
-
-                                        motorization =
-                                            ""
-
-                                        power =
-                                            ""
-
-                                        year =
-                                            ""
-
-                                        plate =
-                                            ""
-
-                                        vin =
-                                            ""
-
-                                        imageUri =
-                                            ""
-
-                                        purchasePrice =
-                                            ""
-
-                                        purchasePriceVisible =
-                                            false
-
-                                        vehicleTypeExpanded =
-                                            false
-
-                                        adding =
-                                            false
-                                    }
-
-                                ) {
-
-                                    Text(
-                                        "Speichern"
-                                    )
-                                }
-
-                                OutlinedButton(
-
-                                    onClick = {
-
-                                        adding =
-                                            false
-
-                                        editingVehicleId =
-                                            ""
-
-                                        editingName =
-                                            ""
-
-                                        name =
-                                            ""
-
-                                        vehicleType =
-                                            "PKW"
-
-                                        make =
-                                            ""
-
-                                        model =
-                                            ""
-
-                                        motorization =
-                                            ""
-
-                                        power =
-                                            ""
-
-                                        year =
-                                            ""
-
-                                        plate =
-                                            ""
-
-                                        vin =
-                                            ""
-
-                                        imageUri =
-                                            ""
-
-                                        purchasePrice =
-                                            ""
-
-                                        purchasePriceVisible =
-                                            false
-
-                                        vehicleTypeExpanded =
-                                            false
-                                    }
-
-                                ) {
-
-                                    Text(
-                                        "Abbrechen"
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        /*
-         * ========================================================
-         * NEUES FAHRZEUG
-         * ========================================================
-         */
-
-        if (
-            !adding &&
-            vehicles.size < 5
-        ) {
-
-            Button(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                onClick = {
-
-                    editingVehicleId =
-                        ""
-
-                    editingName =
-                        ""
-
-                    name =
-                        ""
-
-                    vehicleType =
-                        "PKW"
-
-                    make =
-                        ""
-
-                    model =
-                        ""
-
-                    motorization =
-                        ""
-
-                    power =
-                        ""
-
-                    year =
-                        ""
-
-                    plate =
-                        ""
-
-                    vin =
-                        ""
-
-                    imageUri =
-                        ""
-
-                    purchasePrice =
-                        ""
-
-                    purchasePriceVisible =
-                        false
-
-                    vehicleTypeExpanded =
-                        false
-
-                    adding =
-                        true
-                }
-
-            ) {
-
-                Text(
-                    "Fahrzeug hinzufügen"
-                )
-            }
-        }
-    }
-}
+                             * =================================================
