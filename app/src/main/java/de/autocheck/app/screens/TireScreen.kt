@@ -785,7 +785,23 @@ private fun TireSetCard(
                         FontWeight.Bold,
 
                     color =
-                        Color.White
+                        if (
+                            title.equals(
+                                "Sommerreifen",
+                                ignoreCase = true
+                            )
+                        ) {
+                            Color(0xFF4CAF50)
+                        } else if (
+                            title.equals(
+                                "Winterreifen",
+                                ignoreCase = true
+                            )
+                        ) {
+                            Color(0xFF4A90E2)
+                        } else {
+                            Color.White
+                        }
                 )
 
                 if (
