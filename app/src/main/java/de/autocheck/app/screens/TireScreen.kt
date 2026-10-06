@@ -1985,3 +1985,151 @@ private fun TireRimTypeDropdown(
 
             modifier =
                 Modifier.fill
+
+            modifier =
+    Modifier.fillMaxWidth(),
+
+onClick = {
+    expanded =
+        true
+}
+) {
+
+    Text(
+        if (
+            rimType.isBlank()
+        ) {
+            "Felgenart auswählen"
+        } else {
+            rimType
+        }
+    )
+}
+
+DropdownMenu(
+
+    expanded =
+        expanded,
+
+    onDismissRequest = {
+        expanded =
+            false
+    }
+) {
+
+    tireRimTypes.forEach {
+        option ->
+
+        DropdownMenuItem(
+
+            text = {
+                Text(
+                    option
+                )
+            },
+
+            onClick = {
+
+                onRimTypeChanged(
+                    option
+                )
+
+                expanded =
+                    false
+            }
+        )
+    }
+}
+}
+
+/*
+ * ================================================================
+ * KAUFMONAT AUSWAHL
+ * ================================================================
+ */
+
+@Composable
+private fun TireMonthDropdown(
+
+    modifier:
+        Modifier = Modifier,
+
+    month:
+        String,
+
+    onMonthChanged:
+        (String) -> Unit
+) {
+
+    var expanded by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    Box(
+        modifier =
+            modifier
+    ) {
+
+        OutlinedButton(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            onClick = {
+                expanded =
+                    true
+            }
+        ) {
+
+            Text(
+                if (
+                    month.isBlank()
+                ) {
+
+                    "Monat"
+
+                } else {
+
+                    month
+                }
+            )
+        }
+
+        DropdownMenu(
+
+            expanded =
+                expanded,
+
+            onDismissRequest = {
+                expanded =
+                    false
+            }
+        ) {
+
+            tireMonths.forEach {
+                option ->
+
+                DropdownMenuItem(
+
+                    text = {
+                        Text(
+                            option
+                        )
+                    },
+
+                    onClick = {
+
+                        onMonthChanged(
+                            option
+                        )
+
+                        expanded =
+                            false
+                    }
+                )
+            }
+        }
+    }
+}
