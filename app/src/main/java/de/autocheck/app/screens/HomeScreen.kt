@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CarRepair
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
@@ -93,12 +94,76 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZoneId
 
+private const val PURCHASE_CONTRACT_PREFS =
+    "carvita_purchase_contract"
+
+private const val PURCHASE_CONTRACT_URI =
+    "purchase_contract_uri"
+
 @Composable
 fun HomeScreen(
     visible: Boolean,
     visitedStore: VisitedStore,
     onSelect: (Screen) -> Unit
 ) {
+
+    val context =
+        LocalContext.current
+
+    val purchaseContractPreferences =
+        remember {
+            context.getSharedPreferences(
+                PURCHASE_CONTRACT_PREFS,
+                Context.MODE_PRIVATE
+            )
+        }
+
+    var purchaseContractUri by remember {
+        mutableStateOf(
+            purchaseContractPreferences.getString(
+                PURCHASE_CONTRACT_URI,
+                null
+            )
+        )
+    }
+
+    var purchaseContractMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    val purchaseContractPicker =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.OpenDocument()
+        ) { uri ->
+
+            if (uri != null) {
+
+                try {
+
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+
+                } catch (
+                    _: SecurityException
+                ) {
+                    // Manche Anbieter unterstützen keine dauerhafte URI-Freigabe.
+                }
+
+                purchaseContractPreferences
+                    .edit()
+                    .putString(
+                        PURCHASE_CONTRACT_URI,
+                        uri.toString()
+                    )
+                    .apply()
+
+                purchaseContractUri =
+                    uri.toString()
+            }
+        }
 
     val items =
         listOf(
@@ -234,6 +299,191 @@ fun HomeScreen(
                         contentScale =
                             ContentScale.Fit
                     )
+                }
+
+                Box(
+                    modifier =
+                        Modifier
+                            .align(
+                                Alignment.TopStart
+                            )
+                            .padding(
+                                start = 2.dp
+                            )
+                ) {
+
+                    IconButton(
+
+                        onClick = {
+
+                            purchaseContractMenuExpanded =
+                                !purchaseContractMenuExpanded
+                        },
+
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .clip(
+                                    CircleShape
+                                )
+                                .background(
+                                    Color.White
+                                )
+                    ) {
+
+                        Icon(
+
+                            imageVector =
+                                Icons.Filled.Download,
+
+                            contentDescription =
+                                "Kaufvertrag",
+
+                            tint =
+                                Color.Black,
+
+                            modifier =
+                                Modifier.size(
+                                    28.dp
+                                )
+                        )
+                    }
+
+                    DropdownMenu(
+
+                        expanded =
+                            purchaseContractMenuExpanded,
+
+                        onDismissRequest = {
+
+                            purchaseContractMenuExpanded =
+                                false
+                        }
+                    ) {
+
+                        DropdownMenuItem(
+
+                            text = {
+
+                                Text(
+                                    if (
+                                        purchaseContractUri ==
+                                        null
+                                    ) {
+                                        "Kaufvertrag hinzufügen"
+                                    } else {
+                                        "Kaufvertrag öffnen"
+                                    }
+                                )
+                            },
+
+                            leadingIcon = {
+
+                                Icon(
+                                    Icons.Filled.Download,
+                                    contentDescription =
+                                        null
+                                )
+                            },
+
+                            onClick = {
+
+                                purchaseContractMenuExpanded =
+                                    false
+
+                                if (
+                                    purchaseContractUri ==
+                                    null
+                                ) {
+
+                                    purchaseContractPicker
+                                        .launch(
+                                            arrayOf(
+                                                "application/pdf"
+                                            )
+                                        )
+
+                                } else {
+
+                                    val uri =
+                                        Uri.parse(
+                                            purchaseContractUri
+                                        )
+
+                                    val intent =
+                                        Intent(
+                                            Intent.ACTION_VIEW
+                                        ).apply {
+
+                                            setDataAndType(
+                                                uri,
+                                                "application/pdf"
+                                            )
+
+                                            addFlags(
+                                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                            )
+                                        }
+
+                                    try {
+
+                                        context.startActivity(
+                                            intent
+                                        )
+
+                                    } catch (
+                                        _: Exception
+                                    ) {
+
+                                        purchaseContractPicker
+                                            .launch(
+                                                arrayOf(
+                                                    "application/pdf"
+                                                )
+                                            )
+                                    }
+                                }
+                            }
+                        )
+
+                        if (
+                            purchaseContractUri !=
+                            null
+                        ) {
+
+                            DropdownMenuItem(
+
+                                text = {
+
+                                    Text(
+                                        "Kaufvertrag ersetzen"
+                                    )
+                                },
+
+                                leadingIcon = {
+
+                                    Icon(
+                                        Icons.Filled.Download,
+                                        contentDescription =
+                                            null
+                                    )
+                                },
+
+                                onClick = {
+
+                                    purchaseContractMenuExpanded =
+                                        false
+
+                                    purchaseContractPicker
+                                        .launch(
+                                            arrayOf(
+                                                "application/pdf"
+                                            )
+                                        )
+                                }
+                            )
+                        }
+                    }
                 }
 
                 Box(
@@ -656,6 +906,7 @@ private fun LoginDialog(
                 onClick =
                     onDismiss
             ) {
+
                 Text(
                     "Abbrechen"
                 )
@@ -669,6 +920,7 @@ private fun LoginDialog(
                     onDismiss()
                 }
             ) {
+
                 Text(
                     "Weiter"
                 )
@@ -826,6 +1078,7 @@ private fun RegisterDialog(
                 onClick =
                     onDismiss
             ) {
+
                 Text(
                     "Abbrechen"
                 )
@@ -839,6 +1092,7 @@ private fun RegisterDialog(
                     onDismiss()
                 }
             ) {
+
                 Text(
                     "Weiter"
                 )
