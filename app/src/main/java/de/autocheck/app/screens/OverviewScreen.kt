@@ -7,11 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.CardForm
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -25,7 +26,7 @@ private val overviewPickerlFormatter =
         "MM/yyyy"
     )
 
-private fun formatPickerlMonthYear(
+private fun overviewPickerlMonthYear(
     value: String
 ): String {
 
@@ -68,6 +69,76 @@ private fun formatPickerlMonthYear(
     }
 }
 
+private fun overviewPickerlText(
+    nextDate: String?
+): AnnotatedString {
+
+    val bis =
+        overviewPickerlMonthYear(
+            nextDate ?: ""
+        )
+
+    return buildAnnotatedString {
+
+        val title =
+            "Nächste Überprüfung"
+
+        append(
+            title
+        )
+
+        addStyle(
+
+            style =
+                SpanStyle(
+
+                    color =
+                        Color(
+                            0xFFB05CFF
+                        ),
+
+                    fontWeight =
+                        FontWeight.Bold
+                ),
+
+            start =
+                0,
+
+            end =
+                title.length
+        )
+
+        append(
+            " bis "
+        )
+
+        val bisStart =
+            length
+
+        append(
+            bis
+        )
+
+        addStyle(
+
+            style =
+                SpanStyle(
+
+                    color =
+                        Color(
+                            0xFFF44336
+                        )
+                ),
+
+            start =
+                bisStart,
+
+            end =
+                length
+        )
+    }
+}
+
 @Composable
 fun OverviewScreen(
     store: VehicleStore,
@@ -77,7 +148,9 @@ fun OverviewScreen(
     onVisited: () -> Unit
 ) {
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(
+        Unit
+    ) {
         onVisited()
     }
 
@@ -116,19 +189,27 @@ fun OverviewScreen(
             }
 
     Column(
-        Modifier.fillMaxSize()
+        modifier =
+            Modifier.fillMaxSize()
     ) {
 
         VehicleSelector(
-            vehicles,
-            activeVehicle,
-            onActiveVehicle
+
+            vehicles =
+                vehicles,
+
+            activeVehicle =
+                activeVehicle,
+
+            onSelected =
+                onActiveVehicle
         )
 
         Spacer(
-            Modifier.height(
-                10.dp
-            )
+            modifier =
+                Modifier.height(
+                    10.dp
+                )
         )
 
         if (
@@ -157,9 +238,10 @@ fun OverviewScreen(
 
                 CardForm {
 
-                    androidx.compose.material3.Text(
+                    Text(
 
-                        vehicle.name,
+                        text =
+                            vehicle.name,
 
                         color =
                             Color.White,
@@ -171,10 +253,11 @@ fun OverviewScreen(
                             FontWeight.Bold
                     )
 
-                    androidx.compose.material3.Text(
+                    Text(
 
-                        "${vehicle.make} ${vehicle.model} ${vehicle.year}"
-                            .trim(),
+                        text =
+                            "${vehicle.make} ${vehicle.model} ${vehicle.year}"
+                                .trim(),
 
                         color =
                             Muted
@@ -185,9 +268,10 @@ fun OverviewScreen(
                             .isNotBlank()
                     ) {
 
-                        androidx.compose.material3.Text(
+                        Text(
 
-                            "Kennzeichen: ${vehicle.plate}",
+                            text =
+                                "Kennzeichen: ${vehicle.plate}",
 
                             color =
                                 Color.White
@@ -199,9 +283,10 @@ fun OverviewScreen(
                             .isNotBlank()
                     ) {
 
-                        androidx.compose.material3.Text(
+                        Text(
 
-                            "FIN/VIN: ${vehicle.vin}",
+                            text =
+                                "FIN/VIN: ${vehicle.vin}",
 
                             color =
                                 Color.White
@@ -209,99 +294,46 @@ fun OverviewScreen(
                     }
 
                     Spacer(
-                        Modifier.height(
-                            8.dp
-                        )
+                        modifier =
+                            Modifier.height(
+                                8.dp
+                            )
                     )
 
-                    androidx.compose.material3.Text(
-                        "Reparaturen: $repairs",
-                        color =
-                            Color.White
-                    )
+                    Text(
 
-                    androidx.compose.material3.Text(
-                        "Wartungen: $maintenance",
-                        color =
-                            Color.White
-                    )
-
-                    androidx.compose.material3.Text(
-                        "Reifensätze: $tires",
-                        color =
-                            Color.White
-                    )
-
-                    val pickerText =
-                        buildAnnotatedString {
-
-                            val title =
-                                "Nächste Überprüfung"
-
-                            append(
-                                title
-                            )
-
-                            addStyle(
-
-                                style =
-                                    SpanStyle(
-
-                                        color =
-                                            Color(
-                                                0xFFB05CFF
-                                            ),
-
-                                        fontWeight =
-                                            FontWeight.Bold
-                                    ),
-
-                                start =
-                                    0,
-
-                                end =
-                                    title.length
-                            )
-
-                            append(
-                                " bis "
-                            )
-
-                            val dateStart =
-                                length
-
-                            append(
-
-                                formatPickerlMonthYear(
-
-                                    pickerl
-                                        ?.nextDate
-                                        ?: ""
-                                )
-                            )
-
-                            addStyle(
-
-                                style =
-                                    SpanStyle(
-
-                                        color =
-                                            Color(
-                                                0xFFF44336
-                                            )
-                                    ),
-
-                                start =
-                                    dateStart,
-
-                                end =
-                                    length
-                            )
-                        }
-
-                    androidx.compose.material3.Text(
                         text =
-                            pickerText
+                            "Reparaturen: $repairs",
+
+                        color =
+                            Color.White
+                    )
+
+                    Text(
+
+                        text =
+                            "Wartungen: $maintenance",
+
+                        color =
+                            Color.White
+                    )
+
+                    Text(
+
+                        text =
+                            "Reifensätze: $tires",
+
+                        color =
+                            Color.White
+                    )
+
+                    Text(
+
+                        text =
+                            overviewPickerlText(
+                                nextDate =
+                                    pickerl?.nextDate
+                            )
                     )
                 }
             }
