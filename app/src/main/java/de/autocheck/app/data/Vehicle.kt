@@ -26,5 +26,9 @@ data class Vehicle(
     val vin: String = "",
 
     // Persönliches Fahrzeugbild
-    val imageUri: String = ""
+    val imageUri: String = "",
+
+    // Kaufpreis des Fahrzeugs
+    // Wird gespeichert, aber in der Oberfläche standardmäßig maskiert.
+    val purchasePrice: String = ""
 )
