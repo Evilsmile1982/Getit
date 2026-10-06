@@ -301,7 +301,25 @@ fun HomeScreen(
                     )
                 }
 
-                Box(
+                AnimatedVisibility(
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2000
+                                ),
+
+                            initialOffsetX = {
+                                fullWidth ->
+                                -fullWidth
+                            }
+                        ),
+
                     modifier =
                         Modifier
                             .align(
@@ -312,143 +330,88 @@ fun HomeScreen(
                             )
                 ) {
 
-                    IconButton(
-
-                        onClick = {
-
-                            purchaseContractMenuExpanded =
-                                !purchaseContractMenuExpanded
-                        },
+                    Box(
 
                         modifier =
                             Modifier
-                                .size(48.dp)
+                                .size(
+                                    54.dp
+                                )
                                 .clip(
                                     CircleShape
                                 )
                                 .background(
-                                    Color.White
+
+                                    brush =
+                                        Brush.linearGradient(
+                                            listOf(
+                                                Color(0xFF5A0000),
+                                                Color(0xFFFF1A1A),
+                                                Color(0xFFFF6A6A),
+                                                Color(0xFF8B0000),
+                                                Color(0xFF3A0000)
+                                            )
+                                        )
+                                )
+                                .padding(
+                                    3.dp
                                 )
                     ) {
 
-                        Icon(
-
-                            imageVector =
-                                Icons.Filled.Download,
-
-                            contentDescription =
-                                "Kaufvertrag",
-
-                            tint =
-                                Color.Black,
+                        Box(
 
                             modifier =
-                                Modifier.size(
-                                    28.dp
-                                )
-                        )
-                    }
+                                Modifier
+                                    .fillMaxSize()
+                                    .clip(
+                                        CircleShape
+                                    )
+                                    .background(
+                                        Color.White
+                                    )
+                        ) {
 
-                    DropdownMenu(
+                            IconButton(
 
-                        expanded =
-                            purchaseContractMenuExpanded,
+                                onClick = {
 
-                        onDismissRequest = {
+                                    purchaseContractMenuExpanded =
+                                        !purchaseContractMenuExpanded
+                                },
 
-                            purchaseContractMenuExpanded =
-                                false
-                        }
-                    ) {
-
-                        DropdownMenuItem(
-
-                            text = {
-
-                                Text(
-                                    if (
-                                        purchaseContractUri ==
-                                        null
-                                    ) {
-                                        "Kaufvertrag hinzufügen"
-                                    } else {
-                                        "Kaufvertrag öffnen"
-                                    }
-                                )
-                            },
-
-                            leadingIcon = {
+                                modifier =
+                                    Modifier.fillMaxSize()
+                            ) {
 
                                 Icon(
-                                    Icons.Filled.Download,
-                                    contentDescription =
-                                        null
-                                )
-                            },
 
-                            onClick = {
+                                    imageVector =
+                                        Icons.Filled.Download,
+
+                                    contentDescription =
+                                        "Kaufvertrag",
+
+                                    tint =
+                                        Color.Black,
+
+                                    modifier =
+                                        Modifier.size(
+                                            28.dp
+                                        )
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+
+                            expanded =
+                                purchaseContractMenuExpanded,
+
+                            onDismissRequest = {
 
                                 purchaseContractMenuExpanded =
                                     false
-
-                                if (
-                                    purchaseContractUri ==
-                                    null
-                                ) {
-
-                                    purchaseContractPicker
-                                        .launch(
-                                            arrayOf(
-                                                "application/pdf"
-                                            )
-                                        )
-
-                                } else {
-
-                                    val uri =
-                                        Uri.parse(
-                                            purchaseContractUri
-                                        )
-
-                                    val intent =
-                                        Intent(
-                                            Intent.ACTION_VIEW
-                                        ).apply {
-
-                                            setDataAndType(
-                                                uri,
-                                                "application/pdf"
-                                            )
-
-                                            addFlags(
-                                                Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                            )
-                                        }
-
-                                    try {
-
-                                        context.startActivity(
-                                            intent
-                                        )
-
-                                    } catch (
-                                        _: Exception
-                                    ) {
-
-                                        purchaseContractPicker
-                                            .launch(
-                                                arrayOf(
-                                                    "application/pdf"
-                                                )
-                                            )
-                                    }
-                                }
                             }
-                        )
-
-                        if (
-                            purchaseContractUri !=
-                            null
                         ) {
 
                             DropdownMenuItem(
@@ -456,7 +419,14 @@ fun HomeScreen(
                                 text = {
 
                                     Text(
-                                        "Kaufvertrag ersetzen"
+                                        if (
+                                            purchaseContractUri ==
+                                            null
+                                        ) {
+                                            "Kaufvertrag hinzufügen"
+                                        } else {
+                                            "Kaufvertrag öffnen"
+                                        }
                                     )
                                 },
 
@@ -474,19 +444,121 @@ fun HomeScreen(
                                     purchaseContractMenuExpanded =
                                         false
 
-                                    purchaseContractPicker
-                                        .launch(
-                                            arrayOf(
-                                                "application/pdf"
+                                    if (
+                                        purchaseContractUri ==
+                                        null
+                                    ) {
+
+                                        purchaseContractPicker
+                                            .launch(
+                                                arrayOf(
+                                                    "application/pdf"
+                                                )
                                             )
-                                        )
+
+                                    } else {
+
+                                        val uri =
+                                            Uri.parse(
+                                                purchaseContractUri
+                                            )
+
+                                        val intent =
+                                            Intent(
+                                                Intent.ACTION_VIEW
+                                            ).apply {
+
+                                                setDataAndType(
+                                                    uri,
+                                                    "application/pdf"
+                                                )
+
+                                                addFlags(
+                                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                )
+                                            }
+
+                                        try {
+
+                                            context.startActivity(
+                                                intent
+                                            )
+
+                                        } catch (
+                                            _: Exception
+                                        ) {
+
+                                            purchaseContractPicker
+                                                .launch(
+                                                    arrayOf(
+                                                        "application/pdf"
+                                                    )
+                                                )
+                                        }
+                                    }
                                 }
                             )
+
+                            if (
+                                purchaseContractUri !=
+                                null
+                            ) {
+
+                                DropdownMenuItem(
+
+                                    text = {
+
+                                        Text(
+                                            "Kaufvertrag ersetzen"
+                                        )
+                                    },
+
+                                    leadingIcon = {
+
+                                        Icon(
+                                            Icons.Filled.Download,
+                                            contentDescription =
+                                                null
+                                        )
+                                    },
+
+                                    onClick = {
+
+                                        purchaseContractMenuExpanded =
+                                            false
+
+                                        purchaseContractPicker
+                                            .launch(
+                                                arrayOf(
+                                                    "application/pdf"
+                                                )
+                                            )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-                Box(
+                AnimatedVisibility(
+
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInHorizontally(
+
+                            animationSpec =
+                                tween(
+                                    2000
+                                ),
+
+                            initialOffsetX = {
+                                fullWidth ->
+                                fullWidth
+                            }
+                        ),
+
                     modifier =
                         Modifier
                             .align(
@@ -497,108 +569,142 @@ fun HomeScreen(
                             )
                 ) {
 
-                    IconButton(
-
-                        onClick = {
-                            profileMenuExpanded =
-                                !profileMenuExpanded
-                        },
+                    Box(
 
                         modifier =
                             Modifier
-                                .size(48.dp)
+                                .size(
+                                    54.dp
+                                )
                                 .clip(
                                     CircleShape
                                 )
                                 .background(
-                                    Color(
-                                        0xFFD4AF37
-                                    )
+
+                                    brush =
+                                        Brush.linearGradient(
+                                            listOf(
+                                                Color(0xFF5A5A5A),
+                                                Color(0xFFE8E8E8),
+                                                Color(0xFFFFFFFF),
+                                                Color(0xFF8A8A8A),
+                                                Color(0xFF4A4A4A)
+                                            )
+                                        )
+                                )
+                                .padding(
+                                    3.dp
                                 )
                     ) {
 
-                        Icon(
-
-                            imageVector =
-                                Icons.Filled.Person,
-
-                            contentDescription =
-                                "Profil",
-
-                            tint =
-                                Color.Black,
+                        Box(
 
                             modifier =
-                                Modifier.size(
-                                    28.dp
+                                Modifier
+                                    .fillMaxSize()
+                                    .clip(
+                                        CircleShape
+                                    )
+                                    .background(
+                                        Color(0xFFD4AF37)
+                                    )
+                        ) {
+
+                            IconButton(
+
+                                onClick = {
+                                    profileMenuExpanded =
+                                        !profileMenuExpanded
+                                },
+
+                                modifier =
+                                    Modifier.fillMaxSize()
+                            ) {
+
+                                Icon(
+
+                                    imageVector =
+                                        Icons.Filled.Person,
+
+                                    contentDescription =
+                                        "Profil",
+
+                                    tint =
+                                        Color.Black,
+
+                                    modifier =
+                                        Modifier.size(
+                                            28.dp
+                                        )
                                 )
-                        )
-                    }
-
-                    DropdownMenu(
-
-                        expanded =
-                            profileMenuExpanded,
-
-                        onDismissRequest = {
-                            profileMenuExpanded =
-                                false
+                            }
                         }
-                    ) {
 
-                        DropdownMenuItem(
+                        DropdownMenu(
 
-                            text = {
-                                Text(
-                                    "Anmelden"
-                                )
-                            },
+                            expanded =
+                                profileMenuExpanded,
 
-                            leadingIcon = {
-
-                                Icon(
-                                    Icons.Filled.Person,
-                                    contentDescription =
-                                        null
-                                )
-                            },
-
-                            onClick = {
-
+                            onDismissRequest = {
                                 profileMenuExpanded =
                                     false
-
-                                profileDialog =
-                                    ProfileDialog.LOGIN
                             }
-                        )
+                        ) {
 
-                        DropdownMenuItem(
+                            DropdownMenuItem(
 
-                            text = {
-                                Text(
-                                    "Profil erstellen"
-                                )
-                            },
+                                text = {
+                                    Text(
+                                        "Anmelden"
+                                    )
+                                },
 
-                            leadingIcon = {
+                                leadingIcon = {
 
-                                Icon(
-                                    Icons.Filled.Person,
-                                    contentDescription =
-                                        null
-                                )
-                            },
+                                    Icon(
+                                        Icons.Filled.Person,
+                                        contentDescription =
+                                            null
+                                    )
+                                },
 
-                            onClick = {
+                                onClick = {
 
-                                profileMenuExpanded =
-                                    false
+                                    profileMenuExpanded =
+                                        false
 
-                                profileDialog =
-                                    ProfileDialog.REGISTER
-                            }
-                        )
+                                    profileDialog =
+                                        ProfileDialog.LOGIN
+                                }
+                            )
+
+                            DropdownMenuItem(
+
+                                text = {
+                                    Text(
+                                        "Profil erstellen"
+                                    )
+                                },
+
+                                leadingIcon = {
+
+                                    Icon(
+                                        Icons.Filled.Person,
+                                        contentDescription =
+                                            null
+                                    )
+                                },
+
+                                onClick = {
+
+                                    profileMenuExpanded =
+                                        false
+
+                                    profileDialog =
+                                        ProfileDialog.REGISTER
+                                }
+                            )
+                        }
                     }
                 }
             }
