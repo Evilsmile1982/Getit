@@ -3069,224 +3069,140 @@ private fun MaintenanceHistoryCard(
         ) {
 
             Text(
-
                 item.name,
-
-                color =
-                    Color.White,
-
-                fontSize =
-                    18.sp,
-
-                fontWeight =
-                    FontWeight.Bold
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(
-                Modifier.height(
-                    4.dp
-                )
-            )
+            Spacer(Modifier.height(4.dp))
 
-            if (
-                item.month.isNotBlank() &&
-                item.year.isNotBlank()
-            ) {
-
+            if (item.month.isNotBlank() && item.year.isNotBlank()) {
                 Text(
-
                     "%02d/%s".format(
                         Locale.GERMANY,
-                        item.month.toIntOrNull()
-                            ?: 0,
+                        item.month.toIntOrNull() ?: 0,
                         item.year
                     ),
-
-                    color =
-                        Color(
-                            0xFFD4AF37
-                        )
+                    color = Color(0xFFD4AF37)
                 )
             }
 
-            if (
-                item.mileage.isNotBlank()
-            ) {
-
+            if (item.mileage.isNotBlank()) {
                 Text(
                     "${item.mileage} km",
-                    color =
-                        Color(
-                            0xFFB8BEC8
-                        )
+                    color = Color(0xFFB8BEC8)
                 )
             }
 
-            if (
-                item.used.isNotBlank()
-            ) {
-
+            if (item.used.isNotBlank()) {
                 Text(
                     "Verwendet: ${item.used}",
-                    color =
-                        Color.White
+                    color = Color.White
                 )
             }
 
-            if (
-                item.partNumber.isNotBlank()
-            ) {
-
+            if (item.partNumber.isNotBlank()) {
                 Text(
                     "Teilenummer: ${item.partNumber}",
-                    color =
-                        Color(
-                            0xFFB8BEC8
-                        )
+                    color = Color(0xFFB8BEC8)
                 )
             }
 
-            if (
-                item.materialCost > 0
-            ) {
-
+            if (item.materialCost > 0) {
                 Text(
                     "Material: ${money(item.materialCost)}",
-                    color =
-                        Color.White
+                    color = Color.White
                 )
             }
 
-            if (
-                item.laborCost > 0
-            ) {
-
+            if (item.laborCost > 0) {
                 Text(
                     "Arbeitskosten: ${money(item.laborCost)}",
-                    color =
-                        Color.White
+                    color = Color.White
                 )
             }
 
             Text(
-
                 "Gesamtkosten: ${money(item.totalCost)}",
-
-                color =
-                    Color(
-                        0xFFD4AF37
-                    ),
-
-                fontWeight =
-                    FontWeight.Bold
+                color = Color(0xFFD4AF37),
+                fontWeight = FontWeight.Bold
             )
 
-            if (
-                item.workshop.isNotBlank()
-            ) {
-
+            if (item.workshop.isNotBlank()) {
                 Text(
                     "Werkstatt: ${item.workshop}",
-                    color =
-                        Color(
-                            0xFFB8BEC8
-                        )
+                    color = Color(0xFFB8BEC8)
                 )
             }
 
-            if (
-                item.notes.isNotBlank()
-            ) {
-
+            if (item.notes.isNotBlank()) {
                 Text(
                     "Notiz: ${item.notes}",
-                    color =
-                        Color(
-                            0xFFB8BEC8
-                        )
+                    color = Color(0xFFB8BEC8)
                 )
             }
 
-            if (
-                item.imageUri.isNotBlank()
+            if (item.imageUri.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+
+                MaintenanceImage(
+                    uri = item.imageUri,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            var menuExpanded by remember(item.id) {
+                mutableStateOf(false)
+            }
+
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier.fillMaxWidth()
             ) {
 
-                Spacer(
-                    Modifier.height(
-                        8.dp
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        menuExpanded = true
+                    }
+                ) {
+                    Text(
+                        "☰  Bearbeiten / Löschen",
+                        fontSize = 16.sp,
+                        color = Color.White
                     )
-                )
-
-                var menuExpanded by remember(item.id) {
-                    mutableStateOf(false)
                 }
 
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    verticalAlignment =
-                        Alignment.CenterVertically,
-                    horizontalArrangement =
-                        Arrangement.spacedBy(8.dp)
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = {
+                        menuExpanded = false
+                    }
                 ) {
 
-                    MaintenanceImage(
-
-                        uri =
-                            item.imageUri,
-
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .height(160.dp)
+                    DropdownMenuItem(
+                        text = {
+                            Text("Bearbeiten")
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onEdit()
+                        }
                     )
 
-                    androidx.compose.foundation.layout.Box {
-
-                        OutlinedButton(
-                            modifier =
-                                Modifier.size(48.dp),
-                            contentPadding =
-                                androidx.compose.foundation.layout.PaddingValues(0.dp),
-                            onClick = {
-                                menuExpanded = true
-                            }
-                        ) {
-                            Text(
-                                "☰",
-                                fontSize = 22.sp,
-                                color = Color.White
-                            )
+                    DropdownMenuItem(
+                        text = {
+                            Text("Löschen")
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onDelete()
                         }
-
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = {
-                                menuExpanded = false
-                            }
-                        ) {
-
-                            DropdownMenuItem(
-                                text = {
-                                    Text("Bearbeiten")
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    onEdit()
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = {
-                                    Text("Löschen")
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    onDelete()
-                                }
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }
