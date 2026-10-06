@@ -15,11 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,9 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun VehicleScreen(
@@ -95,6 +104,24 @@ fun VehicleScreen(
 
     var imageUri by remember {
         mutableStateOf("")
+    }
+
+    // ============================================================
+    // KAUFPREIS
+    // ============================================================
+
+    var purchasePrice by remember {
+        mutableStateOf("")
+    }
+
+    var purchasePriceVisible by remember {
+        mutableStateOf(false)
+    }
+
+    // Welche Kaufpreise in der Fahrzeugliste sichtbar sind.
+    // Standardmäßig ist jeder Kaufpreis verborgen.
+    var revealedPurchasePriceIds by remember {
+        mutableStateOf(setOf<String>())
     }
 
     var vehicleTypeExpanded by remember {
@@ -379,6 +406,98 @@ fun VehicleScreen(
                                             1
                                     )
                                 }
+
+                                /*
+                                 * ==================================================
+                                 * KAUFPREIS
+                                 * ==================================================
+                                 *
+                                 * Der Kaufpreis wird grundsätzlich
+                                 * mit Sternchen angezeigt.
+                                 *
+                                 * Antippen des Auges:
+                                 *   ******** €  ->  12.500 € 
+                                 *
+                                 * Erneutes Antippen:
+                                 *   12.500 €   ->  ******** €
+                                 */
+
+                                Row(
+                                    verticalAlignment =
+                                        Alignment.CenterVertically
+                                ) {
+
+                                    Text(
+                                        "Kaufpreis: ",
+                                        color =
+                                            Color(0xFFB8BEC8)
+                                    )
+
+                                    val purchasePriceVisibleInList =
+                                        revealedPurchasePriceIds
+                                            .contains(vehicle.id)
+
+                                    Text(
+                                        if (
+                                            purchasePriceVisibleInList &&
+                                            vehicle.purchasePrice.isNotBlank()
+                                        ) {
+                                            "${vehicle.purchasePrice} €"
+                                        } else {
+                                            "******** €"
+                                        },
+                                        color =
+                                            Color.White,
+                                        fontWeight =
+                                            FontWeight.Medium
+                                    )
+
+                                    IconButton(
+
+                                        onClick = {
+
+                                            revealedPurchasePriceIds =
+                                                if (
+                                                    purchasePriceVisibleInList
+                                                ) {
+
+                                                    revealedPurchasePriceIds -
+                                                        vehicle.id
+
+                                                } else {
+
+                                                    revealedPurchasePriceIds +
+                                                        vehicle.id
+                                                }
+                                        }
+
+                                    ) {
+
+                                        Icon(
+
+                                            imageVector =
+                                                if (
+                                                    purchasePriceVisibleInList
+                                                ) {
+                                                    Icons.Outlined.VisibilityOff
+                                                } else {
+                                                    Icons.Outlined.Visibility
+                                                },
+
+                                            contentDescription =
+                                                if (
+                                                    purchasePriceVisibleInList
+                                                ) {
+                                                    "Kaufpreis verbergen"
+                                                } else {
+                                                    "Kaufpreis anzeigen"
+                                                },
+
+                                            tint =
+                                                Color(0xFFB8BEC8)
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -468,6 +587,16 @@ fun VehicleScreen(
                                     imageUri =
                                         vehicle.imageUri
 
+                                    // Kaufpreis laden
+                                    purchasePrice =
+                                        vehicle.purchasePrice
+
+                                    // Beim Öffnen des
+                                    // Bearbeitungsformulars
+                                    // zunächst immer verborgen.
+                                    purchasePriceVisible =
+                                        false
+
                                     adding =
                                         true
                                 }
@@ -499,6 +628,12 @@ fun VehicleScreen(
                                 onDelete(
                                     vehicle
                                 )
+
+                                // Sicherheitshalber auch
+                                // aus der Anzeige-Liste entfernen.
+                                revealedPurchasePriceIds =
+                                    revealedPurchasePriceIds -
+                                        vehicle.id
                             }
 
                         ) {
@@ -807,6 +942,108 @@ fun VehicleScreen(
 
                             /*
                              * ==================================================
+                             * KAUFPREIS
+                             * ==================================================
+                             */
+
+                            OutlinedTextField(
+
+                                value =
+                                    purchasePrice,
+
+                                onValueChange = { value ->
+
+                                    /*
+                                     * Erlaubt werden Zahlen,
+                                     * Komma und Punkt.
+                                     *
+                                     * Dadurch sind z. B.
+                                     *
+                                     * 12500
+                                     * 12500,50
+                                     * 12.500,50
+                                     *
+                                     * möglich.
+                                     */
+
+                                    purchasePrice =
+                                        value.filter {
+                                            it.isDigit() ||
+                                            it == ',' ||
+                                            it == '.'
+                                        }
+                                },
+
+                                label = {
+                                    Text(
+                                        "Kaufpreis in €"
+                                    )
+                                },
+
+                                placeholder = {
+                                    Text(
+                                        "z. B. 12500"
+                                    )
+                                },
+
+                                singleLine = true,
+
+                                keyboardOptions =
+                                    KeyboardOptions(
+                                        keyboardType =
+                                            KeyboardType.Decimal
+                                    ),
+
+                                visualTransformation =
+                                    if (
+                                        purchasePriceVisible
+                                    ) {
+                                        VisualTransformation.None
+                                    } else {
+                                        PasswordVisualTransformation()
+                                    },
+
+                                trailingIcon = {
+
+                                    IconButton(
+
+                                        onClick = {
+
+                                            purchasePriceVisible =
+                                                !purchasePriceVisible
+                                        }
+
+                                    ) {
+
+                                        Icon(
+
+                                            imageVector =
+                                                if (
+                                                    purchasePriceVisible
+                                                ) {
+                                                    Icons.Outlined.VisibilityOff
+                                                } else {
+                                                    Icons.Outlined.Visibility
+                                                },
+
+                                            contentDescription =
+                                                if (
+                                                    purchasePriceVisible
+                                                ) {
+                                                    "Kaufpreis verbergen"
+                                                } else {
+                                                    "Kaufpreis anzeigen"
+                                                }
+                                        )
+                                    }
+                                },
+
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                            )
+
+                            /*
+                             * ==================================================
                              * FAHRZEUGBILD
                              * ==================================================
                              */
@@ -877,16 +1114,9 @@ fun VehicleScreen(
                                          * AUTOMATISCHER FAHRZEUGNAME
                                          * ==================================================
                                          *
-                                         * PS/KW wird absichtlich NICHT
-                                         * in den Fahrzeugnamen aufgenommen.
-                                         *
-                                         * Dadurch lautet die Überschrift
-                                         * beispielsweise:
-                                         *
-                                         * PKW Volkswagen Golf 2001
-                                         *
-                                         * Die PS/KW bleiben separat
-                                         * im Fahrzeug gespeichert.
+                                         * PS/KW und Kaufpreis werden
+                                         * NICHT in den Fahrzeugnamen
+                                         * aufgenommen.
                                          */
 
                                         val generatedName =
@@ -955,7 +1185,10 @@ fun VehicleScreen(
                                                         vin.trim(),
 
                                                     imageUri =
-                                                        imageUri
+                                                        imageUri,
+
+                                                    purchasePrice =
+                                                        purchasePrice.trim()
                                                 )
 
                                             } else {
@@ -997,7 +1230,10 @@ fun VehicleScreen(
                                                         vin.trim(),
 
                                                     imageUri =
-                                                        imageUri
+                                                        imageUri,
+
+                                                    purchasePrice =
+                                                        purchasePrice.trim()
                                                 )
                                             }
 
@@ -1049,6 +1285,15 @@ fun VehicleScreen(
 
                                         imageUri =
                                             ""
+
+                                        purchasePrice =
+                                            ""
+
+                                        purchasePriceVisible =
+                                            false
+
+                                        vehicleTypeExpanded =
+                                            false
 
                                         adding =
                                             false
@@ -1103,6 +1348,12 @@ fun VehicleScreen(
 
                                         imageUri =
                                             ""
+
+                                        purchasePrice =
+                                            ""
+
+                                        purchasePriceVisible =
+                                            false
 
                                         vehicleTypeExpanded =
                                             false
@@ -1174,6 +1425,12 @@ fun VehicleScreen(
 
                     imageUri =
                         ""
+
+                    purchasePrice =
+                        ""
+
+                    purchasePriceVisible =
+                        false
 
                     vehicleTypeExpanded =
                         false
