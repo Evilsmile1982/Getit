@@ -102,12 +102,19 @@ class VehicleStore(
             } ||
             vehicles.size != array.length()
         ) {
-            save(vehicles)
+
+            save(
+                vehicles
+            )
+
         } else {
 
-            var needsMigration = false
+            var needsMigration =
+                false
 
-            for (i in vehicles.indices) {
+            for (
+                i in vehicles.indices
+            ) {
 
                 val storedId =
                     array
@@ -119,13 +126,19 @@ class VehicleStore(
                     storedId.isBlank() ||
                     storedId != vehicles[i].id
                 ) {
-                    needsMigration = true
+
+                    needsMigration =
+                        true
+
                     break
                 }
             }
 
             if (needsMigration) {
-                save(vehicles)
+
+                save(
+                    vehicles
+                )
             }
         }
 
@@ -914,6 +927,7 @@ class VehicleStore(
 
                 add(
                     TireSet(
+
                         id =
                             o.optLong(
                                 "id"
@@ -927,6 +941,22 @@ class VehicleStore(
                         season =
                             o.optString(
                                 "season"
+                            ),
+
+                        /*
+                         * NEU:
+                         * Felgenart
+                         *
+                         * Alte gespeicherte Reifen besitzen
+                         * dieses Feld noch nicht.
+                         *
+                         * Deshalb wird bei alten Datensätzen
+                         * automatisch "" verwendet.
+                         */
+                        rimType =
+                            o.optString(
+                                "rimType",
+                                ""
                             ),
 
                         dimension =
@@ -1019,6 +1049,15 @@ class VehicleStore(
                     put(
                         "season",
                         it.season
+                    )
+
+                    /*
+                     * NEU:
+                     * Felgenart wird dauerhaft gespeichert.
+                     */
+                    put(
+                        "rimType",
+                        it.rimType
                     )
 
                     put(
