@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -46,8 +47,10 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.TireRepair
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,6 +64,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -80,6 +84,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autocheck.app.ui.AutoCheckTheme
@@ -147,6 +152,14 @@ fun HomeScreen(
             )
         )
 
+    var profileMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    var profileDialog by remember {
+        mutableStateOf<ProfileDialog?>(null)
+    }
+
     LazyColumn(
 
         modifier =
@@ -175,46 +188,169 @@ fun HomeScreen(
 
         item {
 
-            AnimatedVisibility(
-
-                visible =
-                    visible,
-
-                enter =
-                    slideInVertically(
-
-                        animationSpec =
-                            tween(
-                                2000
-                            ),
-
-                        initialOffsetY = {
-                            fullHeight ->
-                            -fullHeight
-                        }
-                    )
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
             ) {
 
-                Image(
+                AnimatedVisibility(
 
-                    painter =
-                        painterResource(
-                            R.drawable.bild_4
+                    visible =
+                        visible,
+
+                    enter =
+                        slideInVertically(
+
+                            animationSpec =
+                                tween(
+                                    2000
+                                ),
+
+                            initialOffsetY = {
+                                fullHeight ->
+                                -fullHeight
+                            }
                         ),
 
-                    contentDescription =
-                        "AutoCheck",
-
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(
-                                72.dp
+                        Modifier.fillMaxSize()
+                ) {
+
+                    Image(
+
+                        painter =
+                            painterResource(
+                                R.drawable.bild_4
                             ),
 
-                    contentScale =
-                        ContentScale.Fit
-                )
+                        contentDescription =
+                            "CARVITA",
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        contentScale =
+                            ContentScale.Fit
+                    )
+                }
+
+                Box(
+                    modifier =
+                        Modifier
+                            .align(
+                                Alignment.TopEnd
+                            )
+                            .padding(
+                                end = 2.dp
+                            )
+                ) {
+
+                    IconButton(
+
+                        onClick = {
+                            profileMenuExpanded =
+                                !profileMenuExpanded
+                        },
+
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .clip(
+                                    CircleShape
+                                )
+                                .background(
+                                    Color(
+                                        0xFFD4AF37
+                                    )
+                                )
+                    ) {
+
+                        Icon(
+
+                            imageVector =
+                                Icons.Filled.Person,
+
+                            contentDescription =
+                                "Profil",
+
+                            tint =
+                                Color.Black,
+
+                            modifier =
+                                Modifier.size(
+                                    28.dp
+                                )
+                        )
+                    }
+
+                    DropdownMenu(
+
+                        expanded =
+                            profileMenuExpanded,
+
+                        onDismissRequest = {
+                            profileMenuExpanded =
+                                false
+                        }
+                    ) {
+
+                        DropdownMenuItem(
+
+                            text = {
+                                Text(
+                                    "Anmelden"
+                                )
+                            },
+
+                            leadingIcon = {
+
+                                Icon(
+                                    Icons.Filled.Person,
+                                    contentDescription =
+                                        null
+                                )
+                            },
+
+                            onClick = {
+
+                                profileMenuExpanded =
+                                    false
+
+                                profileDialog =
+                                    ProfileDialog.LOGIN
+                            }
+                        )
+
+                        DropdownMenuItem(
+
+                            text = {
+                                Text(
+                                    "Profil erstellen"
+                                )
+                            },
+
+                            leadingIcon = {
+
+                                Icon(
+                                    Icons.Filled.Person,
+                                    contentDescription =
+                                        null
+                                )
+                            },
+
+                            onClick = {
+
+                                profileMenuExpanded =
+                                    false
+
+                                profileDialog =
+                                    ProfileDialog.REGISTER
+                            }
+                        )
+                    }
+                }
             }
         }
 
@@ -247,7 +383,7 @@ fun HomeScreen(
                         ),
 
                     contentDescription =
-                        "AutoCheck Fahrzeug",
+                        "CARVITA Fahrzeug",
 
                     modifier =
                         Modifier
@@ -370,4 +506,343 @@ fun HomeScreen(
             )
         }
     }
+
+    when (profileDialog) {
+
+        ProfileDialog.LOGIN -> {
+
+            LoginDialog(
+
+                onDismiss = {
+                    profileDialog =
+                        null
+                }
+            )
+        }
+
+        ProfileDialog.REGISTER -> {
+
+            RegisterDialog(
+
+                onDismiss = {
+                    profileDialog =
+                        null
+                }
+            )
+        }
+
+        null -> Unit
+    }
+}
+
+private enum class ProfileDialog {
+    LOGIN,
+    REGISTER
+}
+
+@Composable
+private fun LoginDialog(
+    onDismiss: () -> Unit
+) {
+
+    var email by remember {
+        mutableStateOf("")
+    }
+
+    var password by remember {
+        mutableStateOf("")
+    }
+
+    AlertDialog(
+
+        onDismissRequest =
+            onDismiss,
+
+        title = {
+
+            Text(
+                "Bei CARVITA anmelden"
+            )
+        },
+
+        text = {
+
+            Column {
+
+                Text(
+                    "Melde dich später mit deinem CARVITA-Konto an, um deine persönlichen Fahrzeugdaten auf verschiedenen Geräten wieder abzurufen.",
+                    fontSize = 14.sp
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            16.dp
+                        )
+                )
+
+                OutlinedTextField(
+
+                    value =
+                        email,
+
+                    onValueChange = {
+                        email =
+                            it
+                    },
+
+                    label = {
+                        Text(
+                            "E-Mail-Adresse"
+                        )
+                    },
+
+                    singleLine = true,
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            10.dp
+                        )
+                )
+
+                OutlinedTextField(
+
+                    value =
+                        password,
+
+                    onValueChange = {
+                        password =
+                            it
+                    },
+
+                    label = {
+                        Text(
+                            "Passwort"
+                        )
+                    },
+
+                    singleLine = true,
+
+                    visualTransformation =
+                        PasswordVisualTransformation(),
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            12.dp
+                        )
+                )
+
+                Text(
+                    "Die echte Anmeldung und E-Mail-Verifizierung werden im nächsten Ausbauschritt sicher angebunden.",
+                    fontSize = 12.sp,
+                    color = Muted
+                )
+            }
+        },
+
+        dismissButton = {
+
+            TextButton(
+                onClick =
+                    onDismiss
+            ) {
+                Text(
+                    "Abbrechen"
+                )
+            }
+        },
+
+        confirmButton = {
+
+            Button(
+                onClick = {
+                    onDismiss()
+                }
+            ) {
+                Text(
+                    "Weiter"
+                )
+            }
+        }
+    )
+}
+
+@Composable
+private fun RegisterDialog(
+    onDismiss: () -> Unit
+) {
+
+    var name by remember {
+        mutableStateOf("")
+    }
+
+    var email by remember {
+        mutableStateOf("")
+    }
+
+    var password by remember {
+        mutableStateOf("")
+    }
+
+    AlertDialog(
+
+        onDismissRequest =
+            onDismiss,
+
+        title = {
+
+            Text(
+                "CARVITA-Profil erstellen"
+            )
+        },
+
+        text = {
+
+            Column {
+
+                Text(
+                    "Dein persönliches Profil wird später mit deinen Fahrzeugdaten verknüpft. Nach der echten Registrierung wird die E-Mail-Adresse verifiziert.",
+                    fontSize = 14.sp
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            16.dp
+                        )
+                )
+
+                OutlinedTextField(
+
+                    value =
+                        name,
+
+                    onValueChange = {
+                        name =
+                            it
+                    },
+
+                    label = {
+                        Text(
+                            "Name"
+                        )
+                    },
+
+                    singleLine = true,
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            10.dp
+                        )
+                )
+
+                OutlinedTextField(
+
+                    value =
+                        email,
+
+                    onValueChange = {
+                        email =
+                            it
+                    },
+
+                    label = {
+                        Text(
+                            "E-Mail-Adresse"
+                        )
+                    },
+
+                    singleLine = true,
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            10.dp
+                        )
+                )
+
+                OutlinedTextField(
+
+                    value =
+                        password,
+
+                    onValueChange = {
+                        password =
+                            it
+                    },
+
+                    label = {
+                        Text(
+                            "Passwort"
+                        )
+                    },
+
+                    singleLine = true,
+
+                    visualTransformation =
+                        PasswordVisualTransformation(),
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            12.dp
+                        )
+                )
+
+                Text(
+                    "Die sichere Kontoerstellung, E-Mail-Verifizierung und Cloud-Synchronisierung werden im nächsten Ausbauschritt angeschlossen.",
+                    fontSize = 12.sp,
+                    color = Muted
+                )
+            }
+        },
+
+        dismissButton = {
+
+            TextButton(
+                onClick =
+                    onDismiss
+            ) {
+                Text(
+                    "Abbrechen"
+                )
+            }
+        },
+
+        confirmButton = {
+
+            Button(
+                onClick = {
+                    onDismiss()
+                }
+            ) {
+                Text(
+                    "Weiter"
+                )
+            }
+        }
+    )
 }
