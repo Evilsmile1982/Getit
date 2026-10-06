@@ -31,8 +31,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -3050,12 +3048,6 @@ private fun MaintenanceHistoryCard(
     onDelete: () -> Unit
 ) {
 
-    var menuExpanded by remember {
-        mutableStateOf(
-            false
-        )
-    }
-
     Card(
 
         colors =
@@ -3076,102 +3068,19 @@ private fun MaintenanceHistoryCard(
             )
         ) {
 
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
+            Text(
 
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
+                item.name,
 
-                Text(
+                color =
+                    Color.White,
 
-                    item.name,
+                fontSize =
+                    18.sp,
 
-                    color =
-                        Color.White,
-
-                    fontSize =
-                        18.sp,
-
-                    fontWeight =
-                        FontWeight.Bold,
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        )
-                )
-
-                androidx.compose.material3.IconButton(
-
-                    onClick = {
-                        menuExpanded =
-                            true
-                    }
-
-                ) {
-
-                    androidx.compose.material3.Icon(
-
-                        imageVector =
-                            Icons.Default.MoreVert,
-
-                        contentDescription =
-                            "Wartungsmenü",
-
-                        tint =
-                            Color.White
-                    )
-                }
-
-                DropdownMenu(
-
-                    expanded =
-                        menuExpanded,
-
-                    onDismissRequest = {
-                        menuExpanded =
-                            false
-                    }
-
-                ) {
-
-                    DropdownMenuItem(
-
-                        text = {
-                            Text(
-                                "Bearbeiten"
-                            )
-                        },
-
-                        onClick = {
-
-                            menuExpanded =
-                                false
-
-                            onEdit()
-                        }
-                    )
-
-                    DropdownMenuItem(
-
-                        text = {
-                            Text(
-                                "Löschen"
-                            )
-                        },
-
-                        onClick = {
-
-                            menuExpanded =
-                                false
-
-                            onDelete()
-                        }
-                    )
-                }
-            }
+                fontWeight =
+                    FontWeight.Bold
+            )
 
             Spacer(
                 Modifier.height(
@@ -3308,18 +3217,77 @@ private fun MaintenanceHistoryCard(
                     )
                 )
 
-                MaintenanceImage(
+                var menuExpanded by remember(item.id) {
+                    mutableStateOf(false)
+                }
 
-                    uri =
-                        item.imageUri,
-
+                Row(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(
-                                160.dp
+                        Modifier.fillMaxWidth(),
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    horizontalArrangement =
+                        Arrangement.spacedBy(8.dp)
+                ) {
+
+                    MaintenanceImage(
+
+                        uri =
+                            item.imageUri,
+
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(160.dp)
+                    )
+
+                    androidx.compose.foundation.layout.Box {
+
+                        OutlinedButton(
+                            modifier =
+                                Modifier.size(48.dp),
+                            contentPadding =
+                                androidx.compose.foundation.layout.PaddingValues(0.dp),
+                            onClick = {
+                                menuExpanded = true
+                            }
+                        ) {
+                            Text(
+                                "☰",
+                                fontSize = 22.sp,
+                                color = Color.White
                             )
-                )
+                        }
+
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = {
+                                menuExpanded = false
+                            }
+                        ) {
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text("Bearbeiten")
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onEdit()
+                                }
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text("Löschen")
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDelete()
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
