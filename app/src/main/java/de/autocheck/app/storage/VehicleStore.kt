@@ -413,13 +413,6 @@ class VehicleStore(
                 val o =
                     array.getJSONObject(i)
 
-                /*
-                 * Neue Ersatzteilliste.
-                 *
-                 * Alte Reparaturen besitzen dieses Feld noch nicht.
-                 * In diesem Fall bleibt die Liste leer und die alten
-                 * Daten werden trotzdem vollständig geladen.
-                 */
                 val partsArray =
                     o.optJSONArray(
                         "parts"
@@ -502,11 +495,6 @@ class VehicleStore(
                                 ""
                             ),
 
-                        /*
-                         * Das alte Kostenfeld bleibt erhalten.
-                         * Dadurch gehen vorhandene Reparaturdaten
-                         * nicht verloren.
-                         */
                         cost =
                             o.optString(
                                 "cost"
@@ -607,9 +595,6 @@ class VehicleStore(
                         repair.laborCost
                     )
 
-                    /*
-                     * Altes Feld bleibt bewusst bestehen.
-                     */
                     put(
                         "cost",
                         repair.cost
@@ -996,12 +981,6 @@ class VehicleStore(
                             o.optInt(
                                 "reminderMonthsBefore",
                                 0
-                            ),
-
-                        reminderKmBefore =
-                            o.optInt(
-                                "reminderKmBefore",
-                                0
                             )
                     )
                 )
@@ -1080,11 +1059,6 @@ class VehicleStore(
                         "reminderMonthsBefore",
                         it.reminderMonthsBefore
                     )
-
-                    put(
-                        "reminderKmBefore",
-                        it.reminderKmBefore
-                    )
                 }
             )
         }
@@ -1140,16 +1114,6 @@ class VehicleStore(
                                 "season"
                             ),
 
-                        /*
-                         * NEU:
-                         * Felgenart
-                         *
-                         * Alte gespeicherte Reifen besitzen
-                         * dieses Feld noch nicht.
-                         *
-                         * Deshalb wird bei alten Datensätzen
-                         * automatisch "" verwendet.
-                         */
                         rimType =
                             o.optString(
                                 "rimType",
@@ -1248,10 +1212,6 @@ class VehicleStore(
                         it.season
                     )
 
-                    /*
-                     * NEU:
-                     * Felgenart wird dauerhaft gespeichert.
-                     */
                     put(
                         "rimType",
                         it.rimType
