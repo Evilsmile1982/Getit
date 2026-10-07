@@ -1,5 +1,6 @@
 package de.autocheck.app
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,7 +59,7 @@ private fun serviceMonthNumber(
 
     val index =
         serviceMonths.indexOf(
-            value.uppercase()
+            value.trim().uppercase()
         )
 
     return if (index >= 0) {
@@ -107,11 +108,15 @@ fun ServiceScreen(
         }
 
     var lastServiceMonth by remember {
-        mutableStateOf(currentMonth)
+        mutableStateOf(
+            currentMonth
+        )
     }
 
     var lastServiceYear by remember {
-        mutableStateOf(currentYear)
+        mutableStateOf(
+            currentYear
+        )
     }
 
     var lastServiceKm by remember {
@@ -119,11 +124,15 @@ fun ServiceScreen(
     }
 
     var nextServiceMonth by remember {
-        mutableStateOf(currentMonth)
+        mutableStateOf(
+            currentMonth
+        )
     }
 
     var nextServiceYear by remember {
-        mutableStateOf(currentYear)
+        mutableStateOf(
+            currentYear
+        )
     }
 
     var nextServiceKm by remember {
@@ -146,15 +155,7 @@ fun ServiceScreen(
         mutableStateOf(0)
     }
 
-    var reminderKmBefore by remember {
-        mutableStateOf(0)
-    }
-
     var monthReminderExpanded by remember {
-        mutableStateOf(false)
-    }
-
-    var kmReminderExpanded by remember {
         mutableStateOf(false)
     }
 
@@ -173,7 +174,8 @@ fun ServiceScreen(
     LaunchedEffect(activeVehicle) {
 
         val existing =
-            store.loadServiceIntervals()
+            store
+                .loadServiceIntervals()
                 .firstOrNull {
                     it.vehicle ==
                         activeVehicle
@@ -209,9 +211,6 @@ fun ServiceScreen(
                 false
 
             reminderMonthsBefore =
-                0
-
-            reminderKmBefore =
                 0
 
             saved =
@@ -266,20 +265,6 @@ fun ServiceScreen(
                         3
                     )
 
-            reminderKmBefore =
-                when (
-                    existing.reminderKmBefore
-                ) {
-
-                    500,
-                    1000,
-                    2000 ->
-                        existing.reminderKmBefore
-
-                    else ->
-                        0
-                }
-
             saved =
                 true
 
@@ -317,7 +302,11 @@ fun ServiceScreen(
 
             Card(
                 modifier =
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 16.dp
+                        ),
 
                 colors =
                     CardDefaults.cardColors(
@@ -338,7 +327,10 @@ fun ServiceScreen(
                         "Bitte zuerst unter „Mein Auto“ ein Fahrzeug anlegen.",
 
                     color =
-                        Color.White
+                        Color.White,
+
+                    fontSize =
+                        16.sp
                 )
             }
 
@@ -347,6 +339,13 @@ fun ServiceScreen(
             LazyColumn(
                 modifier =
                     Modifier.fillMaxSize(),
+
+                contentPadding =
+                    androidx.compose.foundation.layout.PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 24.dp
+                    ),
 
                 verticalArrangement =
                     Arrangement.spacedBy(
@@ -392,14 +391,8 @@ fun ServiceScreen(
                             reminderMonthsBefore =
                                 reminderMonthsBefore,
 
-                            reminderKmBefore =
-                                reminderKmBefore,
-
                             monthReminderExpanded =
                                 monthReminderExpanded,
-
-                            kmReminderExpanded =
-                                kmReminderExpanded,
 
                             onLastServiceMonth = {
                                 lastServiceMonth =
@@ -451,25 +444,16 @@ fun ServiceScreen(
                                     it
                             },
 
-                            onReminderKmBefore = {
-                                reminderKmBefore =
-                                    it
-                            },
-
                             onMonthReminderExpanded = {
                                 monthReminderExpanded =
-                                    it
-                            },
-
-                            onKmReminderExpanded = {
-                                kmReminderExpanded =
                                     it
                             },
 
                             onSave = {
 
                                 val existing =
-                                    store.loadServiceIntervals()
+                                    store
+                                        .loadServiceIntervals()
                                         .firstOrNull {
                                             it.vehicle ==
                                                 activeVehicle
@@ -491,10 +475,12 @@ fun ServiceScreen(
                                             ),
 
                                         lastServiceYear =
-                                            lastServiceYear.trim(),
+                                            lastServiceYear
+                                                .trim(),
 
                                         lastServiceKm =
-                                            lastServiceKm.trim(),
+                                            lastServiceKm
+                                                .trim(),
 
                                         nextServiceMonth =
                                             serviceMonthName(
@@ -502,16 +488,20 @@ fun ServiceScreen(
                                             ),
 
                                         nextServiceYear =
-                                            nextServiceYear.trim(),
+                                            nextServiceYear
+                                                .trim(),
 
                                         nextServiceKm =
-                                            nextServiceKm.trim(),
+                                            nextServiceKm
+                                                .trim(),
 
                                         documentation =
-                                            documentation.trim(),
+                                            documentation
+                                                .trim(),
 
                                         cost =
-                                            cost.trim(),
+                                            cost
+                                                .trim(),
 
                                         reminderEnabled =
                                             reminderEnabled,
@@ -521,25 +511,12 @@ fun ServiceScreen(
                                                 .coerceIn(
                                                     0,
                                                     3
-                                                ),
-
-                                        reminderKmBefore =
-                                            when (
-                                                reminderKmBefore
-                                            ) {
-
-                                                500,
-                                                1000,
-                                                2000 ->
-                                                    reminderKmBefore
-
-                                                else ->
-                                                    0
-                                            }
+                                                )
                                     )
 
                                 val updated =
-                                    store.loadServiceIntervals()
+                                    store
+                                        .loadServiceIntervals()
                                         .filterNot {
                                             it.vehicle ==
                                                 activeVehicle
@@ -550,21 +527,7 @@ fun ServiceScreen(
                                     updated
                                 )
 
-
-                                /*
-                                 * ==================================================
-                                 * SERVICE-ERINNERUNG EINPLANEN
-                                 * ==================================================
-                                 *
-                                 * Wenn reminderEnabled ausgeschaltet ist oder
-                                 * "keine zeitliche Erinnerung" ausgewählt wurde,
-                                 * wird ein eventuell vorhandener Alarm gelöscht.
-                                 *
-                                 * Bei 1, 2 oder 3 Monaten wird der Android-Alarm
-                                 * anhand des nächsten Service-Datums eingeplant.
-                                 */
                                 scheduleServiceReminder(
-
                                     context =
                                         context,
 
@@ -586,7 +549,6 @@ fun ServiceScreen(
                                             0
                                         }
                                 )
-
 
                                 saved =
                                     true
@@ -646,10 +608,8 @@ fun ServiceScreen(
                             reminderMonthsBefore =
                                 reminderMonthsBefore,
 
-                            reminderKmBefore =
-                                reminderKmBefore,
-
                             onEdit = {
+
                                 editing =
                                     true
                             }
@@ -673,9 +633,7 @@ private fun ServiceEditCard(
     cost: String,
     reminderEnabled: Boolean,
     reminderMonthsBefore: Int,
-    reminderKmBefore: Int,
     monthReminderExpanded: Boolean,
-    kmReminderExpanded: Boolean,
     onLastServiceMonth: (Int) -> Unit,
     onLastServiceYear: (String) -> Unit,
     onLastServiceKm: (String) -> Unit,
@@ -686,9 +644,7 @@ private fun ServiceEditCard(
     onCost: (String) -> Unit,
     onReminderEnabled: (Boolean) -> Unit,
     onReminderMonthsBefore: (Int) -> Unit,
-    onReminderKmBefore: (Int) -> Unit,
     onMonthReminderExpanded: (Boolean) -> Unit,
-    onKmReminderExpanded: (Boolean) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
     showCancel: Boolean
@@ -709,13 +665,13 @@ private fun ServiceEditCard(
 
         Column(
             modifier =
-                Modifier.padding(
-                    16.dp
-                ),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
 
             verticalArrangement =
                 Arrangement.spacedBy(
-                    8.dp
+                    10.dp
                 )
         ) {
 
@@ -726,11 +682,11 @@ private fun ServiceEditCard(
                 color =
                     Color.White,
 
-                fontWeight =
-                    FontWeight.Bold,
-
                 fontSize =
-                    22.sp
+                    21.sp,
+
+                fontWeight =
+                    FontWeight.Bold
             )
 
             Text(
@@ -738,56 +694,44 @@ private fun ServiceEditCard(
                     "Letztes Service",
 
                 color =
-                    Color.White,
-
-                fontWeight =
-                    FontWeight.Bold,
+                    Color(
+                        0xFF9A4DFF
+                    ),
 
                 fontSize =
-                    17.sp
+                    17.sp,
+
+                fontWeight =
+                    FontWeight.Bold
             )
 
             ServiceMonthYear(
-
                 month =
                     lastServiceMonth,
 
                 year =
                     lastServiceYear,
 
-                onMonthChanged =
+                onMonth =
                     onLastServiceMonth,
 
-                onYearChanged =
+                onYear =
                     onLastServiceYear
             )
 
             OutlinedTextField(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 value =
                     lastServiceKm,
 
-                onValueChange = { value ->
-
-                    if (
-                        value.length <= 7 &&
-                        value.all {
-                            it.isDigit()
-                        }
-                    ) {
-
-                        onLastServiceKm(
-                            value
-                        )
-                    }
-                },
+                onValueChange =
+                    onLastServiceKm,
 
                 label = {
                     Text(
-                        "Kilometerstand beim letzten Service"
+                        "Kilometer beim letzten Service"
                     )
                 },
 
@@ -807,56 +751,50 @@ private fun ServiceEditCard(
                     "Nächstes Service",
 
                 color =
-                    Color.White,
-
-                fontWeight =
-                    FontWeight.Bold,
+                    Color(
+                        0xFF9A4DFF
+                    ),
 
                 fontSize =
-                    17.sp
+                    17.sp,
+
+                fontWeight =
+                    FontWeight.Bold
             )
 
             ServiceMonthYear(
-
                 month =
                     nextServiceMonth,
 
                 year =
                     nextServiceYear,
 
-                onMonthChanged =
+                onMonth =
                     onNextServiceMonth,
 
-                onYearChanged =
+                onYear =
                     onNextServiceYear
             )
 
             OutlinedTextField(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 value =
                     nextServiceKm,
 
-                onValueChange = { value ->
-
-                    if (
-                        value.length <= 7 &&
-                        value.all {
-                            it.isDigit()
-                        }
-                    ) {
-
-                        onNextServiceKm(
-                            value
-                        )
-                    }
-                },
+                onValueChange =
+                    onNextServiceKm,
 
                 label = {
                     Text(
-                        "Nächster Service bei Kilometerstand"
+                        "Nächstes Service bei Kilometer"
+                    )
+                },
+
+                placeholder = {
+                    Text(
+                        "z. B. 150000"
                     )
                 },
 
@@ -864,8 +802,41 @@ private fun ServiceEditCard(
                     true
             )
 
-            OutlinedTextField(
+            Text(
+                text =
+                    "Die Kilometerangabe dient als Information. Es wird keine Kilometer-Erinnerung ausgelöst.",
 
+                color =
+                    Color.LightGray,
+
+                fontSize =
+                    12.sp
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        6.dp
+                    )
+            )
+
+            Text(
+                text =
+                    "Dokumentation",
+
+                color =
+                    Color(
+                        0xFF9A4DFF
+                    ),
+
+                fontSize =
+                    17.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            OutlinedTextField(
                 modifier =
                     Modifier.fillMaxWidth(),
 
@@ -881,33 +852,38 @@ private fun ServiceEditCard(
                     )
                 },
 
+                placeholder = {
+                    Text(
+                        "z. B. Öl, Filter und Bremsen erneuert"
+                    )
+                },
+
                 minLines =
-                    4
+                    3,
+
+                maxLines =
+                    6
             )
 
             OutlinedTextField(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 value =
                     cost,
 
-                onValueChange = { value ->
-
-                    if (
-                        value.length <= 12
-                    ) {
-
-                        onCost(
-                            value
-                        )
-                    }
-                },
+                onValueChange =
+                    onCost,
 
                 label = {
                     Text(
-                        "Kosten (€)"
+                        "Kosten"
+                    )
+                },
+
+                placeholder = {
+                    Text(
+                        "z. B. 350 €"
                     )
                 },
 
@@ -918,32 +894,75 @@ private fun ServiceEditCard(
             Spacer(
                 modifier =
                     Modifier.height(
-                        4.dp
+                        6.dp
                     )
             )
 
-            Row(
+            Text(
+                text =
+                    "Erinnerung",
 
+                color =
+                    Color(
+                        0xFF9A4DFF
+                    ),
+
+                fontSize =
+                    17.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Row(
                 modifier =
                     Modifier.fillMaxWidth(),
 
-                horizontalArrangement =
-                    Arrangement.SpaceBetween,
-
                 verticalAlignment =
-                    Alignment.CenterVertically
+                    Alignment.CenterVertically,
+
+                horizontalArrangement =
+                    Arrangement.SpaceBetween
             ) {
 
-                Text(
-                    text =
-                        "Erinnerung",
+                Column(
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
+                ) {
 
-                    color =
-                        Color.White,
+                    Text(
+                        text =
+                            "Service-Erinnerung",
 
-                    fontWeight =
-                        FontWeight.Bold
-                )
+                        color =
+                            Color.White,
+
+                        fontSize =
+                            16.sp,
+
+                        fontWeight =
+                            FontWeight.Medium
+                    )
+
+                    Text(
+                        text =
+                            if (
+                                reminderEnabled
+                            ) {
+                                "Benachrichtigung ist aktiviert."
+                            } else {
+                                "Keine automatische Benachrichtigung."
+                            },
+
+                        color =
+                            Color.LightGray,
+
+                        fontSize =
+                            12.sp
+                    )
+                }
 
                 Switch(
                     checked =
@@ -958,20 +977,15 @@ private fun ServiceEditCard(
                 reminderEnabled
             ) {
 
-                Text(
-                    text =
-                        "Zeitliche Erinnerung",
-
-                    color =
-                        Color.White,
-
-                    fontWeight =
-                        FontWeight.Bold
-                )
-
-                Box {
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                ) {
 
                     OutlinedButton(
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
                         onClick = {
                             onMonthReminderExpanded(
                                 true
@@ -980,28 +994,27 @@ private fun ServiceEditCard(
                     ) {
 
                         Text(
+                            text =
+                                when (
+                                    reminderMonthsBefore
+                                ) {
 
-                            when (
-                                reminderMonthsBefore
-                            ) {
+                                    1 ->
+                                        "1 Monat vorher"
 
-                                1 ->
-                                    "1 Monat vorher"
+                                    2 ->
+                                        "2 Monate vorher"
 
-                                2 ->
-                                    "2 Monate vorher"
+                                    3 ->
+                                        "3 Monate vorher"
 
-                                3 ->
-                                    "3 Monate vorher"
-
-                                else ->
-                                    "Keine zeitliche Erinnerung"
-                            }
+                                    else ->
+                                        "Erinnerungszeitraum auswählen"
+                                }
                         )
                     }
 
                     DropdownMenu(
-
                         expanded =
                             monthReminderExpanded,
 
@@ -1012,167 +1025,97 @@ private fun ServiceEditCard(
                         }
                     ) {
 
-                        listOf(
-                            0,
-                            1,
-                            2,
-                            3
-                        ).forEach {
-                            months ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "1 Monat vorher"
+                                )
+                            },
 
-                            DropdownMenuItem(
+                            onClick = {
 
-                                text = {
+                                onReminderMonthsBefore(
+                                    1
+                                )
 
-                                    Text(
+                                onMonthReminderExpanded(
+                                    false
+                                )
+                            }
+                        )
 
-                                        when (
-                                            months
-                                        ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "2 Monate vorher"
+                                )
+                            },
 
-                                            1 ->
-                                                "1 Monat vorher"
+                            onClick = {
 
-                                            2 ->
-                                                "2 Monate vorher"
+                                onReminderMonthsBefore(
+                                    2
+                                )
 
-                                            3 ->
-                                                "3 Monate vorher"
+                                onMonthReminderExpanded(
+                                    false
+                                )
+                            }
+                        )
 
-                                            else ->
-                                                "Keine zeitliche Erinnerung"
-                                        }
-                                    )
-                                },
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "3 Monate vorher"
+                                )
+                            },
 
-                                onClick = {
+                            onClick = {
 
-                                    onReminderMonthsBefore(
-                                        months
-                                    )
+                                onReminderMonthsBefore(
+                                    3
+                                )
 
-                                    onMonthReminderExpanded(
-                                        false
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
+                                onMonthReminderExpanded(
+                                    false
+                                )
+                            }
+                        )
 
-                Text(
-                    text =
-                        "Kilometer-Erinnerung",
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Keine Erinnerung"
+                                )
+                            },
 
-                    color =
-                        Color.White,
+                            onClick = {
 
-                    fontWeight =
-                        FontWeight.Bold
-                )
+                                onReminderMonthsBefore(
+                                    0
+                                )
 
-                Box {
+                                onReminderEnabled(
+                                    false
+                                )
 
-                    OutlinedButton(
-                        onClick = {
-                            onKmReminderExpanded(
-                                true
-                            )
-                        }
-                    ) {
-
-                        Text(
-
-                            when (
-                                reminderKmBefore
-                            ) {
-
-                                500 ->
-                                    "500 km vorher"
-
-                                1000 ->
-                                    "1.000 km vorher"
-
-                                2000 ->
-                                    "2.000 km vorher"
-
-                                else ->
-                                    "Keine km-Erinnerung"
+                                onMonthReminderExpanded(
+                                    false
+                                )
                             }
                         )
                     }
-
-                    DropdownMenu(
-
-                        expanded =
-                            kmReminderExpanded,
-
-                        onDismissRequest = {
-                            onKmReminderExpanded(
-                                false
-                            )
-                        }
-                    ) {
-
-                        listOf(
-                            0,
-                            500,
-                            1000,
-                            2000
-                        ).forEach {
-                            km ->
-
-                            DropdownMenuItem(
-
-                                text = {
-
-                                    Text(
-
-                                        when (
-                                            km
-                                        ) {
-
-                                            500 ->
-                                                "500 km vorher"
-
-                                            1000 ->
-                                                "1.000 km vorher"
-
-                                            2000 ->
-                                                "2.000 km vorher"
-
-                                            else ->
-                                                "Keine km-Erinnerung"
-                                        }
-                                    )
-                                },
-
-                                onClick = {
-
-                                    onReminderKmBefore(
-                                        km
-                                    )
-
-                                    onKmReminderExpanded(
-                                        false
-                                    )
-                                }
-                            )
-                        }
-                    }
                 }
 
                 Text(
                     text =
-                        "Die Erinnerung wird später ausgelöst, sobald das zeitliche oder Kilometer-Intervall erreicht ist.",
+                        "Die Erinnerung erfolgt am eingestellten Tag um 09:00 Uhr.",
 
                     color =
-                        Color(
-                            0xFF9AA0AA
-                        ),
+                        Color.LightGray,
 
                     fontSize =
-                        13.sp
+                        12.sp
                 )
             }
 
@@ -1183,35 +1126,48 @@ private fun ServiceEditCard(
                     )
             )
 
-            Button(
-
+            Row(
                 modifier =
                     Modifier.fillMaxWidth(),
 
-                onClick =
-                    onSave
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        10.dp
+                    )
             ) {
 
-                Text(
-                    "Service speichern"
-                )
-            }
+                if (
+                    showCancel
+                ) {
 
-            if (
-                showCancel
-            ) {
+                    OutlinedButton(
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
 
-                TextButton(
+                        onClick =
+                            onCancel
+                    ) {
 
+                        Text(
+                            "Abbrechen"
+                        )
+                    }
+                }
+
+                Button(
                     modifier =
-                        Modifier.fillMaxWidth(),
+                        Modifier.weight(
+                            1f
+                        ),
 
                     onClick =
-                        onCancel
+                        onSave
                 ) {
 
                     Text(
-                        "Abbrechen"
+                        "Speichern"
                     )
                 }
             }
@@ -1232,12 +1188,10 @@ private fun ServiceSummaryCard(
     cost: String,
     reminderEnabled: Boolean,
     reminderMonthsBefore: Int,
-    reminderKmBefore: Int,
     onEdit: () -> Unit
 ) {
 
     Card(
-
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -1251,201 +1205,202 @@ private fun ServiceSummaryCard(
     ) {
 
         Column(
-
             modifier =
-                Modifier.padding(
-                    16.dp
-                ),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
 
             verticalArrangement =
                 Arrangement.spacedBy(
-                    8.dp
+                    10.dp
                 )
         ) {
 
             Text(
                 text =
-                    "Gespeichertes Service",
+                    "Service und Intervalle",
 
                 color =
                     Color.White,
+
+                fontSize =
+                    21.sp,
 
                 fontWeight =
-                    FontWeight.Bold,
+                    FontWeight.Bold
+            )
+
+            Text(
+                text =
+                    vehicle,
+
+                color =
+                    Color(
+                        0xFF9A4DFF
+                    ),
 
                 fontSize =
-                    22.sp
-            )
-
-            Text(
-                text =
-                    "Fahrzeug: $vehicle",
-
-                color =
-                    Color.White,
-
-                fontSize =
-                    17.sp
-            )
-
-            Text(
-                text =
-                    "Letztes Service: " +
-                        serviceMonthName(
-                            lastServiceMonth
-                        ) +
-                        " " +
-                        lastServiceYear,
-
-                color =
-                    Color.White
-            )
-
-            if (
-                lastServiceKm.isNotBlank()
-            ) {
-
-                Text(
-                    text =
-                        "Letztes Service bei: " +
-                            lastServiceKm +
-                            " km",
-
-                    color =
-                        Color.White
-                )
-            }
-
-            Text(
-                text =
-                    "Nächstes Service: " +
-                        serviceMonthName(
-                            nextServiceMonth
-                        ) +
-                        " " +
-                        nextServiceYear,
-
-                color =
-                    Color.White,
+                    15.sp,
 
                 fontWeight =
-                    FontWeight.Bold,
-
-                fontSize =
-                    18.sp
+                    FontWeight.Medium
             )
 
-            if (
-                nextServiceKm.isNotBlank()
-            ) {
+            ServiceSummarySectionTitle(
+                text =
+                    "Letztes Service"
+            )
 
-                Text(
-                    text =
-                        "Nächstes Service bei: " +
-                            nextServiceKm +
-                            " km",
+            ServiceSummaryRow(
+                label =
+                    "Datum",
 
-                    color =
-                        Color.White
-                )
-            }
+                value =
+                    "${serviceMonthName(lastServiceMonth)} $lastServiceYear"
+            )
 
-            if (
-                cost.isNotBlank()
-            ) {
+            ServiceSummaryRow(
+                label =
+                    "Kilometer",
 
-                Text(
-                    text =
-                        "Kosten: " +
-                            cost +
-                            " €",
+                value =
+                    if (
+                        lastServiceKm.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        "$lastServiceKm km"
+                    }
+            )
 
-                    color =
-                        Color.White
-                )
-            }
+            ServiceSummarySectionTitle(
+                text =
+                    "Nächstes Service"
+            )
 
-            if (
-                documentation.isNotBlank()
-            ) {
+            ServiceSummaryRow(
+                label =
+                    "Datum",
 
-                Text(
-                    text =
-                        "Dokumentation: " +
-                            documentation,
+                value =
+                    "${serviceMonthName(nextServiceMonth)} $nextServiceYear"
+            )
 
-                    color =
-                        Color.White
-                )
-            }
+            ServiceSummaryRow(
+                label =
+                    "Kilometer",
+
+                value =
+                    if (
+                        nextServiceKm.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        "$nextServiceKm km"
+                    }
+            )
+
+            ServiceSummarySectionTitle(
+                text =
+                    "Dokumentation"
+            )
 
             Text(
-
                 text =
                     if (
-                        reminderEnabled
+                        documentation.isBlank()
                     ) {
-
-                        val timeText =
-                            when (
-                                reminderMonthsBefore
-                            ) {
-
-                                1 ->
-                                    "1 Monat"
-
-                                2 ->
-                                    "2 Monate"
-
-                                3 ->
-                                    "3 Monate"
-
-                                else ->
-                                    "keine Zeit"
-                            }
-
-                        val kmText =
-                            when (
-                                reminderKmBefore
-                            ) {
-
-                                500 ->
-                                    "500 km"
-
-                                1000 ->
-                                    "1.000 km"
-
-                                2000 ->
-                                    "2.000 km"
-
-                                else ->
-                                    "keine km"
-                            }
-
-                        "Erinnerung: " +
-                            timeText +
-                            " / " +
-                            kmText +
-                            " vorher"
-
+                        "Keine Dokumentation hinterlegt."
                     } else {
-
-                        "Erinnerung: ausgeschaltet"
+                        documentation
                     },
 
                 color =
-                    Color.White
+                    if (
+                        documentation.isBlank()
+                    ) {
+                        Color.Gray
+                    } else {
+                        Color.White
+                    },
+
+                fontSize =
+                    14.sp
+            )
+
+            ServiceSummaryRow(
+                label =
+                    "Kosten",
+
+                value =
+                    if (
+                        cost.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        cost
+                    }
+            )
+
+            ServiceSummarySectionTitle(
+                text =
+                    "Erinnerung"
+            )
+
+            val reminderText =
+                if (
+                    reminderEnabled &&
+                    reminderMonthsBefore > 0
+                ) {
+
+                    when (
+                        reminderMonthsBefore
+                    ) {
+
+                        1 ->
+                            "1 Monat vorher"
+
+                        2 ->
+                            "2 Monate vorher"
+
+                        3 ->
+                            "3 Monate vorher"
+
+                        else ->
+                            "Aktiv"
+                    }
+
+                } else {
+                    "Keine Erinnerung"
+                }
+
+            ServiceSummaryRow(
+                label =
+                    "Service-Erinnerung",
+
+                value =
+                    reminderText
+            )
+
+            Text(
+                text =
+                    "Es werden keine Kilometer-Erinnerungen verwendet.",
+
+                color =
+                    Color.Gray,
+
+                fontSize =
+                    12.sp
             )
 
             Spacer(
                 modifier =
                     Modifier.height(
-                        6.dp
+                        4.dp
                     )
             )
 
             Button(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
@@ -1454,23 +1409,93 @@ private fun ServiceSummaryCard(
             ) {
 
                 Text(
-                    "Ändern"
+                    "Service bearbeiten"
                 )
             }
-
-            Text(
-                text =
-                    "Die Service-Daten sind lokal auf diesem Gerät gespeichert.",
-
-                color =
-                    Color(
-                        0xFF9AA0AA
-                    ),
-
-                fontSize =
-                    13.sp
-            )
         }
+    }
+}
+
+@Composable
+private fun ServiceSummarySectionTitle(
+    text: String
+) {
+
+    Spacer(
+        modifier =
+            Modifier.height(
+                4.dp
+            )
+    )
+
+    Text(
+        text =
+            text,
+
+        color =
+            Color(
+                0xFF9A4DFF
+            ),
+
+        fontSize =
+            16.sp,
+
+        fontWeight =
+            FontWeight.Bold
+    )
+}
+
+@Composable
+private fun ServiceSummaryRow(
+    label: String,
+    value: String
+) {
+
+    Row(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        horizontalArrangement =
+            Arrangement.SpaceBetween,
+
+        verticalAlignment =
+            Alignment.Top
+    ) {
+
+        Text(
+            modifier =
+                Modifier.weight(
+                    0.45f
+                ),
+
+            text =
+                label,
+
+            color =
+                Color.LightGray,
+
+            fontSize =
+                14.sp
+        )
+
+        Text(
+            modifier =
+                Modifier.weight(
+                    0.55f
+                ),
+
+            text =
+                value,
+
+            color =
+                Color.White,
+
+            fontSize =
+                14.sp,
+
+            fontWeight =
+                FontWeight.Medium
+        )
     }
 }
 
@@ -1478,26 +1503,22 @@ private fun ServiceSummaryCard(
 private fun ServiceMonthYear(
     month: Int,
     year: String,
-    onMonthChanged: (Int) -> Unit,
-    onYearChanged: (String) -> Unit
+    onMonth: (Int) -> Unit,
+    onYear: (String) -> Unit
 ) {
 
-    var expanded by remember {
+    var monthExpanded by remember {
         mutableStateOf(false)
     }
 
     Row(
-
         modifier =
             Modifier.fillMaxWidth(),
 
         horizontalArrangement =
             Arrangement.spacedBy(
-                8.dp
-            ),
-
-        verticalAlignment =
-            Alignment.CenterVertically
+                10.dp
+            )
     ) {
 
         Box(
@@ -1508,12 +1529,11 @@ private fun ServiceMonthYear(
         ) {
 
             OutlinedButton(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 onClick = {
-                    expanded =
+                    monthExpanded =
                         true
                 }
             ) {
@@ -1526,66 +1546,53 @@ private fun ServiceMonthYear(
             }
 
             DropdownMenu(
-
                 expanded =
-                    expanded,
+                    monthExpanded,
 
                 onDismissRequest = {
-                    expanded =
+                    monthExpanded =
                         false
                 }
             ) {
 
-                serviceMonths
-                    .forEachIndexed {
-                        index,
-                        name ->
+                serviceMonths.forEachIndexed {
+                    index,
+                    monthName ->
 
-                        DropdownMenuItem(
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                monthName
+                            )
+                        },
 
-                            text = {
-                                Text(
-                                    name
-                                )
-                            },
+                        onClick = {
 
-                            onClick = {
+                            onMonth(
+                                index + 1
+                            )
 
-                                onMonthChanged(
-                                    index + 1
-                                )
-
-                                expanded =
-                                    false
-                            }
-                        )
-                    }
+                            monthExpanded =
+                                false
+                        }
+                    )
+                }
             }
         }
 
         OutlinedTextField(
-
             modifier =
                 Modifier.weight(
-                    1f
+                    0.65f
                 ),
 
             value =
                 year,
 
-            onValueChange = { value ->
-
-                if (
-                    value.length <= 4 &&
-                    value.all {
-                        it.isDigit()
-                    }
-                ) {
-
-                    onYearChanged(
-                        value
-                    )
-                }
+            onValueChange = {
+                onYear(
+                    it
+                )
             },
 
             label = {
