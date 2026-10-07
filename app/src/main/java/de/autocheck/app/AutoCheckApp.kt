@@ -171,6 +171,9 @@ fun AutoCheckApp() {
                 Screen.GESAMTBLICK ->
                     "Gesamtblick"
 
+                Screen.SERVICE ->
+                    "Service und Intervalle"
+
                 Screen.REIFEN ->
                     "Reifen"
 
@@ -375,17 +378,6 @@ fun AutoCheckApp() {
                  * ==================================================
                  * REPARATUREN
                  * ==================================================
-                 *
-                 * WICHTIG:
-                 *
-                 * RepairScreen bekommt hier ab sofort NICHT
-                 * mehr die komplette Fahrzeugliste.
-                 *
-                 * Es wird ausschließlich das aktuell aktive
-                 * Fahrzeug übergeben.
-                 *
-                 * Dadurch kann die Reparaturseite nicht mehr
-                 * auf ein anderes Fahrzeug wechseln.
                  */
                 Screen.REPARATUREN ->
 
@@ -394,9 +386,6 @@ fun AutoCheckApp() {
                         store =
                             store,
 
-                        /*
-                         * Nur das zentrale aktive Fahrzeug.
-                         */
                         vehicles =
                             if (
                                 activeVehicle != null
@@ -411,13 +400,6 @@ fun AutoCheckApp() {
                         activeVehicle =
                             activeVehicleName,
 
-                        /*
-                         * Reparaturen dürfen das aktive Fahrzeug
-                         * NICHT selbst verändern.
-                         *
-                         * Die einzige Stelle für den Wechsel
-                         * bleibt "Mein Auto".
-                         */
                         onActiveVehicle = {
                             // Keine Änderung.
                             // Aktives Fahrzeug wird ausschließlich
@@ -436,9 +418,6 @@ fun AutoCheckApp() {
                  * ==================================================
                  * PICKERL
                  * ==================================================
-                 *
-                 * Auch hier bekommt das Menü nur noch das
-                 * zentrale aktive Fahrzeug.
                  */
                 Screen.PICKERL ->
 
@@ -554,6 +533,49 @@ fun AutoCheckApp() {
 
                 /*
                  * ==================================================
+                 * SERVICE UND INTERVALLE
+                 * ==================================================
+                 *
+                 * Vorübergehend wird hier noch die bisherige
+                 * Gesamtblick-Seite angezeigt.
+                 *
+                 * Im nächsten Schritt ersetzen wir diese Stelle
+                 * durch die neue ServiceScreen-Seite.
+                 */
+                Screen.SERVICE ->
+
+                    OverviewScreen(
+
+                        store =
+                            store,
+
+                        vehicles =
+                            if (
+                                activeVehicle != null
+                            ) {
+                                listOf(
+                                    activeVehicle
+                                )
+                            } else {
+                                emptyList()
+                            },
+
+                        activeVehicle =
+                            activeVehicleName,
+
+                        onActiveVehicle = {
+                            // Aktives Fahrzeug wird ausschließlich
+                            // in "Mein Auto" geändert.
+                        },
+
+                        onVisited = {
+                            // Wird beim neuen ServiceScreen
+                            // ergänzt.
+                        }
+                    )
+
+                /*
+                 * ==================================================
                  * REIFEN
                  * ==================================================
                  */
@@ -591,7 +613,7 @@ fun AutoCheckApp() {
                         }
                     )
 
-                else -> Unit
+                Screen.HOME -> Unit
             }
         }
     }
