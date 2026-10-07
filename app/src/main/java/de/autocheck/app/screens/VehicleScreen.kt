@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,6 +27,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -125,6 +127,18 @@ fun VehicleScreen(
      */
     var revealedPurchasePriceIds by remember {
         mutableStateOf(setOf<String>())
+    }
+
+    /*
+     * Fahrzeug, das aktuell zum Löschen vorgemerkt wurde.
+     *
+     * Wichtig:
+     * Das Fahrzeug wird hier noch NICHT gelöscht.
+     * Erst wenn der Benutzer im Dialog auf
+     * "Löschen" drückt, wird onDelete() ausgeführt.
+     */
+    var vehicleToDelete by remember {
+        mutableStateOf<Vehicle?>(null)
     }
 
     var vehicleTypeExpanded by remember {
@@ -630,19 +644,19 @@ fun VehicleScreen(
                          * ==================================================
                          * FAHRZEUG LÖSCHEN
                          * ==================================================
+                         *
+                         * Hier wird das Fahrzeug NICHT sofort gelöscht.
+                         *
+                         * Stattdessen wird es für die
+                         * Sicherheitsabfrage vorgemerkt.
                          */
 
                         OutlinedButton(
 
                             onClick = {
 
-                                onDelete(
+                                vehicleToDelete =
                                     vehicle
-                                )
-
-                                revealedPurchasePriceIds =
-                                    revealedPurchasePriceIds -
-                                        vehicle.id
                             }
 
                         ) {
@@ -1413,6 +1427,113 @@ fun VehicleScreen(
                 )
             }
         }
+    }
+
+    /*
+     * ============================================================
+     * LÖSCH-BESTÄTIGUNG
+     * ============================================================
+     *
+     * Dieser Dialog erscheint erst nachdem der Benutzer
+     * auf "Fahrzeug entfernen" gedrückt hat.
+     *
+     * Das Fahrzeug wird erst gelöscht, wenn ausdrücklich
+     * "Löschen" bestätigt wird.
+     */
+
+    if (
+        vehicleToDelete != null
+    ) {
+
+        val vehicle =
+            vehicleToDelete!!
+
+        AlertDialog(
+
+            onDismissRequest = {
+
+                vehicleToDelete =
+                    null
+            },
+
+            title = {
+
+                Text(
+                    "Fahrzeug löschen?"
+                )
+            },
+
+            text = {
+
+                Text(
+                    "Möchtest du das Fahrzeug „${vehicle.name}“ wirklich löschen? Alle gespeicherten Daten dieses Fahrzeugs werden entfernt."
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+
+                    onClick = {
+
+                        /*
+                         * Erst hier wird das Fahrzeug
+                         * tatsächlich gelöscht.
+                         */
+
+                        onDelete(
+                            vehicle
+                        )
+
+                        /*
+                         * Auch der aktuell angezeigte
+                         * Kaufpreis wird aus dem Zustand
+                         * entfernt.
+                         */
+
+                        revealedPurchasePriceIds =
+                            revealedPurchasePriceIds -
+                                vehicle.id
+
+                        /*
+                         * Dialog schließen.
+                         */
+
+                        vehicleToDelete =
+                            null
+                    }
+
+                ) {
+
+                    Text(
+                        "Löschen"
+                    )
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+
+                    onClick = {
+
+                        /*
+                         * Nur Dialog schließen.
+                         * Das Fahrzeug bleibt erhalten.
+                         */
+
+                        vehicleToDelete =
+                            null
+                    }
+
+                ) {
+
+                    Text(
+                        "Abbrechen"
+                    )
+                }
+            }
+        )
     }
 }
 
