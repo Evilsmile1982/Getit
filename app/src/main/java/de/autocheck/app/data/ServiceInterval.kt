@@ -2,6 +2,7 @@ package de.autocheck.app.data
 
 data class ServiceInterval(
     val id: Long = 0L,
+
     val vehicle: String = "",
 
     // Letztes Service
@@ -14,12 +15,11 @@ data class ServiceInterval(
     val nextServiceYear: String = "",
     val nextServiceKm: String = "",
 
-    // Dokumentation und Kosten
+    // Weitere Informationen
     val documentation: String = "",
     val cost: String = "",
 
-    // Erinnerungen
+    // Zeitbasierte Erinnerung
     val reminderEnabled: Boolean = false,
-    val reminderMonthsBefore: Int = 0,
-    val reminderKmBefore: Int = 0
+    val reminderMonthsBefore: Int = 0
 )
