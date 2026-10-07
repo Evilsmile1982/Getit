@@ -6,6 +6,7 @@ enum class Screen {
     REPARATUREN,
     PICKERL,
     WARTUNGEN,
+    GESAMTBLICK,
     SERVICE,
     REIFEN
 }
