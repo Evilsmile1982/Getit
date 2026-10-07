@@ -29,9 +29,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.autocheck.app.utils.scheduleServiceReminder
 import java.time.LocalDate
 
 private val serviceMonths =
@@ -85,6 +87,9 @@ fun ServiceScreen(
     onActiveVehicle: (String) -> Unit,
     onVisited: () -> Unit
 ) {
+
+    val context =
+        LocalContext.current
 
     val currentYear =
         remember {
@@ -544,6 +549,44 @@ fun ServiceScreen(
                                 store.saveServiceIntervals(
                                     updated
                                 )
+
+
+                                /*
+                                 * ==================================================
+                                 * SERVICE-ERINNERUNG EINPLANEN
+                                 * ==================================================
+                                 *
+                                 * Wenn reminderEnabled ausgeschaltet ist oder
+                                 * "keine zeitliche Erinnerung" ausgewählt wurde,
+                                 * wird ein eventuell vorhandener Alarm gelöscht.
+                                 *
+                                 * Bei 1, 2 oder 3 Monaten wird der Android-Alarm
+                                 * anhand des nächsten Service-Datums eingeplant.
+                                 */
+                                scheduleServiceReminder(
+
+                                    context =
+                                        context,
+
+                                    vehicle =
+                                        activeVehicle,
+
+                                    nextServiceMonth =
+                                        entry.nextServiceMonth,
+
+                                    nextServiceYear =
+                                        entry.nextServiceYear,
+
+                                    reminderMonths =
+                                        if (
+                                            entry.reminderEnabled
+                                        ) {
+                                            entry.reminderMonthsBefore
+                                        } else {
+                                            0
+                                        }
+                                )
+
 
                                 saved =
                                     true
