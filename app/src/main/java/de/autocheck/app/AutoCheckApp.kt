@@ -535,16 +535,10 @@ fun AutoCheckApp() {
                  * ==================================================
                  * SERVICE UND INTERVALLE
                  * ==================================================
-                 *
-                 * Vorübergehend wird hier noch die bisherige
-                 * Gesamtblick-Seite angezeigt.
-                 *
-                 * Im nächsten Schritt ersetzen wir diese Stelle
-                 * durch die neue ServiceScreen-Seite.
                  */
                 Screen.SERVICE ->
 
-                    OverviewScreen(
+                    ServiceScreen(
 
                         store =
                             store,
@@ -569,8 +563,10 @@ fun AutoCheckApp() {
                         },
 
                         onVisited = {
-                            // Wird beim neuen ServiceScreen
-                            // ergänzt.
+
+                            visitedStore.markVisited(
+                                Screen.SERVICE
+                            )
                         }
                     )
 
