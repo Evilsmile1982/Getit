@@ -201,12 +201,12 @@ fun HomeScreen(
             ),
 
             MenuItemData(
-                "Gesamtblick",
-                "Die wichtigsten Infos",
-                Icons.Filled.Visibility,
-                Color(0xFF9A4DFF),
-                Screen.GESAMTBLICK
-            ),
+    "Service und Intervalle",
+    "Service, Intervalle & Erinnerungen",
+    Icons.Filled.Build,
+    Color(0xFF9A4DFF),
+    Screen.SERVICE
+),
 
             MenuItemData(
                 "Reifen",
