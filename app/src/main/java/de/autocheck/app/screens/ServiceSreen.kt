@@ -1,6 +1,8 @@
 package de.autocheck.app
 
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +22,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +35,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.autocheck.app.data.ServiceInterval
+import de.autocheck.app.utils.ServicePdfData
+import de.autocheck.app.utils.exportServicePdf
 import de.autocheck.app.utils.scheduleServiceReminder
 import java.time.LocalDate
 
@@ -62,7 +66,9 @@ private fun serviceMonthNumber(
             value.trim().uppercase()
         )
 
-    return if (index >= 0) {
+    return if (
+        index >= 0
+    ) {
         index + 1
     } else {
         1
@@ -74,7 +80,10 @@ private fun serviceMonthName(
 ): String {
 
     return serviceMonths.getOrElse(
-        value.coerceIn(1, 12) - 1
+        value.coerceIn(
+            1,
+            12
+        ) - 1
     ) {
         "JANUAR"
     }
@@ -167,6 +176,31 @@ fun ServiceScreen(
         mutableStateOf(false)
     }
 
+    var pdfData by remember {
+        mutableStateOf<ServicePdfData?>(null)
+    }
+
+    val pdfLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.CreateDocument(
+                    "application/pdf"
+                )
+        ) { uri ->
+
+            if (
+                uri != null &&
+                pdfData != null
+            ) {
+
+                exportServicePdf(
+                    context = context,
+                    uri = uri,
+                    data = pdfData!!
+                )
+            }
+        }
+
     LaunchedEffect(Unit) {
         onVisited()
     }
@@ -181,7 +215,9 @@ fun ServiceScreen(
                         activeVehicle
                 }
 
-        if (existing == null) {
+        if (
+            existing == null
+        ) {
 
             lastServiceMonth =
                 currentMonth
@@ -460,7 +496,7 @@ fun ServiceScreen(
                                         }
 
                                 val entry =
-                                    de.autocheck.app.data.ServiceInterval(
+                                    ServiceInterval(
 
                                         id =
                                             existing?.id
@@ -562,6 +598,7 @@ fun ServiceScreen(
                                 if (
                                     saved
                                 ) {
+
                                     editing =
                                         false
                                 }
@@ -612,6 +649,64 @@ fun ServiceScreen(
 
                                 editing =
                                     true
+                            },
+
+                            onExportPdf = {
+
+                                pdfData =
+                                    ServicePdfData(
+
+                                        vehicle =
+                                            activeVehicle,
+
+                                        lastServiceMonth =
+                                            serviceMonthName(
+                                                lastServiceMonth
+                                            ),
+
+                                        lastServiceYear =
+                                            lastServiceYear,
+
+                                        lastServiceKm =
+                                            lastServiceKm,
+
+                                        nextServiceMonth =
+                                            serviceMonthName(
+                                                nextServiceMonth
+                                            ),
+
+                                        nextServiceYear =
+                                            nextServiceYear,
+
+                                        nextServiceKm =
+                                            nextServiceKm,
+
+                                        documentation =
+                                            documentation,
+
+                                        cost =
+                                            cost,
+
+                                        reminderEnabled =
+                                            reminderEnabled,
+
+                                        reminderMonthsBefore =
+                                            reminderMonthsBefore
+                                    )
+
+                                val safeVehicleName =
+                                    activeVehicle
+                                        .ifBlank {
+                                            "Fahrzeug"
+                                        }
+                                        .replace(
+                                            " ",
+                                            "_"
+                                        )
+
+                                pdfLauncher.launch(
+                                    "Service_${safeVehicleName}.pdf"
+                                )
                             }
                         )
                     }
@@ -1188,7 +1283,8 @@ private fun ServiceSummaryCard(
     cost: String,
     reminderEnabled: Boolean,
     reminderMonthsBefore: Int,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onExportPdf: () -> Unit
 ) {
 
     Card(
@@ -1410,6 +1506,19 @@ private fun ServiceSummaryCard(
 
                 Text(
                     "Service bearbeiten"
+                )
+            }
+
+            OutlinedButton(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                onClick =
+                    onExportPdf
+            ) {
+
+                Text(
+                    "PDF exportieren"
                 )
             }
         }
