@@ -902,6 +902,203 @@ class VehicleStore(
 
     /*
      * ============================================================
+     * SERVICE UND INTERVALLE
+     * ============================================================
+     */
+
+    fun loadServiceIntervals(): List<de.autocheck.app.data.ServiceInterval> {
+
+        val array =
+            JSONArray(
+                prefs.getString(
+                    "serviceIntervals",
+                    "[]"
+                ) ?: "[]"
+            )
+
+        return buildList {
+
+            for (
+                i in 0 until array.length()
+            ) {
+
+                val o =
+                    array.getJSONObject(i)
+
+                add(
+                    de.autocheck.app.data.ServiceInterval(
+
+                        id =
+                            o.optLong(
+                                "id"
+                            ),
+
+                        vehicle =
+                            o.optString(
+                                "vehicle"
+                            ),
+
+                        lastServiceMonth =
+                            o.optString(
+                                "lastServiceMonth",
+                                ""
+                            ),
+
+                        lastServiceYear =
+                            o.optString(
+                                "lastServiceYear",
+                                ""
+                            ),
+
+                        lastServiceKm =
+                            o.optString(
+                                "lastServiceKm",
+                                ""
+                            ),
+
+                        nextServiceMonth =
+                            o.optString(
+                                "nextServiceMonth",
+                                ""
+                            ),
+
+                        nextServiceYear =
+                            o.optString(
+                                "nextServiceYear",
+                                ""
+                            ),
+
+                        nextServiceKm =
+                            o.optString(
+                                "nextServiceKm",
+                                ""
+                            ),
+
+                        documentation =
+                            o.optString(
+                                "documentation",
+                                ""
+                            ),
+
+                        cost =
+                            o.optString(
+                                "cost",
+                                ""
+                            ),
+
+                        reminderEnabled =
+                            o.optBoolean(
+                                "reminderEnabled",
+                                false
+                            ),
+
+                        reminderMonthsBefore =
+                            o.optInt(
+                                "reminderMonthsBefore",
+                                0
+                            ),
+
+                        reminderKmBefore =
+                            o.optInt(
+                                "reminderKmBefore",
+                                0
+                            )
+                    )
+                )
+            }
+        }
+    }
+
+    fun saveServiceIntervals(
+        list: List<de.autocheck.app.data.ServiceInterval>
+    ) {
+
+        val array =
+            JSONArray()
+
+        list.forEach {
+
+            array.put(
+                JSONObject().apply {
+
+                    put(
+                        "id",
+                        it.id
+                    )
+
+                    put(
+                        "vehicle",
+                        it.vehicle
+                    )
+
+                    put(
+                        "lastServiceMonth",
+                        it.lastServiceMonth
+                    )
+
+                    put(
+                        "lastServiceYear",
+                        it.lastServiceYear
+                    )
+
+                    put(
+                        "lastServiceKm",
+                        it.lastServiceKm
+                    )
+
+                    put(
+                        "nextServiceMonth",
+                        it.nextServiceMonth
+                    )
+
+                    put(
+                        "nextServiceYear",
+                        it.nextServiceYear
+                    )
+
+                    put(
+                        "nextServiceKm",
+                        it.nextServiceKm
+                    )
+
+                    put(
+                        "documentation",
+                        it.documentation
+                    )
+
+                    put(
+                        "cost",
+                        it.cost
+                    )
+
+                    put(
+                        "reminderEnabled",
+                        it.reminderEnabled
+                    )
+
+                    put(
+                        "reminderMonthsBefore",
+                        it.reminderMonthsBefore
+                    )
+
+                    put(
+                        "reminderKmBefore",
+                        it.reminderKmBefore
+                    )
+                }
+            )
+        }
+
+        prefs.edit()
+            .putString(
+                "serviceIntervals",
+                array.toString()
+            )
+            .apply()
+    }
+
+    /*
+     * ============================================================
      * REIFEN
      * ============================================================
      */
@@ -1152,6 +1349,13 @@ class VehicleStore(
 
         savePickerl(
             loadPickerl()
+                .filterNot {
+                    it.vehicle == name
+                }
+        )
+
+        saveServiceIntervals(
+            loadServiceIntervals()
                 .filterNot {
                     it.vehicle == name
                 }
