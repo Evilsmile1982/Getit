@@ -889,6 +889,17 @@ class VehicleStore(
      * ============================================================
      * SERVICE UND INTERVALLE
      * ============================================================
+     *
+     * Jeder Service-Termin ist jetzt ein eigener Datensatz.
+     *
+     * Dadurch können für ein Fahrzeug beliebig viele Service-Termine
+     * gespeichert werden und eine dauerhafte Service-Historie
+     * entstehen.
+     *
+     * Alte gespeicherte Service-Datensätze mit den bisherigen
+     * lastService*-Feldern werden beim Laden einmalig als
+     * Service-Datensatz übernommen.
+     * ============================================================
      */
 
     fun loadServiceIntervals(): List<de.autocheck.app.data.ServiceInterval> {
@@ -910,6 +921,51 @@ class VehicleStore(
                 val o =
                     array.getJSONObject(i)
 
+                /*
+                 * Neue Struktur:
+                 *
+                 * serviceMonth
+                 * serviceYear
+                 * serviceKm
+                 *
+                 * Alte Struktur:
+                 *
+                 * lastServiceMonth
+                 * lastServiceYear
+                 * lastServiceKm
+                 *
+                 * Damit bereits gespeicherte Daten nicht verloren gehen,
+                 * wird zuerst die neue Struktur gelesen und bei einem
+                 * alten Datensatz auf die bisherigen Felder zurückgegriffen.
+                 */
+
+                val serviceMonth =
+                    o.optString(
+                        "serviceMonth",
+                        o.optString(
+                            "lastServiceMonth",
+                            ""
+                        )
+                    )
+
+                val serviceYear =
+                    o.optString(
+                        "serviceYear",
+                        o.optString(
+                            "lastServiceYear",
+                            ""
+                        )
+                    )
+
+                val serviceKm =
+                    o.optString(
+                        "serviceKm",
+                        o.optString(
+                            "lastServiceKm",
+                            ""
+                        )
+                    )
+
                 add(
                     de.autocheck.app.data.ServiceInterval(
 
@@ -923,23 +979,14 @@ class VehicleStore(
                                 "vehicle"
                             ),
 
-                        lastServiceMonth =
-                            o.optString(
-                                "lastServiceMonth",
-                                ""
-                            ),
+                        serviceMonth =
+                            serviceMonth,
 
-                        lastServiceYear =
-                            o.optString(
-                                "lastServiceYear",
-                                ""
-                            ),
+                        serviceYear =
+                            serviceYear,
 
-                        lastServiceKm =
-                            o.optString(
-                                "lastServiceKm",
-                                ""
-                            ),
+                        serviceKm =
+                            serviceKm,
 
                         nextServiceMonth =
                             o.optString(
@@ -1010,19 +1057,24 @@ class VehicleStore(
                         it.vehicle
                     )
 
+                    /*
+                     * Ein Service-Termin wird als eigener Datensatz
+                     * mit serviceMonth/serviceYear/serviceKm gespeichert.
+                     */
+
                     put(
-                        "lastServiceMonth",
-                        it.lastServiceMonth
+                        "serviceMonth",
+                        it.serviceMonth
                     )
 
                     put(
-                        "lastServiceYear",
-                        it.lastServiceYear
+                        "serviceYear",
+                        it.serviceYear
                     )
 
                     put(
-                        "lastServiceKm",
-                        it.lastServiceKm
+                        "serviceKm",
+                        it.serviceKm
                     )
 
                     put(
@@ -1314,6 +1366,10 @@ class VehicleStore(
                 }
         )
 
+        /*
+         * Hier werden automatisch ALLE Service-Historieneinträge
+         * dieses Fahrzeugs gelöscht.
+         */
         saveServiceIntervals(
             loadServiceIntervals()
                 .filterNot {
