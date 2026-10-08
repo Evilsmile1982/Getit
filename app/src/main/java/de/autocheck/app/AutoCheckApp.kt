@@ -44,9 +44,6 @@ fun AutoCheckApp() {
      * ============================================================
      * EINZIGE QUELLE FÜR DAS AKTIVE FAHRZEUG
      * ============================================================
-     *
-     * Das aktive Fahrzeug wird ausschließlich über seine
-     * stabile ID bestimmt.
      */
     var activeVehicleId by remember {
 
@@ -56,7 +53,7 @@ fun AutoCheckApp() {
     }
 
     /*
-     * Aktives Fahrzeug anhand der ID bestimmen.
+     * Aktives Fahrzeug anhand der stabilen ID bestimmen.
      */
     val activeVehicle =
         vehicles.firstOrNull {
@@ -66,9 +63,6 @@ fun AutoCheckApp() {
     /*
      * Bestehende Untermenüs arbeiten weiterhin mit dem
      * Fahrzeugnamen.
-     *
-     * Der Name wird ausschließlich aus dem zentral
-     * aktiven Fahrzeug abgeleitet.
      */
     val activeVehicleName =
         activeVehicle?.name ?: ""
@@ -97,7 +91,8 @@ fun AutoCheckApp() {
                 300
             )
 
-        homeReady = true
+        homeReady =
+            true
 
         /*
          * Falls keine gültige aktive ID vorhanden ist,
@@ -178,7 +173,7 @@ fun AutoCheckApp() {
                     "Reifen"
 
                 Screen.HOME ->
-                    "AutoCheck"
+                    "CARVITA"
             }
 
         DetailScaffold(
@@ -207,10 +202,6 @@ fun AutoCheckApp() {
                         vehicles =
                             vehicles,
 
-                        /*
-                         * VehicleScreen arbeitet mit der
-                         * stabilen Fahrzeug-ID.
-                         */
                         activeVehicle =
                             activeVehicleId,
 
@@ -236,11 +227,6 @@ fun AutoCheckApp() {
                             }
                         },
 
-                        /*
-                         * ==================================================
-                         * FAHRZEUG SPEICHERN
-                         * ==================================================
-                         */
                         onSave = {
                                 vehicle,
                                 oldName ->
@@ -309,11 +295,6 @@ fun AutoCheckApp() {
                             )
                         },
 
-                        /*
-                         * ==================================================
-                         * FAHRZEUG LÖSCHEN
-                         * ==================================================
-                         */
                         onDelete = {
                                 vehicle ->
 
@@ -401,7 +382,6 @@ fun AutoCheckApp() {
                             activeVehicleName,
 
                         onActiveVehicle = {
-                            // Keine Änderung.
                             // Aktives Fahrzeug wird ausschließlich
                             // in Mein Auto geändert.
                         },
@@ -481,7 +461,7 @@ fun AutoCheckApp() {
 
                         onActiveVehicle = {
                             // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
+                            // in Mein Auto geändert.
                         },
 
                         onVisited = {
@@ -520,7 +500,7 @@ fun AutoCheckApp() {
 
                         onActiveVehicle = {
                             // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
+                            // in Mein Auto geändert.
                         },
 
                         onVisited = {
@@ -535,10 +515,16 @@ fun AutoCheckApp() {
                  * ==================================================
                  * SERVICE UND INTERVALLE
                  * ==================================================
+                 *
+                 * NEU:
+                 *
+                 * Statt direkt die bisherige ServiceScreen-Seite
+                 * zu öffnen, wird jetzt zuerst das neue Service-Menü
+                 * angezeigt.
                  */
                 Screen.SERVICE ->
 
-                    ServiceScreen(
+                    ServiceMenuScreen(
 
                         store =
                             store,
@@ -557,9 +543,13 @@ fun AutoCheckApp() {
                         activeVehicle =
                             activeVehicleName,
 
+                        activeVehicleData =
+                            activeVehicle,
+
                         onActiveVehicle = {
-                            // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
+                            // Das aktive Fahrzeug wird weiterhin
+                            // ausschließlich in "Mein Auto"
+                            // geändert.
                         },
 
                         onVisited = {
@@ -598,7 +588,7 @@ fun AutoCheckApp() {
 
                         onActiveVehicle = {
                             // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
+                            // in Mein Auto geändert.
                         },
 
                         onVisited = {
