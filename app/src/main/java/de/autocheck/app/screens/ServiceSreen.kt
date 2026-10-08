@@ -1,6 +1,5 @@
 package de.autocheck.app
 
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -22,6 +23,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,6 +91,42 @@ private fun serviceMonthName(
     }
 }
 
+private fun serviceSortValue(
+    service: ServiceInterval
+): Int {
+
+    val year =
+        service.serviceYear
+            .trim()
+            .toIntOrNull()
+            ?: 0
+
+    val month =
+        serviceMonthNumber(
+            service.serviceMonth
+        )
+
+    return (
+        year * 12
+    ) + month
+}
+
+private fun sortServiceHistory(
+    services: List<ServiceInterval>
+): List<ServiceInterval> {
+
+    return services
+        .sortedWith(
+            compareByDescending<ServiceInterval> {
+                serviceSortValue(
+                    it
+                )
+            }.thenByDescending {
+                it.id
+            }
+        )
+}
+
 @Composable
 fun ServiceScreen(
     store: VehicleStore,
@@ -115,6 +153,24 @@ fun ServiceScreen(
                 .now()
                 .monthValue
         }
+
+    var serviceHistory by remember {
+        mutableStateOf(
+            emptyList<ServiceInterval>()
+        )
+    }
+
+    var editingServiceId by remember {
+        mutableStateOf<Long?>(null)
+    }
+
+    var addingService by remember {
+        mutableStateOf(false)
+    }
+
+    var serviceToDelete by remember {
+        mutableStateOf<ServiceInterval?>(null)
+    }
 
     var lastServiceMonth by remember {
         mutableStateOf(
@@ -168,14 +224,6 @@ fun ServiceScreen(
         mutableStateOf(false)
     }
 
-    var saved by remember {
-        mutableStateOf(false)
-    }
-
-    var editing by remember {
-        mutableStateOf(false)
-    }
-
     var pdfData by remember {
         mutableStateOf<ServicePdfData?>(null)
     }
@@ -201,22 +249,25 @@ fun ServiceScreen(
             }
         }
 
-    LaunchedEffect(Unit) {
-        onVisited()
+    fun reloadHistory() {
+
+        serviceHistory =
+            sortServiceHistory(
+                store
+                    .loadServiceIntervals()
+                    .filter {
+                        it.vehicle ==
+                            activeVehicle
+                    }
+            )
     }
 
-    LaunchedEffect(activeVehicle) {
-
-        val existing =
-            store
-                .loadServiceIntervals()
-                .firstOrNull {
-                    it.vehicle ==
-                        activeVehicle
-                }
+    fun loadServiceIntoEditor(
+        service: ServiceInterval?
+    ) {
 
         if (
-            existing == null
+            service == null
         ) {
 
             lastServiceMonth =
@@ -249,64 +300,240 @@ fun ServiceScreen(
             reminderMonthsBefore =
                 0
 
-            saved =
-                false
-
-            editing =
-                true
-
         } else {
 
             lastServiceMonth =
                 serviceMonthNumber(
-                    existing.lastServiceMonth
+                    service.serviceMonth
                 )
 
             lastServiceYear =
-                existing.lastServiceYear
+                service.serviceYear
                     .ifBlank {
                         currentYear
                     }
 
             lastServiceKm =
-                existing.lastServiceKm
+                service.serviceKm
 
             nextServiceMonth =
                 serviceMonthNumber(
-                    existing.nextServiceMonth
+                    service.nextServiceMonth
                 )
 
             nextServiceYear =
-                existing.nextServiceYear
+                service.nextServiceYear
                     .ifBlank {
                         currentYear
                     }
 
             nextServiceKm =
-                existing.nextServiceKm
+                service.nextServiceKm
 
             documentation =
-                existing.documentation
+                service.documentation
 
             cost =
-                existing.cost
+                service.cost
 
             reminderEnabled =
-                existing.reminderEnabled
+                service.reminderEnabled
 
             reminderMonthsBefore =
-                existing.reminderMonthsBefore
+                service.reminderMonthsBefore
                     .coerceIn(
                         0,
                         3
                     )
-
-            saved =
-                true
-
-            editing =
-                false
         }
+    }
+
+    fun startNewService() {
+
+        loadServiceIntoEditor(
+            null
+        )
+
+        editingServiceId =
+            null
+
+        addingService =
+            true
+    }
+
+    fun editService(
+        service: ServiceInterval
+    ) {
+
+        loadServiceIntoEditor(
+            service
+        )
+
+        editingServiceId =
+            service.id
+
+        addingService =
+            true
+    }
+
+    fun saveCurrentService() {
+
+        val existing =
+            serviceHistory
+                .firstOrNull {
+                    it.id ==
+                        editingServiceId
+                }
+
+        val entry =
+            ServiceInterval(
+
+                id =
+                    existing?.id
+                        ?: System.currentTimeMillis(),
+
+                vehicle =
+                    activeVehicle,
+
+                serviceMonth =
+                    serviceMonthName(
+                        lastServiceMonth
+                    ),
+
+                serviceYear =
+                    lastServiceYear
+                        .trim(),
+
+                serviceKm =
+                    lastServiceKm
+                        .trim(),
+
+                nextServiceMonth =
+                    serviceMonthName(
+                        nextServiceMonth
+                    ),
+
+                nextServiceYear =
+                    nextServiceYear
+                        .trim(),
+
+                nextServiceKm =
+                    nextServiceKm
+                        .trim(),
+
+                documentation =
+                    documentation
+                        .trim(),
+
+                cost =
+                    cost
+                        .trim(),
+
+                reminderEnabled =
+                    reminderEnabled,
+
+                reminderMonthsBefore =
+                    reminderMonthsBefore
+                        .coerceIn(
+                            0,
+                            3
+                        )
+            )
+
+        val allServices =
+            store
+                .loadServiceIntervals()
+
+        val updated =
+            if (
+                existing != null
+            ) {
+
+                allServices
+                    .map {
+                        if (
+                            it.id ==
+                                existing.id
+                        ) {
+                            entry
+                        } else {
+                            it
+                        }
+                    }
+
+            } else {
+
+                allServices +
+                    entry
+            }
+
+        store.saveServiceIntervals(
+            updated
+        )
+
+        serviceHistory =
+            sortServiceHistory(
+                updated.filter {
+                    it.vehicle ==
+                        activeVehicle
+                }
+            )
+
+        /*
+         * Die Erinnerung gehört immer zum aktuellsten
+         * Service-Eintrag des Fahrzeugs.
+         */
+        val newestService =
+            serviceHistory.firstOrNull()
+
+        if (
+            newestService != null
+        ) {
+
+            scheduleServiceReminder(
+                context =
+                    context,
+
+                vehicle =
+                    activeVehicle,
+
+                nextServiceMonth =
+                    newestService.nextServiceMonth,
+
+                nextServiceYear =
+                    newestService.nextServiceYear,
+
+                reminderMonths =
+                    if (
+                        newestService.reminderEnabled
+                    ) {
+                        newestService.reminderMonthsBefore
+                    } else {
+                        0
+                    }
+            )
+        }
+
+        addingService =
+            false
+
+        editingServiceId =
+            null
+    }
+
+    LaunchedEffect(Unit) {
+        onVisited()
+    }
+
+    LaunchedEffect(activeVehicle) {
+
+        reloadHistory()
+
+        addingService =
+            false
+
+        editingServiceId =
+            null
     }
 
     Column(
@@ -389,13 +616,16 @@ fun ServiceScreen(
                     )
             ) {
 
-                item {
+                if (
+                    addingService
+                ) {
 
-                    if (
-                        editing
-                    ) {
+                    item {
 
                         ServiceEditCard(
+
+                            isNewService =
+                                editingServiceId == null,
 
                             lastServiceMonth =
                                 lastServiceMonth,
@@ -486,230 +716,932 @@ fun ServiceScreen(
                             },
 
                             onSave = {
-
-                                val existing =
-                                    store
-                                        .loadServiceIntervals()
-                                        .firstOrNull {
-                                            it.vehicle ==
-                                                activeVehicle
-                                        }
-
-                                val entry =
-                                    ServiceInterval(
-
-                                        id =
-                                            existing?.id
-                                                ?: System.currentTimeMillis(),
-
-                                        vehicle =
-                                            activeVehicle,
-
-                                        lastServiceMonth =
-                                            serviceMonthName(
-                                                lastServiceMonth
-                                            ),
-
-                                        lastServiceYear =
-                                            lastServiceYear
-                                                .trim(),
-
-                                        lastServiceKm =
-                                            lastServiceKm
-                                                .trim(),
-
-                                        nextServiceMonth =
-                                            serviceMonthName(
-                                                nextServiceMonth
-                                            ),
-
-                                        nextServiceYear =
-                                            nextServiceYear
-                                                .trim(),
-
-                                        nextServiceKm =
-                                            nextServiceKm
-                                                .trim(),
-
-                                        documentation =
-                                            documentation
-                                                .trim(),
-
-                                        cost =
-                                            cost
-                                                .trim(),
-
-                                        reminderEnabled =
-                                            reminderEnabled,
-
-                                        reminderMonthsBefore =
-                                            reminderMonthsBefore
-                                                .coerceIn(
-                                                    0,
-                                                    3
-                                                )
-                                    )
-
-                                val updated =
-                                    store
-                                        .loadServiceIntervals()
-                                        .filterNot {
-                                            it.vehicle ==
-                                                activeVehicle
-                                        } +
-                                        entry
-
-                                store.saveServiceIntervals(
-                                    updated
-                                )
-
-                                scheduleServiceReminder(
-                                    context =
-                                        context,
-
-                                    vehicle =
-                                        activeVehicle,
-
-                                    nextServiceMonth =
-                                        entry.nextServiceMonth,
-
-                                    nextServiceYear =
-                                        entry.nextServiceYear,
-
-                                    reminderMonths =
-                                        if (
-                                            entry.reminderEnabled
-                                        ) {
-                                            entry.reminderMonthsBefore
-                                        } else {
-                                            0
-                                        }
-                                )
-
-                                saved =
-                                    true
-
-                                editing =
-                                    false
+                                saveCurrentService()
                             },
 
                             onCancel = {
 
-                                if (
-                                    saved
-                                ) {
+                                addingService =
+                                    false
 
-                                    editing =
-                                        false
-                                }
+                                editingServiceId =
+                                    null
                             },
 
                             showCancel =
-                                saved
+                                true
                         )
+                    }
 
-                    } else {
+                } else {
 
-                        ServiceSummaryCard(
+                    item {
+
+                        val latestService =
+                            serviceHistory.firstOrNull()
+
+                        ServiceCurrentCard(
 
                             vehicle =
                                 activeVehicle,
 
-                            lastServiceMonth =
-                                lastServiceMonth,
+                            latestService =
+                                latestService,
 
-                            lastServiceYear =
-                                lastServiceYear,
+                            onAddService = {
+                                startNewService()
+                            },
 
-                            lastServiceKm =
-                                lastServiceKm,
+                            onEditService = {
 
-                            nextServiceMonth =
-                                nextServiceMonth,
-
-                            nextServiceYear =
-                                nextServiceYear,
-
-                            nextServiceKm =
-                                nextServiceKm,
-
-                            documentation =
-                                documentation,
-
-                            cost =
-                                cost,
-
-                            reminderEnabled =
-                                reminderEnabled,
-
-                            reminderMonthsBefore =
-                                reminderMonthsBefore,
-
-                            onEdit = {
-
-                                editing =
-                                    true
+                                if (
+                                    latestService != null
+                                ) {
+                                    editService(
+                                        latestService
+                                    )
+                                }
                             },
 
                             onExportPdf = {
 
-                                pdfData =
-                                    ServicePdfData(
+                                if (
+                                    latestService != null
+                                ) {
 
-                                        vehicle =
-                                            activeVehicle,
+                                    pdfData =
+                                        ServicePdfData(
 
-                                        lastServiceMonth =
-                                            serviceMonthName(
-                                                lastServiceMonth
-                                            ),
+                                            vehicle =
+                                                activeVehicle,
 
-                                        lastServiceYear =
-                                            lastServiceYear,
+                                            lastServiceMonth =
+                                                latestService.serviceMonth,
 
-                                        lastServiceKm =
-                                            lastServiceKm,
+                                            lastServiceYear =
+                                                latestService.serviceYear,
 
-                                        nextServiceMonth =
-                                            serviceMonthName(
-                                                nextServiceMonth
-                                            ),
+                                            lastServiceKm =
+                                                latestService.serviceKm,
 
-                                        nextServiceYear =
-                                            nextServiceYear,
+                                            nextServiceMonth =
+                                                latestService.nextServiceMonth,
 
-                                        nextServiceKm =
-                                            nextServiceKm,
+                                            nextServiceYear =
+                                                latestService.nextServiceYear,
 
-                                        documentation =
-                                            documentation,
+                                            nextServiceKm =
+                                                latestService.nextServiceKm,
 
-                                        cost =
-                                            cost,
+                                            documentation =
+                                                latestService.documentation,
 
-                                        reminderEnabled =
-                                            reminderEnabled,
+                                            cost =
+                                                latestService.cost,
 
-                                        reminderMonthsBefore =
-                                            reminderMonthsBefore
-                                    )
+                                            reminderEnabled =
+                                                latestService.reminderEnabled,
 
-                                val safeVehicleName =
-                                    activeVehicle
-                                        .ifBlank {
-                                            "Fahrzeug"
-                                        }
-                                        .replace(
-                                            " ",
-                                            "_"
+                                            reminderMonthsBefore =
+                                                latestService.reminderMonthsBefore
                                         )
 
-                                pdfLauncher.launch(
-                                    "Service_${safeVehicleName}.pdf"
-                                )
+                                    val safeVehicleName =
+                                        activeVehicle
+                                            .ifBlank {
+                                                "Fahrzeug"
+                                            }
+                                            .replace(
+                                                " ",
+                                                "_"
+                                            )
+
+                                    pdfLauncher.launch(
+                                        "Service_${safeVehicleName}.pdf"
+                                    )
+                                }
                             }
                         )
                     }
+
+                    if (
+                        serviceHistory.isNotEmpty()
+                    ) {
+
+                        item {
+
+                            ServiceHistoryHeader(
+                                count =
+                                    serviceHistory.size
+                            )
+                        }
+
+                        items(
+                            items =
+                                serviceHistory,
+                            key = {
+                                it.id
+                            }
+                        ) { service ->
+
+                            ServiceHistoryCard(
+
+                                service =
+                                    service,
+
+                                onEdit = {
+                                    editService(
+                                        service
+                                    )
+                                },
+
+                                onDelete = {
+                                    serviceToDelete =
+                                        service
+                                }
+                            )
+                        }
+
+                    } else {
+
+                        item {
+
+                            ServiceEmptyHistoryCard(
+                                onAddService = {
+                                    startNewService()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (
+        serviceToDelete != null
+    ) {
+
+        val service =
+            serviceToDelete!!
+
+        AlertDialog(
+
+            onDismissRequest = {
+                serviceToDelete =
+                    null
+            },
+
+            title = {
+                Text(
+                    "Service löschen?"
+                )
+            },
+
+            text = {
+
+                Text(
+                    "Möchtest du den Service vom ${service.serviceMonth} ${service.serviceYear} wirklich aus der Historie löschen?"
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+
+                        val updated =
+                            store
+                                .loadServiceIntervals()
+                                .filterNot {
+                                    it.id ==
+                                        service.id
+                                }
+
+                        store.saveServiceIntervals(
+                            updated
+                        )
+
+                        serviceHistory =
+                            sortServiceHistory(
+                                updated.filter {
+                                    it.vehicle ==
+                                        activeVehicle
+                                }
+                            )
+
+                        val newestService =
+                            serviceHistory.firstOrNull()
+
+                        if (
+                            newestService != null
+                        ) {
+
+                            scheduleServiceReminder(
+                                context =
+                                    context,
+
+                                vehicle =
+                                    activeVehicle,
+
+                                nextServiceMonth =
+                                    newestService.nextServiceMonth,
+
+                                nextServiceYear =
+                                    newestService.nextServiceYear,
+
+                                reminderMonths =
+                                    if (
+                                        newestService.reminderEnabled
+                                    ) {
+                                        newestService.reminderMonthsBefore
+                                    } else {
+                                        0
+                                    }
+                            )
+
+                        } else {
+
+                            scheduleServiceReminder(
+                                context =
+                                    context,
+
+                                vehicle =
+                                    activeVehicle,
+
+                                nextServiceMonth =
+                                    "",
+
+                                nextServiceYear =
+                                    "",
+
+                                reminderMonths =
+                                    0
+                            )
+                        }
+
+                        serviceToDelete =
+                            null
+                    }
+                ) {
+
+                    Text(
+                        "Löschen"
+                    )
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick = {
+                        serviceToDelete =
+                            null
+                    }
+                ) {
+
+                    Text(
+                        "Abbrechen"
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ServiceCurrentCard(
+    vehicle: String,
+    latestService: ServiceInterval?,
+    onAddService: () -> Unit,
+    onEditService: () -> Unit,
+    onExportPdf: () -> Unit
+) {
+
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            )
+    ) {
+
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+        ) {
+
+            Text(
+                text =
+                    "Service und Intervalle",
+
+                color =
+                    Color.White,
+
+                fontSize =
+                    21.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+                text =
+                    vehicle,
+
+                color =
+                    Color(
+                        0xFF9A4DFF
+                    ),
+
+                fontSize =
+                    15.sp,
+
+                fontWeight =
+                    FontWeight.Medium
+            )
+
+            if (
+                latestService == null
+            ) {
+
+                Text(
+                    text =
+                        "Noch kein Service gespeichert.",
+
+                    color =
+                        Color.LightGray,
+
+                    fontSize =
+                        15.sp
+                )
+
+                Button(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    onClick =
+                        onAddService
+                ) {
+
+                    Text(
+                        "Ersten Service hinzufügen"
+                    )
+                }
+
+            } else {
+
+                ServiceSummarySectionTitle(
+                    text =
+                        "Letztes Service",
+
+                    color =
+                        Color(
+                            0xFF4CAF50
+                        )
+                )
+
+                ServiceSummaryRow(
+                    label =
+                        "Datum",
+
+                    value =
+                        "${latestService.serviceMonth} ${latestService.serviceYear}"
+                )
+
+                ServiceSummaryRow(
+                    label =
+                        "Kilometer",
+
+                    value =
+                        if (
+                            latestService.serviceKm.isBlank()
+                        ) {
+                            "—"
+                        } else {
+                            "${latestService.serviceKm} km"
+                        }
+                )
+
+                ServiceSummarySectionTitle(
+                    text =
+                        "Nächstes Service",
+
+                    color =
+                        Color(
+                            0xFFF44336
+                        )
+                )
+
+                ServiceSummaryRow(
+                    label =
+                        "Datum",
+
+                    value =
+                        if (
+                            latestService.nextServiceYear.isBlank()
+                        ) {
+                            "—"
+                        } else {
+                            "${latestService.nextServiceMonth} ${latestService.nextServiceYear}"
+                        }
+                )
+
+                ServiceSummaryRow(
+                    label =
+                        "Kilometer",
+
+                    value =
+                        if (
+                            latestService.nextServiceKm.isBlank()
+                        ) {
+                            "—"
+                        } else {
+                            "${latestService.nextServiceKm} km"
+                        }
+                )
+
+                ServiceSummarySectionTitle(
+                    text =
+                        "Dokumentation",
+
+                    color =
+                        Color(
+                            0xFFFFD700
+                        )
+                )
+
+                Text(
+                    text =
+                        if (
+                            latestService.documentation.isBlank()
+                        ) {
+                            "Keine Dokumentation hinterlegt."
+                        } else {
+                            latestService.documentation
+                        },
+
+                    color =
+                        if (
+                            latestService.documentation.isBlank()
+                        ) {
+                            Color.Gray
+                        } else {
+                            Color.White
+                        },
+
+                    fontSize =
+                        14.sp
+                )
+
+                ServiceSummaryRow(
+                    label =
+                        "Kosten",
+
+                    value =
+                        if (
+                            latestService.cost.isBlank()
+                        ) {
+                            "—"
+                        } else {
+                            latestService.cost
+                        }
+                )
+
+                ServiceSummarySectionTitle(
+                    text =
+                        "Erinnerung",
+
+                    color =
+                        Color(
+                            0xFFF44336
+                        )
+                )
+
+                val reminderText =
+                    if (
+                        latestService.reminderEnabled &&
+                        latestService.reminderMonthsBefore > 0
+                    ) {
+
+                        when (
+                            latestService.reminderMonthsBefore
+                        ) {
+
+                            1 ->
+                                "1 Monat vorher"
+
+                            2 ->
+                                "2 Monate vorher"
+
+                            3 ->
+                                "3 Monate vorher"
+
+                            else ->
+                                "Aktiv"
+                        }
+
+                    } else {
+                        "Keine Erinnerung"
+                    }
+
+                ServiceSummaryRow(
+                    label =
+                        "Service-Erinnerung",
+
+                    value =
+                        reminderText
+                )
+
+                Text(
+                    text =
+                        "Es werden keine Kilometer-Erinnerungen verwendet.",
+
+                    color =
+                        Color.Gray,
+
+                    fontSize =
+                        12.sp
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            4.dp
+                        )
+                )
+
+                Button(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    onClick =
+                        onAddService
+                ) {
+
+                    Text(
+                        "➕ Service hinzufügen"
+                    )
+                }
+
+                OutlinedButton(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    onClick =
+                        onEditService
+                ) {
+
+                    Text(
+                        "Letztes Service bearbeiten"
+                    )
+                }
+
+                OutlinedButton(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    onClick =
+                        onExportPdf
+                ) {
+
+                    Text(
+                        "PDF exportieren"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServiceEmptyHistoryCard(
+    onAddService: () -> Unit
+) {
+
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            )
+    ) {
+
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+        ) {
+
+            Text(
+                text =
+                    "Service-Historie",
+
+                color =
+                    Color.White,
+
+                fontSize =
+                    18.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+                text =
+                    "Für dieses Fahrzeug wurden noch keine Service-Termine gespeichert.",
+
+                color =
+                    Color.LightGray,
+
+                fontSize =
+                    14.sp
+            )
+
+            Button(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                onClick =
+                    onAddService
+            ) {
+
+                Text(
+                    "Ersten Service hinzufügen"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServiceHistoryHeader(
+    count: Int
+) {
+
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            )
+    ) {
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+
+            horizontalArrangement =
+                Arrangement.SpaceBetween,
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Text(
+                text =
+                    "📚 Service-Historie",
+
+                color =
+                    Color.White,
+
+                fontSize =
+                    19.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+                text =
+                    if (
+                        count == 1
+                    ) {
+                        "1 Termin"
+                    } else {
+                        "$count Termine"
+                    },
+
+                color =
+                    Color(
+                        0xFF9A4DFF
+                    ),
+
+                fontSize =
+                    14.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun ServiceHistoryCard(
+    service: ServiceInterval,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xFF11141A
+                    )
+            )
+    ) {
+
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+
+            Text(
+                text =
+                    "${service.serviceMonth} ${service.serviceYear}",
+
+                color =
+                    Color(
+                        0xFF4CAF50
+                    ),
+
+                fontSize =
+                    18.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            ServiceSummaryRow(
+                label =
+                    "Kilometer",
+
+                value =
+                    if (
+                        service.serviceKm.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        "${service.serviceKm} km"
+                    }
+            )
+
+            ServiceSummaryRow(
+                label =
+                    "Kosten",
+
+                value =
+                    if (
+                        service.cost.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        service.cost
+                    }
+            )
+
+            if (
+                service.documentation.isNotBlank()
+            ) {
+
+                Text(
+                    text =
+                        "Dokumentation",
+
+                    color =
+                        Color(
+                            0xFFFFD700
+                        ),
+
+                    fontSize =
+                        14.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Text(
+                    text =
+                        service.documentation,
+
+                    color =
+                        Color.White,
+
+                    fontSize =
+                        14.sp
+                )
+            }
+
+            Text(
+                text =
+                    if (
+                        service.nextServiceYear.isBlank()
+                    ) {
+                        "Nächstes Service: —"
+                    } else {
+                        "Nächstes Service: ${service.nextServiceMonth} ${service.nextServiceYear}"
+                    },
+
+                color =
+                    Color(
+                        0xFFF44336
+                    ),
+
+                fontSize =
+                    13.sp,
+
+                fontWeight =
+                    FontWeight.Medium
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        2.dp
+                    )
+            )
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        10.dp
+                    )
+            ) {
+
+                OutlinedButton(
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    onClick =
+                        onEdit
+                ) {
+
+                    Text(
+                        "Bearbeiten"
+                    )
+                }
+
+                OutlinedButton(
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    onClick =
+                        onDelete
+                ) {
+
+                    Text(
+                        "Löschen"
+                    )
                 }
             }
         }
@@ -718,6 +1650,7 @@ fun ServiceScreen(
 
 @Composable
 private fun ServiceEditCard(
+    isNewService: Boolean,
     lastServiceMonth: Int,
     lastServiceYear: String,
     lastServiceKm: String,
@@ -772,7 +1705,13 @@ private fun ServiceEditCard(
 
             Text(
                 text =
-                    "Service und Intervalle",
+                    if (
+                        isNewService
+                    ) {
+                        "Neues Service"
+                    } else {
+                        "Service bearbeiten"
+                    },
 
                 color =
                     Color.White,
@@ -786,7 +1725,7 @@ private fun ServiceEditCard(
 
             Text(
                 text =
-                    "Letztes Service",
+                    "Durchgeführtes Service",
 
                 color =
                     Color(
@@ -826,7 +1765,7 @@ private fun ServiceEditCard(
 
                 label = {
                     Text(
-                        "Kilometer beim letzten Service"
+                        "Kilometer beim Service"
                     )
                 },
 
@@ -1265,281 +2204,6 @@ private fun ServiceEditCard(
                         "Speichern"
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ServiceSummaryCard(
-    vehicle: String,
-    lastServiceMonth: Int,
-    lastServiceYear: String,
-    lastServiceKm: String,
-    nextServiceMonth: Int,
-    nextServiceYear: String,
-    nextServiceKm: String,
-    documentation: String,
-    cost: String,
-    reminderEnabled: Boolean,
-    reminderMonthsBefore: Int,
-    onEdit: () -> Unit,
-    onExportPdf: () -> Unit
-) {
-
-    Card(
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(
-                        0xFF11141A
-                    )
-            )
-    ) {
-
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
-        ) {
-
-            Text(
-                text =
-                    "Service und Intervalle",
-
-                color =
-                    Color.White,
-
-                fontSize =
-                    21.sp,
-
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            Text(
-                text =
-                    vehicle,
-
-                color =
-                    Color(
-                        0xFF9A4DFF
-                    ),
-
-                fontSize =
-                    15.sp,
-
-                fontWeight =
-                    FontWeight.Medium
-            )
-
-            ServiceSummarySectionTitle(
-                text =
-                    "Letztes Service",
-
-                color =
-                    Color(
-                        0xFF4CAF50
-                    )
-            )
-
-            ServiceSummaryRow(
-                label =
-                    "Datum",
-
-                value =
-                    "${serviceMonthName(lastServiceMonth)} $lastServiceYear"
-            )
-
-            ServiceSummaryRow(
-                label =
-                    "Kilometer",
-
-                value =
-                    if (
-                        lastServiceKm.isBlank()
-                    ) {
-                        "—"
-                    } else {
-                        "$lastServiceKm km"
-                    }
-            )
-
-            ServiceSummarySectionTitle(
-                text =
-                    "Nächstes Service",
-
-                color =
-                    Color(
-                        0xFFF44336
-                    )
-            )
-
-            ServiceSummaryRow(
-                label =
-                    "Datum",
-
-                value =
-                    "${serviceMonthName(nextServiceMonth)} $nextServiceYear"
-            )
-
-            ServiceSummaryRow(
-                label =
-                    "Kilometer",
-
-                value =
-                    if (
-                        nextServiceKm.isBlank()
-                    ) {
-                        "—"
-                    } else {
-                        "$nextServiceKm km"
-                    }
-            )
-
-            ServiceSummarySectionTitle(
-                text =
-                    "Dokumentation",
-
-                color =
-                    Color(
-                        0xFFFFD700
-                    )
-            )
-
-            Text(
-                text =
-                    if (
-                        documentation.isBlank()
-                    ) {
-                        "Keine Dokumentation hinterlegt."
-                    } else {
-                        documentation
-                    },
-
-                color =
-                    if (
-                        documentation.isBlank()
-                    ) {
-                        Color.Gray
-                    } else {
-                        Color.White
-                    },
-
-                fontSize =
-                    14.sp
-            )
-
-            ServiceSummaryRow(
-                label =
-                    "Kosten",
-
-                value =
-                    if (
-                        cost.isBlank()
-                    ) {
-                        "—"
-                    } else {
-                        cost
-                    }
-            )
-
-            ServiceSummarySectionTitle(
-                text =
-                    "Erinnerung",
-
-                color =
-                    Color(
-                        0xFFF44336
-                    )
-            )
-
-            val reminderText =
-                if (
-                    reminderEnabled &&
-                    reminderMonthsBefore > 0
-                ) {
-
-                    when (
-                        reminderMonthsBefore
-                    ) {
-
-                        1 ->
-                            "1 Monat vorher"
-
-                        2 ->
-                            "2 Monate vorher"
-
-                        3 ->
-                            "3 Monate vorher"
-
-                        else ->
-                            "Aktiv"
-                    }
-
-                } else {
-                    "Keine Erinnerung"
-                }
-
-            ServiceSummaryRow(
-                label =
-                    "Service-Erinnerung",
-
-                value =
-                    reminderText
-            )
-
-            Text(
-                text =
-                    "Es werden keine Kilometer-Erinnerungen verwendet.",
-
-                color =
-                    Color.Gray,
-
-                fontSize =
-                    12.sp
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        4.dp
-                    )
-            )
-
-            Button(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                onClick =
-                    onEdit
-            ) {
-
-                Text(
-                    "Service bearbeiten"
-                )
-            }
-
-            OutlinedButton(
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                onClick =
-                    onExportPdf
-            ) {
-
-                Text(
-                    "PDF exportieren"
-                )
             }
         }
     }
