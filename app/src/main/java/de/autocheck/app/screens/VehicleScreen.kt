@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -109,10 +110,6 @@ fun VehicleScreen(
         mutableStateOf("")
     }
 
-    // ============================================================
-    // KAUFPREIS
-    // ============================================================
-
     var purchasePrice by remember {
         mutableStateOf("")
     }
@@ -121,22 +118,10 @@ fun VehicleScreen(
         mutableStateOf(false)
     }
 
-    /*
-     * Kaufpreise, die in der Fahrzeugliste aktuell
-     * sichtbar sind.
-     */
     var revealedPurchasePriceIds by remember {
         mutableStateOf(setOf<String>())
     }
 
-    /*
-     * Fahrzeug, das aktuell zum Löschen vorgemerkt wurde.
-     *
-     * Wichtig:
-     * Das Fahrzeug wird hier noch NICHT gelöscht.
-     * Erst wenn der Benutzer im Dialog auf
-     * "Löschen" drückt, wird onDelete() ausgeführt.
-     */
     var vehicleToDelete by remember {
         mutableStateOf<Vehicle?>(null)
     }
@@ -212,12 +197,6 @@ fun VehicleScreen(
                     bottom = 12.dp
                 )
         )
-
-        /*
-         * ========================================================
-         * KEINE FAHRZEUGE
-         * ========================================================
-         */
 
         if (vehicles.isEmpty()) {
 
@@ -324,24 +303,18 @@ fun VehicleScreen(
                             ) {
 
                                 Text(
-
                                     vehicle.name,
-
                                     color =
                                         Color.White,
-
                                     fontWeight =
                                         FontWeight.Bold,
-
                                     fontSize =
                                         18.sp
                                 )
 
                                 Text(
-
                                     "${vehicle.vehicleType} • ${vehicle.make} ${vehicle.model}"
                                         .trim(),
-
                                     color =
                                         Color(
                                             0xFFB8BEC8
@@ -353,9 +326,7 @@ fun VehicleScreen(
                                 ) {
 
                                     Text(
-
                                         "Motorisierung: ${vehicle.motorization}",
-
                                         color =
                                             Color(
                                                 0xFFB8BEC8
@@ -368,9 +339,7 @@ fun VehicleScreen(
                                 ) {
 
                                     Text(
-
                                         "PS/KW: ${vehicle.power}",
-
                                         color =
                                             Color(
                                                 0xFFB8BEC8
@@ -383,9 +352,7 @@ fun VehicleScreen(
                                 ) {
 
                                     Text(
-
                                         "Baujahr: ${vehicle.year}",
-
                                         color =
                                             Color(
                                                 0xFFB8BEC8
@@ -398,9 +365,7 @@ fun VehicleScreen(
                                 ) {
 
                                     Text(
-
                                         "Kennzeichen: ${vehicle.plate}",
-
                                         color =
                                             Color.White
                                     )
@@ -411,14 +376,11 @@ fun VehicleScreen(
                                 ) {
 
                                     Text(
-
                                         "FIN/VIN: ${vehicle.vin}",
-
                                         color =
                                             Color(
                                                 0xFFB8BEC8
                                             ),
-
                                         maxLines =
                                             1
                                     )
@@ -442,18 +404,10 @@ fun VehicleScreen(
                                     Text(
                                         "Kaufpreis: ",
                                         color =
-                                            Color(0xFFB8BEC8)
+                                            Color(
+                                                0xFFB8BEC8
+                                            )
                                     )
-
-                                    /*
-                                     * Der Kaufpreis selbst ist antippbar.
-                                     *
-                                     * Versteckt:
-                                     * ******** €
-                                     *
-                                     * Sichtbar:
-                                     * 12500 €
-                                     */
 
                                     Text(
                                         if (
@@ -495,12 +449,6 @@ fun VehicleScreen(
                                             10.dp
                                         )
                                     )
-
-                                    /*
-                                     * Echtes gezeichnetes Auge.
-                                     * Kein Emoji und keine zusätzliche
-                                     * Icon-Abhängigkeit.
-                                     */
 
                                     EyeIcon(
                                         visible =
@@ -547,6 +495,19 @@ fun VehicleScreen(
                                 )
                         ) {
 
+                            /*
+                             * ==================================================
+                             * AKTIV-BUTTON
+                             * ==================================================
+                             *
+                             * AKTIVES FAHRZEUG:
+                             * GRÜN + "AKTIV"
+                             *
+                             * NICHT AKTIVES FAHRZEUG:
+                             * GOLD + "Aktiv setzen"
+                             * ==================================================
+                             */
+
                             Button(
 
                                 onClick = {
@@ -554,7 +515,41 @@ fun VehicleScreen(
                                     onActiveVehicle(
                                         vehicle.id
                                     )
-                                }
+                                },
+
+                                colors =
+                                    ButtonDefaults.buttonColors(
+
+                                        containerColor =
+                                            if (
+                                                activeVehicle ==
+                                                vehicle.id
+                                            ) {
+
+                                                Color(
+                                                    0xFF4CAF50
+                                                )
+
+                                            } else {
+
+                                                Color(
+                                                    0xFFFFD700
+                                                )
+                                            },
+
+                                        contentColor =
+                                            if (
+                                                activeVehicle ==
+                                                vehicle.id
+                                            ) {
+
+                                                Color.White
+
+                                            } else {
+
+                                                Color.Black
+                                            }
+                                    )
 
                             ) {
 
@@ -564,12 +559,24 @@ fun VehicleScreen(
                                         activeVehicle ==
                                         vehicle.id
                                     ) {
-                                        "Aktiv"
+
+                                        "AKTIV"
+
                                     } else {
+
                                         "Aktiv setzen"
-                                    }
+                                    },
+
+                                    fontWeight =
+                                        FontWeight.Bold
                                 )
                             }
+
+                            /*
+                             * ==================================================
+                             * BEARBEITEN
+                             * ==================================================
+                             */
 
                             OutlinedButton(
 
@@ -616,9 +623,6 @@ fun VehicleScreen(
                                     purchasePrice =
                                         vehicle.purchasePrice
 
-                                    /*
-                                     * Beim Öffnen immer versteckt.
-                                     */
                                     purchasePriceVisible =
                                         false
 
@@ -644,11 +648,6 @@ fun VehicleScreen(
                          * ==================================================
                          * FAHRZEUG LÖSCHEN
                          * ==================================================
-                         *
-                         * Hier wird das Fahrzeug NICHT sofort gelöscht.
-                         *
-                         * Stattdessen wird es für die
-                         * Sicherheitsabfrage vorgemerkt.
                          */
 
                         OutlinedButton(
@@ -725,7 +724,7 @@ fun VehicleScreen(
 
                             /*
                              * ==================================================
-                             * BEZEICHNUNG
+                             * FAHRZEUGTYP
                              * ==================================================
                              */
 
@@ -976,15 +975,11 @@ fun VehicleScreen(
 
                                 onValueChange = { value ->
 
-                                    /*
-                                     * Nur Zahlen, Punkt und Komma.
-                                     */
-
                                     purchasePrice =
                                         value.filter {
                                             it.isDigit() ||
-                                            it == ',' ||
-                                            it == '.'
+                                                it == ',' ||
+                                                it == '.'
                                         }
                                 },
 
@@ -1000,7 +995,8 @@ fun VehicleScreen(
                                     )
                                 },
 
-                                singleLine = true,
+                                singleLine =
+                                    true,
 
                                 keyboardOptions =
                                     KeyboardOptions(
@@ -1008,9 +1004,6 @@ fun VehicleScreen(
                                             KeyboardType.Decimal
                                     ),
 
-                                /*
-                                 * Eigene Sternchen-Maskierung.
-                                 */
                                 visualTransformation =
                                     if (
                                         purchasePriceVisible
@@ -1103,16 +1096,10 @@ fun VehicleScreen(
 
                                     enabled =
                                         vehicleType.isNotBlank() &&
-                                        make.isNotBlank() &&
-                                        model.isNotBlank(),
+                                            make.isNotBlank() &&
+                                            model.isNotBlank(),
 
                                     onClick = {
-
-                                        /*
-                                         * ==================================================
-                                         * AUTOMATISCHER FAHRZEUGNAME
-                                         * ==================================================
-                                         */
 
                                         val generatedName =
                                             listOf(
@@ -1127,12 +1114,6 @@ fun VehicleScreen(
                                                 .joinToString(
                                                     " "
                                                 )
-
-                                        /*
-                                         * ==================================================
-                                         * FAHRZEUG SPEICHERN
-                                         * ==================================================
-                                         */
 
                                         val vehicleToSave =
 
@@ -1226,9 +1207,7 @@ fun VehicleScreen(
                                         )
 
                                         /*
-                                         * ==================================================
-                                         * FORMULAR ZURÜCKSETZEN
-                                         * ==================================================
+                                         * Formular zurücksetzen
                                          */
 
                                         editingVehicleId =
@@ -1433,12 +1412,6 @@ fun VehicleScreen(
      * ============================================================
      * LÖSCH-BESTÄTIGUNG
      * ============================================================
-     *
-     * Dieser Dialog erscheint erst nachdem der Benutzer
-     * auf "Fahrzeug entfernen" gedrückt hat.
-     *
-     * Das Fahrzeug wird erst gelöscht, wenn ausdrücklich
-     * "Löschen" bestätigt wird.
      */
 
     if (
@@ -1476,28 +1449,13 @@ fun VehicleScreen(
 
                     onClick = {
 
-                        /*
-                         * Erst hier wird das Fahrzeug
-                         * tatsächlich gelöscht.
-                         */
-
                         onDelete(
                             vehicle
                         )
 
-                        /*
-                         * Auch der aktuell angezeigte
-                         * Kaufpreis wird aus dem Zustand
-                         * entfernt.
-                         */
-
                         revealedPurchasePriceIds =
                             revealedPurchasePriceIds -
                                 vehicle.id
-
-                        /*
-                         * Dialog schließen.
-                         */
 
                         vehicleToDelete =
                             null
@@ -1516,11 +1474,6 @@ fun VehicleScreen(
                 TextButton(
 
                     onClick = {
-
-                        /*
-                         * Nur Dialog schließen.
-                         * Das Fahrzeug bleibt erhalten.
-                         */
 
                         vehicleToDelete =
                             null
@@ -1541,9 +1494,6 @@ fun VehicleScreen(
  * ================================================================
  * EIGENES AUGEN-SYMBOL
  * ================================================================
- *
- * Kein Emoji.
- * Keine zusätzliche Material-Icon-Abhängigkeit.
  */
 
 @Composable
@@ -1569,9 +1519,6 @@ private fun EyeIcon(
         val strokeWidth =
             2.dp.toPx()
 
-        /*
-         * Auge
-         */
         drawOval(
 
             color =
@@ -1584,9 +1531,6 @@ private fun EyeIcon(
                 )
         )
 
-        /*
-         * Pupille
-         */
         drawCircle(
 
             color =
@@ -1596,10 +1540,6 @@ private fun EyeIcon(
                 4.dp.toPx()
         )
 
-        /*
-         * Wenn der Preis sichtbar ist,
-         * wird das Auge durchgestrichen.
-         */
         if (visible) {
 
             drawLine(
@@ -1638,14 +1578,6 @@ private fun EyeIcon(
  * ================================================================
  * STERNCHEN-MASKIERUNG
  * ================================================================
- *
- * Beispiel:
- *
- * 12500
- *
- * wird zu:
- *
- * *****
  */
 
 private object AsteriskVisualTransformation :
