@@ -1,6 +1,7 @@
 package de.autocheck.app.utils
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
@@ -26,25 +27,13 @@ data class ServiceHistoryPdfData(
     val services: List<ServiceInterval>
 )
 
-/**
- * Exportiert das aktuell ausgewählte Service als PDF.
- */
 fun exportServicePdf(
     context: Context,
     uri: Uri,
     data: ServicePdfData
 ) {
     val document = PdfDocument()
-
-    val pageWidth = 595
-    val pageHeight = 842
-
-    val pageInfo = PdfDocument.PageInfo.Builder(
-        pageWidth,
-        pageHeight,
-        1
-    ).create()
-
+    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
     val page = document.startPage(pageInfo)
     val canvas = page.canvas
 
@@ -78,13 +67,7 @@ fun exportServicePdf(
 
     var y = 45f
 
-    canvas.drawText(
-        "AutoCheck",
-        40f,
-        y,
-        smallPaint
-    )
-
+    canvas.drawText("AutoCheck", 40f, y, smallPaint)
     y += 35f
 
     canvas.drawText(
@@ -93,7 +76,6 @@ fun exportServicePdf(
         y,
         titlePaint
     )
-
     y += 28f
 
     canvas.drawText(
@@ -102,12 +84,7 @@ fun exportServicePdf(
         y,
         sectionPaint
     )
-
     y += 35f
-
-    // ---------------------------------------------------------
-    // LETZTES SERVICE
-    // ---------------------------------------------------------
 
     canvas.drawText(
         "LETZTES SERVICE",
@@ -115,41 +92,34 @@ fun exportServicePdf(
         y,
         sectionPaint
     )
-
-    y += 24f
+    y += 25f
 
     drawLabelValue(
-        canvas = canvas,
-        label = "Datum",
-        value = buildDate(
+        canvas,
+        "Datum",
+        buildDate(
             data.lastServiceMonth,
             data.lastServiceYear
         ),
-        labelPaint = labelPaint,
-        textPaint = textPaint,
-        y = y
+        labelPaint,
+        textPaint,
+        y
     )
-
-    y += 22f
+    y += 23f
 
     drawLabelValue(
-        canvas = canvas,
-        label = "Kilometer",
-        value = if (data.lastServiceKm.isBlank()) {
+        canvas,
+        "Kilometer",
+        if (data.lastServiceKm.isBlank()) {
             "—"
         } else {
             "${data.lastServiceKm} km"
         },
-        labelPaint = labelPaint,
-        textPaint = textPaint,
-        y = y
+        labelPaint,
+        textPaint,
+        y
     )
-
     y += 40f
-
-    // ---------------------------------------------------------
-    // NÄCHSTES SERVICE
-    // ---------------------------------------------------------
 
     canvas.drawText(
         "NÄCHSTES SERVICE",
@@ -157,41 +127,34 @@ fun exportServicePdf(
         y,
         sectionPaint
     )
-
-    y += 24f
+    y += 25f
 
     drawLabelValue(
-        canvas = canvas,
-        label = "Datum",
-        value = buildDate(
+        canvas,
+        "Datum",
+        buildDate(
             data.nextServiceMonth,
             data.nextServiceYear
         ),
-        labelPaint = labelPaint,
-        textPaint = textPaint,
-        y = y
+        labelPaint,
+        textPaint,
+        y
     )
-
-    y += 22f
+    y += 23f
 
     drawLabelValue(
-        canvas = canvas,
-        label = "Kilometer",
-        value = if (data.nextServiceKm.isBlank()) {
+        canvas,
+        "Kilometer",
+        if (data.nextServiceKm.isBlank()) {
             "—"
         } else {
             "${data.nextServiceKm} km"
         },
-        labelPaint = labelPaint,
-        textPaint = textPaint,
-        y = y
+        labelPaint,
+        textPaint,
+        y
     )
-
     y += 40f
-
-    // ---------------------------------------------------------
-    // DOKUMENTATION
-    // ---------------------------------------------------------
 
     canvas.drawText(
         "DOKUMENTATION",
@@ -199,49 +162,36 @@ fun exportServicePdf(
         y,
         sectionPaint
     )
+    y += 25f
 
-    y += 24f
-
-    val documentationText =
+    y = drawWrappedText(
+        canvas,
         if (data.documentation.isBlank()) {
             "Keine Dokumentation hinterlegt."
         } else {
             data.documentation
-        }
-
-    y = drawWrappedText(
-        canvas = canvas,
-        text = documentationText,
-        paint = textPaint,
-        x = 40f,
-        y = y,
-        maxWidth = 515f
+        },
+        textPaint,
+        40f,
+        y,
+        515f
     )
 
     y += 20f
 
-    // ---------------------------------------------------------
-    // KOSTEN
-    // ---------------------------------------------------------
-
     drawLabelValue(
-        canvas = canvas,
-        label = "Kosten",
-        value = if (data.cost.isBlank()) {
+        canvas,
+        "Kosten",
+        if (data.cost.isBlank()) {
             "—"
         } else {
             data.cost
         },
-        labelPaint = labelPaint,
-        textPaint = textPaint,
-        y = y
+        labelPaint,
+        textPaint,
+        y
     )
-
     y += 40f
-
-    // ---------------------------------------------------------
-    // ERINNERUNG
-    // ---------------------------------------------------------
 
     canvas.drawText(
         "ERINNERUNG",
@@ -249,31 +199,31 @@ fun exportServicePdf(
         y,
         sectionPaint
     )
+    y += 25f
 
-    y += 24f
-
-    val reminderText =
-        if (data.reminderEnabled && data.reminderMonthsBefore > 0) {
-            when (data.reminderMonthsBefore) {
-                1 -> "1 Monat vorher"
-                2 -> "2 Monate vorher"
-                3 -> "3 Monate vorher"
-                else -> "${data.reminderMonthsBefore} Monate vorher"
-            }
-        } else {
-            "Keine Erinnerung"
+    val reminderText = if (
+        data.reminderEnabled &&
+        data.reminderMonthsBefore > 0
+    ) {
+        when (data.reminderMonthsBefore) {
+            1 -> "1 Monat vorher"
+            2 -> "2 Monate vorher"
+            3 -> "3 Monate vorher"
+            else -> "${data.reminderMonthsBefore} Monate vorher"
         }
+    } else {
+        "Keine Erinnerung"
+    }
 
     drawLabelValue(
-        canvas = canvas,
-        label = "Service-Erinnerung",
-        value = reminderText,
-        labelPaint = labelPaint,
-        textPaint = textPaint,
-        y = y
+        canvas,
+        "Service-Erinnerung",
+        reminderText,
+        labelPaint,
+        textPaint,
+        y
     )
-
-    y += 22f
+    y += 25f
 
     canvas.drawText(
         "Die Erinnerung erfolgt zeitbasiert.",
@@ -281,7 +231,6 @@ fun exportServicePdf(
         y,
         smallPaint
     )
-
     y += 18f
 
     canvas.drawText(
@@ -290,8 +239,7 @@ fun exportServicePdf(
         y,
         smallPaint
     )
-
-    y += 45f
+    y += 35f
 
     canvas.drawText(
         "Erstellt mit AutoCheck",
@@ -305,28 +253,14 @@ fun exportServicePdf(
     try {
         context.contentResolver
             .openOutputStream(uri)
-            ?.use { outputStream ->
-                document.writeTo(outputStream)
+            ?.use { output ->
+                document.writeTo(output)
             }
     } finally {
         document.close()
     }
 }
 
-/**
- * Exportiert die komplette Service-Historie als eigenes PDF.
- *
- * Das PDF enthält:
- * - Fahrzeug
- * - Anzahl der Serviceeinträge
- * - Gesamtkosten
- * - alle Serviceeinträge
- * - Kilometer
- * - nächstes Service
- * - nächste Kilometer
- * - Erinnerung
- * - Dokumentation
- */
 fun exportServiceHistoryPdf(
     context: Context,
     uri: Uri,
@@ -334,26 +268,22 @@ fun exportServiceHistoryPdf(
 ) {
     val document = PdfDocument()
 
-    val pageWidth = 595
-    val pageHeight = 842
-
-    val sortedServices = data.services
-        .sortedWith(
-            compareByDescending<ServiceInterval> {
-                serviceSortValue(it)
-            }.thenByDescending {
-                it.id
-            }
-        )
+    val services = data.services.sortedWith(
+        compareByDescending<ServiceInterval> {
+            serviceSortValue(it)
+        }.thenByDescending {
+            it.id
+        }
+    )
 
     // =========================================================
-    // SEITE 1 – ÜBERSICHT
+    // ÜBERSICHT
     // =========================================================
 
     run {
         val pageInfo = PdfDocument.PageInfo.Builder(
-            pageWidth,
-            pageHeight,
+            595,
+            842,
             1
         ).create()
 
@@ -388,14 +318,31 @@ fun exportServiceHistoryPdf(
             color = android.graphics.Color.DKGRAY
         }
 
-        var y = drawHistoryPageHeader(
-            canvas = canvas,
-            vehicle = data.vehicle,
-            pageNumber = 1,
-            titlePaint = titlePaint,
-            sectionPaint = sectionPaint,
-            smallPaint = smallPaint
+        var y = 45f
+
+        canvas.drawText(
+            "AutoCheck",
+            40f,
+            y,
+            smallPaint
         )
+        y += 35f
+
+        canvas.drawText(
+            "Service-Historie",
+            40f,
+            y,
+            titlePaint
+        )
+        y += 28f
+
+        canvas.drawText(
+            data.vehicle.ifBlank { "Fahrzeug" },
+            40f,
+            y,
+            sectionPaint
+        )
+        y += 40f
 
         canvas.drawText(
             "ÜBERSICHT",
@@ -403,34 +350,31 @@ fun exportServiceHistoryPdf(
             y,
             sectionPaint
         )
-
-        y += 30f
+        y += 28f
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Serviceeinträge",
-            value = sortedServices.size.toString(),
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
+            canvas,
+            "Serviceeinträge",
+            services.size.toString(),
+            labelPaint,
+            textPaint,
+            y
         )
+        y += 25f
 
-        y += 30f
-
-        val totalCost = sortedServices.sumOf {
+        val totalCost = services.sumOf {
             parseCost(it.cost)
         }
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Gesamtkosten",
-            value = formatEuro(totalCost),
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
+            canvas,
+            "Gesamtkosten",
+            formatEuro(totalCost),
+            labelPaint,
+            textPaint,
+            y
         )
-
-        y += 45f
+        y += 40f
 
         canvas.drawText(
             "SERVICE-HISTORIE",
@@ -438,10 +382,10 @@ fun exportServiceHistoryPdf(
             y,
             sectionPaint
         )
-
         y += 28f
 
-        if (sortedServices.isEmpty()) {
+        if (services.isEmpty()) {
+
             canvas.drawText(
                 "Noch keine Serviceeinträge vorhanden.",
                 40f,
@@ -449,66 +393,46 @@ fun exportServiceHistoryPdf(
                 textPaint
             )
 
-            y += 25f
-
-            canvas.drawText(
-                "Sobald ein Service gespeichert wurde,",
-                40f,
-                y,
-                smallPaint
-            )
-
-            y += 17f
-
-            canvas.drawText(
-                "erscheint es hier in der Service-Historie.",
-                40f,
-                y,
-                smallPaint
-            )
         } else {
-            sortedServices.forEachIndexed { index, service ->
 
-                val date = buildDate(
-                    service.serviceMonth,
-                    service.serviceYear
-                )
+            services.forEachIndexed { index, service ->
 
-                val cost = if (service.cost.isBlank()) {
-                    "—"
-                } else {
-                    service.cost
+                if (y > 750f) {
+                    return@forEachIndexed
                 }
 
                 drawLabelValue(
-                    canvas = canvas,
-                    label = "${index + 1}. Service",
-                    value = date,
-                    labelPaint = labelPaint,
-                    textPaint = textPaint,
-                    y = y
+                    canvas,
+                    "${index + 1}. Service",
+                    buildDate(
+                        service.serviceMonth,
+                        service.serviceYear
+                    ),
+                    labelPaint,
+                    textPaint,
+                    y
                 )
 
-                y += 21f
+                y += 22f
 
                 drawLabelValue(
-                    canvas = canvas,
-                    label = "Kosten",
-                    value = cost,
-                    labelPaint = labelPaint,
-                    textPaint = textPaint,
-                    y = y
+                    canvas,
+                    "Kosten",
+                    if (service.cost.isBlank()) {
+                        "—"
+                    } else {
+                        service.cost
+                    },
+                    labelPaint,
+                    textPaint,
+                    y
                 )
 
-                y += 32f
-
-                if (y > 760f && index < sortedServices.lastIndex) {
-                    break
-                }
+                y += 30f
             }
         }
 
-        y += 30f
+        y += 25f
 
         canvas.drawText(
             "Erstellt mit AutoCheck",
@@ -521,16 +445,16 @@ fun exportServiceHistoryPdf(
     }
 
     // =========================================================
-    // JEDE SERVICE-HISTORIE AUF EIGENER SEITE
+    // EINZELNE SERVICE-EINTRÄGE
     // =========================================================
 
-    sortedServices.forEachIndexed { index, service ->
+    services.forEachIndexed { index, service ->
 
         val pageNumber = index + 2
 
         val pageInfo = PdfDocument.PageInfo.Builder(
-            pageWidth,
-            pageHeight,
+            595,
+            842,
             pageNumber
         ).create()
 
@@ -565,14 +489,41 @@ fun exportServiceHistoryPdf(
             color = android.graphics.Color.DKGRAY
         }
 
-        var y = drawHistoryPageHeader(
-            canvas = canvas,
-            vehicle = data.vehicle,
-            pageNumber = pageNumber,
-            titlePaint = titlePaint,
-            sectionPaint = sectionPaint,
-            smallPaint = smallPaint
+        var y = 45f
+
+        canvas.drawText(
+            "AutoCheck",
+            40f,
+            y,
+            smallPaint
         )
+
+        canvas.drawText(
+            "Seite $pageNumber",
+            485f,
+            y,
+            smallPaint
+        )
+
+        y += 35f
+
+        canvas.drawText(
+            "Service-Historie",
+            40f,
+            y,
+            titlePaint
+        )
+
+        y += 28f
+
+        canvas.drawText(
+            data.vehicle.ifBlank { "Fahrzeug" },
+            40f,
+            y,
+            sectionPaint
+        )
+
+        y += 40f
 
         canvas.drawText(
             "SERVICE ${index + 1}",
@@ -581,54 +532,51 @@ fun exportServiceHistoryPdf(
             sectionPaint
         )
 
-        y += 32f
+        y += 28f
 
         // -----------------------------------------------------
-        // SERVICE-DATEN
+        // SERVICE
         // -----------------------------------------------------
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Datum",
-            value = buildDate(
+            canvas,
+            "Datum",
+            buildDate(
                 service.serviceMonth,
                 service.serviceYear
             ),
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
+            labelPaint,
+            textPaint,
+            y
         )
-
         y += 23f
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Kilometer",
-            value = if (service.serviceKm.isBlank()) {
+            canvas,
+            "Kilometer",
+            if (service.serviceKm.isBlank()) {
                 "—"
             } else {
                 "${service.serviceKm} km"
             },
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
+            labelPaint,
+            textPaint,
+            y
         )
-
         y += 23f
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Kosten",
-            value = if (service.cost.isBlank()) {
+            canvas,
+            "Kosten",
+            if (service.cost.isBlank()) {
                 "—"
             } else {
                 service.cost
             },
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
+            labelPaint,
+            textPaint,
+            y
         )
-
         y += 40f
 
         // -----------------------------------------------------
@@ -645,32 +593,30 @@ fun exportServiceHistoryPdf(
         y += 25f
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Datum",
-            value = buildDate(
+            canvas,
+            "Datum",
+            buildDate(
                 service.nextServiceMonth,
                 service.nextServiceYear
             ),
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
+            labelPaint,
+            textPaint,
+            y
         )
-
         y += 23f
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Kilometer",
-            value = if (service.nextServiceKm.isBlank()) {
+            canvas,
+            "Kilometer",
+            if (service.nextServiceKm.isBlank()) {
                 "—"
             } else {
                 "${service.nextServiceKm} km"
             },
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
+            labelPaint,
+            textPaint,
+            y
         )
-
         y += 40f
 
         // -----------------------------------------------------
@@ -686,37 +632,28 @@ fun exportServiceHistoryPdf(
 
         y += 25f
 
-        val reminderText =
-            if (service.reminderEnabled &&
-                service.reminderMonthsBefore > 0
-            ) {
-                when (service.reminderMonthsBefore) {
-                    1 -> "1 Monat vorher"
-                    2 -> "2 Monate vorher"
-                    3 -> "3 Monate vorher"
-                    else ->
-                        "${service.reminderMonthsBefore} Monate vorher"
-                }
-            } else {
-                "Keine Erinnerung"
+        val reminderText = if (
+            service.reminderEnabled &&
+            service.reminderMonthsBefore > 0
+        ) {
+            when (service.reminderMonthsBefore) {
+                1 -> "1 Monat vorher"
+                2 -> "2 Monate vorher"
+                3 -> "3 Monate vorher"
+                else ->
+                    "${service.reminderMonthsBefore} Monate vorher"
             }
+        } else {
+            "Keine Erinnerung"
+        }
 
         drawLabelValue(
-            canvas = canvas,
-            label = "Service-Erinnerung",
-            value = reminderText,
-            labelPaint = labelPaint,
-            textPaint = textPaint,
-            y = y
-        )
-
-        y += 23f
-
-        canvas.drawText(
-            "Zeitbasierte Erinnerung.",
-            40f,
-            y,
-            smallPaint
+            canvas,
+            "Service-Erinnerung",
+            reminderText,
+            labelPaint,
+            textPaint,
+            y
         )
 
         y += 40f
@@ -741,16 +678,19 @@ fun exportServiceHistoryPdf(
                 service.documentation
             }
 
-        y = drawWrappedText(
-            canvas = canvas,
-            text = documentation,
-            paint = textPaint,
-            x = 40f,
-            y = y,
-            maxWidth = 515f
+        drawWrappedText(
+            canvas,
+            documentation,
+            textPaint,
+            40f,
+            y,
+            515f
         )
 
-        y += 45f
+        y = minOf(
+            y + 150f,
+            760f
+        )
 
         canvas.drawText(
             "Erstellt mit AutoCheck",
@@ -762,30 +702,19 @@ fun exportServiceHistoryPdf(
         document.finishPage(page)
     }
 
-    // =========================================================
-    // PDF SPEICHERN
-    // =========================================================
-
     try {
         context.contentResolver
             .openOutputStream(uri)
-            ?.use { outputStream ->
-                document.writeTo(outputStream)
+            ?.use { output ->
+                document.writeTo(output)
             }
     } finally {
         document.close()
     }
 }
 
-// =============================================================
-// HILFSFUNKTIONEN
-// =============================================================
-
-/**
- * Zeichnet ein Label und den dazugehörigen Wert.
- */
 private fun drawLabelValue(
-    canvas: android.graphics.Canvas,
+    canvas: Canvas,
     label: String,
     value: String,
     labelPaint: Paint,
@@ -807,11 +736,8 @@ private fun drawLabelValue(
     )
 }
 
-/**
- * Zeichnet längeren Text mit automatischem Zeilenumbruch.
- */
 private fun drawWrappedText(
-    canvas: android.graphics.Canvas,
+    canvas: Canvas,
     text: String,
     paint: Paint,
     x: Float,
@@ -823,9 +749,7 @@ private fun drawWrappedText(
     }
 
     var currentY = y
-
-    val lineHeight =
-        paint.textSize + 6f
+    val lineHeight = paint.textSize + 6f
 
     val paragraphs = text
         .replace("\r\n", "\n")
@@ -839,30 +763,30 @@ private fun drawWrappedText(
             continue
         }
 
-        val words = paragraph.trim().split(
-            Regex("\\s+")
-        )
+        val words = paragraph
+            .trim()
+            .split(Regex("\\s+"))
 
-        var currentLine = ""
+        var line = ""
 
         for (word in words) {
 
             val candidate =
-                if (currentLine.isBlank()) {
+                if (line.isBlank()) {
                     word
                 } else {
-                    "$currentLine $word"
+                    "$line $word"
                 }
 
             if (
                 paint.measureText(candidate) <= maxWidth
             ) {
-                currentLine = candidate
+                line = candidate
             } else {
 
-                if (currentLine.isNotBlank()) {
+                if (line.isNotBlank()) {
                     canvas.drawText(
-                        currentLine,
+                        line,
                         x,
                         currentY,
                         paint
@@ -871,13 +795,13 @@ private fun drawWrappedText(
                     currentY += lineHeight
                 }
 
-                currentLine = word
+                line = word
             }
         }
 
-        if (currentLine.isNotBlank()) {
+        if (line.isNotBlank()) {
             canvas.drawText(
-                currentLine,
+                line,
                 x,
                 currentY,
                 paint
@@ -890,61 +814,6 @@ private fun drawWrappedText(
     return currentY
 }
 
-/**
- * Erstellt die Kopfzeile einer Historienseite.
- */
-private fun drawHistoryPageHeader(
-    canvas: android.graphics.Canvas,
-    vehicle: String,
-    pageNumber: Int,
-    titlePaint: Paint,
-    sectionPaint: Paint,
-    smallPaint: Paint
-): Float {
-    var y = 45f
-
-    canvas.drawText(
-        "AutoCheck",
-        40f,
-        y,
-        smallPaint
-    )
-
-    canvas.drawText(
-        "Seite $pageNumber",
-        485f,
-        y,
-        smallPaint
-    )
-
-    y += 35f
-
-    canvas.drawText(
-        "Service-Historie",
-        40f,
-        y,
-        titlePaint
-    )
-
-    y += 28f
-
-    canvas.drawText(
-        vehicle.ifBlank { "Fahrzeug" },
-        40f,
-        y,
-        sectionPaint
-    )
-
-    y += 35f
-
-    return y
-}
-
-/**
- * Sortierwert für die Service-Historie.
- *
- * Jahr + Monat werden zu einem numerischen Wert kombiniert.
- */
 private fun serviceSortValue(
     service: ServiceInterval
 ): Long {
@@ -953,24 +822,22 @@ private fun serviceSortValue(
         .toIntOrNull()
         ?: 0
 
-    val month = serviceMonthToNumber(
+    val month = monthNumber(
         service.serviceMonth
     )
 
-    return year.toLong() * 100L + month.toLong()
+    return year.toLong() * 100L +
+        month.toLong()
 }
 
-/**
- * Wandelt einen Monatsnamen oder eine Monatszahl in eine Zahl um.
- */
-private fun serviceMonthToNumber(
+private fun monthNumber(
     month: String
 ): Int {
-    val normalized = month
-        .trim()
-        .lowercase(Locale.GERMANY)
-
-    return when (normalized) {
+    return when (
+        month
+            .trim()
+            .lowercase(Locale.GERMANY)
+    ) {
         "1", "01", "jänner", "januar" -> 1
         "2", "02", "februar" -> 2
         "3", "03", "märz", "maerz" -> 3
@@ -980,11 +847,11 @@ private fun serviceMonthToNumber(
         "7", "07", "juli" -> 7
         "8", "08", "august" -> 8
         "9", "09", "september" -> 9
-        "10", "oktober" -> 10
-        "11", "november" -> 11
-        "12", "dezember" -> 12
+        "10", "10.", "oktober" -> 10
+        "11", "11.", "november" -> 11
+        "12", "12.", "dezember" -> 12
         else -> {
-            normalized
+            month
                 .filter { it.isDigit() }
                 .toIntOrNull()
                 ?.coerceIn(0, 12)
@@ -993,47 +860,21 @@ private fun serviceMonthToNumber(
     }
 }
 
-/**
- * Erstellt eine lesbare Datumsanzeige.
- */
 private fun buildDate(
     month: String,
     year: String
 ): String {
-    val cleanMonth = month.trim()
-    val cleanYear = year.trim()
+    val m = month.trim()
+    val y = year.trim()
 
     return when {
-        cleanMonth.isNotBlank() &&
-            cleanYear.isNotBlank() -> {
-            "$cleanMonth $cleanYear"
-        }
-
-        cleanMonth.isNotBlank() -> {
-            cleanMonth
-        }
-
-        cleanYear.isNotBlank() -> {
-            cleanYear
-        }
-
-        else -> {
-            "—"
-        }
+        m.isNotBlank() && y.isNotBlank() -> "$m $y"
+        m.isNotBlank() -> m
+        y.isNotBlank() -> y
+        else -> "—"
     }
 }
 
-/**
- * Versucht verschiedene Kostenformate zu erkennen.
- *
- * Beispiele:
- * 350
- * 350 €
- * 350,50
- * 350.50
- * 1.250,50
- * 1,250.50
- */
 private fun parseCost(
     cost: String
 ): Double {
@@ -1047,69 +888,50 @@ private fun parseCost(
         .replace("EUR", "", ignoreCase = true)
         .replace(" ", "")
 
-    if (value.isBlank()) {
-        return 0.0
-    }
+    val comma = value.lastIndexOf(',')
+    val dot = value.lastIndexOf('.')
 
-    val lastComma = value.lastIndexOf(',')
-    val lastDot = value.lastIndexOf('.')
+    return try {
 
-    try {
-        if (
-            lastComma >= 0 &&
-            lastDot >= 0
-        ) {
-            // Beide Zeichen vorhanden.
-            // Das zuletzt vorkommende Zeichen wird als Dezimaltrennzeichen
-            // interpretiert.
+        if (comma >= 0 && dot >= 0) {
 
-            if (lastComma > lastDot) {
-                // Beispiel: 1.250,50
+            if (comma > dot) {
                 value = value
                     .replace(".", "")
                     .replace(",", ".")
             } else {
-                // Beispiel: 1,250.50
-                value = value
-                    .replace(",", "")
+                value = value.replace(",", "")
             }
-        } else if (lastComma >= 0) {
+
+        } else if (comma >= 0) {
+
             val decimals =
-                value.length - lastComma - 1
+                value.length - comma - 1
 
             value =
                 if (decimals in 1..2) {
-                    // Beispiel: 350,50
                     value.replace(",", ".")
                 } else {
-                    // Beispiel: 1,250
                     value.replace(",", "")
                 }
-        } else if (lastDot >= 0) {
-            val decimals =
-                value.length - lastDot - 1
 
-            value =
-                if (decimals in 1..2) {
-                    // Beispiel: 350.50
-                    value
-                } else {
-                    // Beispiel: 1.250
-                    value.replace(".", "")
-                }
+        } else if (dot >= 0) {
+
+            val decimals =
+                value.length - dot - 1
+
+            if (decimals > 2) {
+                value = value.replace(".", "")
+            }
         }
 
-        return value.toDoubleOrNull()
-            ?: 0.0
+        value.toDoubleOrNull() ?: 0.0
 
     } catch (_: Exception) {
-        return 0.0
+        0.0
     }
 }
 
-/**
- * Formatiert einen Betrag als Euro.
- */
 private fun formatEuro(
     value: Double
 ): String {
@@ -1118,24 +940,4 @@ private fun formatEuro(
         "%.2f €",
         value
     )
-}
-
-/**
- * Berechnet eine ungefähre Höhe eines Historieneintrags.
- *
- * Die Funktion bleibt bewusst im Exporter vorhanden,
- * damit die PDF-Erstellung auch bei späteren Layout-
- * Erweiterungen verwendet werden kann.
- */
-private fun calculateHistoryEntryHeight(
-    service: ServiceInterval
-): Float {
-    val documentationLength =
-        service.documentation.length
-
-    val additionalLines =
-        documentationLength / 70
-
-    return 260f +
-        additionalLines * 17f
 }
