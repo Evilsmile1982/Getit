@@ -46,8 +46,11 @@ class VehicleStore(
 
                     add(
                         Vehicle(
+
                             id =
-                                if (storedId.isNotBlank()) {
+                                if (
+                                    storedId.isNotBlank()
+                                ) {
                                     storedId
                                 } else {
                                     UUID.randomUUID().toString()
@@ -58,6 +61,18 @@ class VehicleStore(
                                     "name"
                                 ),
 
+                            /*
+                             * WICHTIG:
+                             * Diese Fahrzeugdaten werden jetzt
+                             * dauerhaft gespeichert und geladen.
+                             */
+
+                            vehicleType =
+                                o.optString(
+                                    "vehicleType",
+                                    "PKW"
+                                ),
+
                             make =
                                 o.optString(
                                     "make"
@@ -66,6 +81,18 @@ class VehicleStore(
                             model =
                                 o.optString(
                                     "model"
+                                ),
+
+                            motorization =
+                                o.optString(
+                                    "motorization",
+                                    ""
+                                ),
+
+                            power =
+                                o.optString(
+                                    "power",
+                                    ""
                                 ),
 
                             year =
@@ -86,6 +113,17 @@ class VehicleStore(
                             imageUri =
                                 o.optString(
                                     "imageUri"
+                                ),
+
+                            /*
+                             * WICHTIG:
+                             * Der Kaufpreis wird jetzt ebenfalls
+                             * dauerhaft aus dem Speicher geladen.
+                             */
+                            purchasePrice =
+                                o.optString(
+                                    "purchasePrice",
+                                    ""
                                 )
                         )
                     )
@@ -94,8 +132,9 @@ class VehicleStore(
 
         /*
          * Falls alte Fahrzeuge noch keine ID hatten,
-         * werden die neu erzeugten IDs sofort dauerhaft gespeichert.
+         * werden die neu erzeugten IDs dauerhaft gespeichert.
          */
+
         if (
             vehicles.any {
                 it.id.isBlank()
@@ -143,10 +182,11 @@ class VehicleStore(
         }
 
         /*
-         * Alte aktive Fahrzeugauswahl wurde bisher über den Namen
-         * gespeichert. Falls noch keine ID vorhanden ist, wird der
-         * alte Name einmalig auf die neue ID umgestellt.
+         * ========================================================
+         * AKTIVES FAHRZEUG
+         * ========================================================
          */
+
         val storedActiveId =
             prefs.getString(
                 "activeVehicleId",
@@ -178,11 +218,21 @@ class VehicleStore(
                     "activeVehicleId",
                     vehicleToActivate.id
                 )
+                .putString(
+                    "activeVehicle",
+                    vehicleToActivate.name
+                )
                 .apply()
         }
 
         return vehicles
     }
+
+    /*
+     * ============================================================
+     * FAHRZEUGE SPEICHERN
+     * ============================================================
+     */
 
     fun save(
         list: List<Vehicle>
@@ -206,34 +256,95 @@ class VehicleStore(
                         vehicle.name
                     )
 
+                    /*
+                     * Fahrzeugart
+                     */
+                    put(
+                        "vehicleType",
+                        vehicle.vehicleType
+                    )
+
+                    /*
+                     * Marke
+                     */
                     put(
                         "make",
                         vehicle.make
                     )
 
+                    /*
+                     * Modell
+                     */
                     put(
                         "model",
                         vehicle.model
                     )
 
+                    /*
+                     * Motorisierung
+                     */
+                    put(
+                        "motorization",
+                        vehicle.motorization
+                    )
+
+                    /*
+                     * PS / KW
+                     */
+                    put(
+                        "power",
+                        vehicle.power
+                    )
+
+                    /*
+                     * Baujahr
+                     */
                     put(
                         "year",
                         vehicle.year
                     )
 
+                    /*
+                     * Kennzeichen
+                     */
                     put(
                         "plate",
                         vehicle.plate
                     )
 
+                    /*
+                     * FIN / VIN
+                     */
                     put(
                         "vin",
                         vehicle.vin
                     )
 
+                    /*
+                     * Fahrzeugbild
+                     */
                     put(
                         "imageUri",
                         vehicle.imageUri
+                    )
+
+                    /*
+                     * ==================================================
+                     * KAUFPREIS
+                     * ==================================================
+                     *
+                     * DAS WAR DER FEHLER.
+                     *
+                     * Der Kaufpreis wurde vorher zwar im Vehicle-Objekt
+                     * gespeichert, aber hier nicht in die JSON-Datei
+                     * geschrieben.
+                     *
+                     * Dadurch war er nach einem Neustart weg.
+                     */
+
+                    put(
+                        "purchasePrice",
+                        vehicle.purchasePrice
                     )
                 }
             )
@@ -248,9 +359,9 @@ class VehicleStore(
     }
 
     /*
-     * ------------------------------------------------------------
+     * ============================================================
      * BISHERIGE NAMENS-FUNKTIONEN
-     * ------------------------------------------------------------
+     * ============================================================
      */
 
     fun activeVehicle(): String {
@@ -270,6 +381,7 @@ class VehicleStore(
             }
 
         if (activeById != null) {
+
             return activeById.name
         }
 
@@ -310,9 +422,9 @@ class VehicleStore(
     }
 
     /*
-     * ------------------------------------------------------------
+     * ============================================================
      * ID-BASIERTE AKTIVE FAHRZEUGAUSWAHL
-     * ------------------------------------------------------------
+     * ============================================================
      */
 
     fun activeVehicleId(): String {
@@ -332,6 +444,7 @@ class VehicleStore(
             }
 
         if (validVehicle != null) {
+
             return validVehicle.id
         }
 
@@ -370,12 +483,15 @@ class VehicleStore(
             }
 
         if (vehicle == null) {
+
             return
         }
 
         /*
-         * Es existiert immer nur genau EINE globale activeVehicleId.
+         * Es existiert immer nur genau eine
+         * globale aktive Fahrzeug-ID.
          */
+
         prefs.edit()
             .putString(
                 "activeVehicleId",
@@ -421,7 +537,9 @@ class VehicleStore(
                 val parts =
                     buildList {
 
-                        if (partsArray != null) {
+                        if (
+                            partsArray != null
+                        ) {
 
                             for (
                                 partIndex in
@@ -433,10 +551,13 @@ class VehicleStore(
                                         partIndex
                                     )
 
-                                if (partObject != null) {
+                                if (
+                                    partObject != null
+                                ) {
 
                                     add(
                                         RepairPart(
+
                                             name =
                                                 partObject.optString(
                                                     "name"
@@ -455,6 +576,7 @@ class VehicleStore(
 
                 add(
                     Repair(
+
                         id =
                             o.optLong(
                                 "id"
@@ -653,6 +775,7 @@ class VehicleStore(
 
                 add(
                     Maintenance(
+
                         id =
                             o.optLong(
                                 "id"
@@ -778,6 +901,7 @@ class VehicleStore(
 
                 add(
                     Pickerl(
+
                         vehicle =
                             o.optString(
                                 "vehicle"
@@ -889,20 +1013,10 @@ class VehicleStore(
      * ============================================================
      * SERVICE UND INTERVALLE
      * ============================================================
-     *
-     * Jeder Service-Termin ist jetzt ein eigener Datensatz.
-     *
-     * Dadurch können für ein Fahrzeug beliebig viele Service-Termine
-     * gespeichert werden und eine dauerhafte Service-Historie
-     * entstehen.
-     *
-     * Alte gespeicherte Service-Datensätze mit den bisherigen
-     * lastService*-Feldern werden beim Laden einmalig als
-     * Service-Datensatz übernommen.
-     * ============================================================
      */
 
-    fun loadServiceIntervals(): List<de.autocheck.app.data.ServiceInterval> {
+    fun loadServiceIntervals():
+        List<de.autocheck.app.data.ServiceInterval> {
 
         val array =
             JSONArray(
@@ -934,9 +1048,7 @@ class VehicleStore(
                  * lastServiceYear
                  * lastServiceKm
                  *
-                 * Damit bereits gespeicherte Daten nicht verloren gehen,
-                 * wird zuerst die neue Struktur gelesen und bei einem
-                 * alten Datensatz auf die bisherigen Felder zurückgegriffen.
+                 * Alte Daten werden weiterhin erkannt.
                  */
 
                 val serviceMonth =
@@ -1036,7 +1148,8 @@ class VehicleStore(
     }
 
     fun saveServiceIntervals(
-        list: List<de.autocheck.app.data.ServiceInterval>
+        list:
+            List<de.autocheck.app.data.ServiceInterval>
     ) {
 
         val array =
@@ -1056,11 +1169,6 @@ class VehicleStore(
                         "vehicle",
                         it.vehicle
                     )
-
-                    /*
-                     * Ein Service-Termin wird als eigener Datensatz
-                     * mit serviceMonth/serviceYear/serviceKm gespeichert.
-                     */
 
                     put(
                         "serviceMonth",
@@ -1367,9 +1475,10 @@ class VehicleStore(
         )
 
         /*
-         * Hier werden automatisch ALLE Service-Historieneinträge
-         * dieses Fahrzeugs gelöscht.
+         * Alle Service-Historieneinträge
+         * dieses Fahrzeugs entfernen.
          */
+
         saveServiceIntervals(
             loadServiceIntervals()
                 .filterNot {
