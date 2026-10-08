@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
+import de.autocheck.app.data.ServiceInterval
+import java.util.Locale
 
 data class ServicePdfData(
     val vehicle: String,
@@ -17,6 +19,11 @@ data class ServicePdfData(
     val cost: String,
     val reminderEnabled: Boolean,
     val reminderMonthsBefore: Int
+)
+
+data class ServiceHistoryPdfData(
+    val vehicle: String,
+    val services: List<ServiceInterval>
 )
 
 fun exportServicePdf(
@@ -337,136 +344,341 @@ fun exportServicePdf(
     }
 }
 
-private fun drawLabelValue(
-    canvas: android.graphics.Canvas,
-    label: String,
-    value: String,
-    labelPaint: Paint,
-    textPaint: Paint,
-    y: Float
+fun exportServiceHistoryPdf(
+    context: Context,
+    uri: Uri,
+    data: ServiceHistoryPdfData
 ) {
 
+    val document =
+        PdfDocument()
+
+    val pageWidth =
+        595
+
+    val pageHeight =
+        842
+
+    val titlePaint =
+        Paint().apply {
+            textSize = 24f
+            isFakeBoldText = true
+            color = android.graphics.Color.BLACK
+        }
+
+    val sectionPaint =
+        Paint().apply {
+            textSize = 17f
+            isFakeBoldText = true
+            color = android.graphics.Color.rgb(
+                154,
+                77,
+                255
+            )
+        }
+
+    val labelPaint =
+        Paint().apply {
+            textSize = 13f
+            isFakeBoldText = true
+            color = android.graphics.Color.DKGRAY
+        }
+
+    val textPaint =
+        Paint().apply {
+            textSize = 12f
+            color = android.graphics.Color.BLACK
+        }
+
+    val smallPaint =
+        Paint().apply {
+            textSize = 10f
+            color = android.graphics.Color.DKGRAY
+        }
+
+    val services =
+        data.services.sortedWith(
+            compareByDescending<ServiceInterval> {
+                serviceSortValue(it)
+            }.thenByDescending {
+                it.id
+            }
+        )
+
+    var pageNumber =
+        1
+
+    var page =
+        document.startPage(
+            PdfDocument.PageInfo.Builder(
+                pageWidth,
+                pageHeight,
+                pageNumber
+            ).create()
+        )
+
+    var canvas =
+        page.canvas
+
+    var y =
+        drawHistoryPageHeader(
+            canvas = canvas,
+            titlePaint = titlePaint,
+            sectionPaint = sectionPaint,
+            smallPaint = smallPaint,
+            vehicle = data.vehicle,
+            pageNumber = pageNumber
+        )
+
+    val totalCost =
+        services.sumOf {
+            parseCost(
+                it.cost
+            )
+        }
+
+    y += 15f
+
     canvas.drawText(
-        "$label:",
+        "ÜBERSICHT",
         40f,
         y,
-        labelPaint
+        sectionPaint
     )
 
-    canvas.drawText(
-        value,
-        190f,
-        y,
-        textPaint
+    y += 24f
+
+    drawLabelValue(
+        canvas = canvas,
+        label = "Anzahl Services",
+        value = services.size.toString(),
+        labelPaint = labelPaint,
+        textPaint = textPaint,
+        y = y
     )
-}
 
-private fun drawWrappedText(
-    canvas: android.graphics.Canvas,
-    text: String,
-    paint: Paint,
-    x: Float,
-    y: Float,
-    maxWidth: Float
-): Float {
+    y += 22f
 
-    val words =
-        text
-            .replace(
-                "\n",
-                " \n "
-            )
-            .split(
-                " "
-            )
+    drawLabelValue(
+        canvas = canvas,
+        label = "Gesamtkosten",
+        value = formatEuro(
+            totalCost
+        ),
+        labelPaint = labelPaint,
+        textPaint = textPaint,
+        y = y
+    )
 
-    var currentLine =
-        ""
-
-    var currentY =
-        y
-
-    val lineHeight =
-        18f
-
-    for (
-        word in words
-    ) {
-
-        if (
-            word == "\n"
-        ) {
-
-            canvas.drawText(
-                currentLine,
-                x,
-                currentY,
-                paint
-            )
-
-            currentLine =
-                ""
-
-            currentY +=
-                lineHeight
-
-            continue
-        }
-
-        val testLine =
-            if (
-                currentLine.isBlank()
-            ) {
-                word
-            } else {
-                "$currentLine $word"
-            }
-
-        if (
-            paint.measureText(
-                testLine
-            ) <= maxWidth
-        ) {
-
-            currentLine =
-                testLine
-
-        } else {
-
-            if (
-                currentLine.isNotBlank()
-            ) {
-
-                canvas.drawText(
-                    currentLine,
-                    x,
-                    currentY,
-                    paint
-                )
-
-                currentY +=
-                    lineHeight
-            }
-
-            currentLine =
-                word
-        }
-    }
+    y += 35f
 
     if (
-        currentLine.isNotBlank()
+        services.isEmpty()
     ) {
 
         canvas.drawText(
-            currentLine,
-            x,
-            currentY,
-            paint
+            "Keine Service-Termine vorhanden.",
+            40f,
+            y,
+            textPaint
         )
 
-        currentY +=
-            lineHeight
-    }
+    } else {
 
-    return currentY
-}
+        services.forEachIndexed { index, service ->
+
+            val estimatedHeight =
+                calculateHistoryEntryHeight(
+                    service
+                )
+
+            if (
+                y + estimatedHeight > 760f
+            ) {
+
+                document.finishPage(
+                    page
+                )
+
+                pageNumber++
+
+                page =
+                    document.startPage(
+                        PdfDocument.PageInfo.Builder(
+                            pageWidth,
+                            pageHeight,
+                            pageNumber
+                        ).create()
+                    )
+
+                canvas =
+                    page.canvas
+
+                y =
+                    drawHistoryPageHeader(
+                        canvas = canvas,
+                        titlePaint = titlePaint,
+                        sectionPaint = sectionPaint,
+                        smallPaint = smallPaint,
+                        vehicle = data.vehicle,
+                        pageNumber = pageNumber
+                    )
+
+                y += 20f
+            }
+
+            canvas.drawText(
+                "SERVICE ${index + 1}",
+                40f,
+                y,
+                sectionPaint
+            )
+
+            y += 24f
+
+            val serviceDate =
+                if (
+                    service.serviceMonth.isBlank() &&
+                    service.serviceYear.isBlank()
+                ) {
+                    "—"
+                } else {
+                    "${service.serviceMonth} ${service.serviceYear}"
+                }
+
+            drawLabelValue(
+                canvas = canvas,
+                label = "Datum",
+                value = serviceDate,
+                labelPaint = labelPaint,
+                textPaint = textPaint,
+                y = y
+            )
+
+            y += 20f
+
+            drawLabelValue(
+                canvas = canvas,
+                label = "Kilometer",
+                value =
+                    if (
+                        service.serviceKm.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        "${service.serviceKm} km"
+                    },
+                labelPaint = labelPaint,
+                textPaint = textPaint,
+                y = y
+            )
+
+            y += 20f
+
+            drawLabelValue(
+                canvas = canvas,
+                label = "Kosten",
+                value =
+                    if (
+                        service.cost.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        service.cost
+                    },
+                labelPaint = labelPaint,
+                textPaint = textPaint,
+                y = y
+            )
+
+            y += 20f
+
+            val nextServiceDate =
+                if (
+                    service.nextServiceMonth.isBlank() &&
+                    service.nextServiceYear.isBlank()
+                ) {
+                    "—"
+                } else {
+                    "${service.nextServiceMonth} ${service.nextServiceYear}"
+                }
+
+            drawLabelValue(
+                canvas = canvas,
+                label = "Nächstes Service",
+                value = nextServiceDate,
+                labelPaint = labelPaint,
+                textPaint = textPaint,
+                y = y
+            )
+
+            y += 20f
+
+            drawLabelValue(
+                canvas = canvas,
+                label = "Nächste km",
+                value =
+                    if (
+                        service.nextServiceKm.isBlank()
+                    ) {
+                        "—"
+                    } else {
+                        "${service.nextServiceKm} km"
+                    },
+                labelPaint = labelPaint,
+                textPaint = textPaint,
+                y = y
+            )
+
+            y += 20f
+
+            val reminderText =
+                if (
+                    service.reminderEnabled &&
+                    service.reminderMonthsBefore > 0
+                ) {
+
+                    when (
+                        service.reminderMonthsBefore
+                    ) {
+
+                        1 ->
+                            "1 Monat vorher"
+
+                        2 ->
+                            "2 Monate vorher"
+
+                        3 ->
+                            "3 Monate vorher"
+
+                        else ->
+                            "Aktiv"
+                    }
+
+                } else {
+                    "Keine Erinnerung"
+                }
+
+            drawLabelValue(
+                canvas = canvas,
+                label = "Erinnerung",
+                value = reminderText,
+                labelPaint = labelPaint,
+                textPaint = textPaint,
+                y = y
+            )
+
+            y += 25f
+
+            canvas.drawText(
+                "Dokumentation:",
+                40f,
+                y,
+                labelPaint
+            )
+
+            y += 18f
+
+            val documentation =
+                if (
+                   
