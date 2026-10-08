@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ import de.autocheck.app.utils.exportServiceHistoryPdf
 import de.autocheck.app.utils.exportServicePdf
 import de.autocheck.app.utils.scheduleServiceReminder
 import java.time.LocalDate
+import java.util.Locale
 
 private val serviceMonths =
     listOf(
@@ -72,28 +74,30 @@ private val serviceMonths =
     )
 
 private val goldColor =
-    Color(
-        0xFFFFD700
-    )
+    Color(0xFFFFD700)
 
 private val darkCardColor =
-    Color(
-        0xFF11141A
-    )
+    Color(0xFF11141A)
+
+private val greenColor =
+    Color(0xFF4CAF50)
+
+private val redColor =
+    Color(0xFFF44336)
+
+private val purpleColor =
+    Color(0xFF9A4DFF)
 
 private enum class ServiceMenuSection {
-
     MENU,
-
     INTERVALS,
-
     HISTORY
 }
 
 
 /*
  * ================================================================
- * HAUPT-EINSTIEG SERVICE
+ * SERVICE HAUPTEINSTIEG
  * ================================================================
  */
 @Composable
@@ -112,84 +116,45 @@ fun ServiceMenuScreen(
         )
     }
 
-    /*
-     * Wird beim Öffnen des Service-Bereichs einmal ausgelöst.
-     */
     LaunchedEffect(Unit) {
-
         onVisited()
     }
 
-    when (
-        section
-    ) {
+    when (section) {
 
-        /*
-         * ========================================================
-         * SERVICE-MENÜ
-         * ========================================================
-         */
         ServiceMenuSection.MENU -> {
 
             ServiceMenuHome(
-
-                vehicle =
-                    activeVehicleData,
-
+                vehicle = activeVehicleData,
                 onServiceAndIntervals = {
-
                     section =
                         ServiceMenuSection.INTERVALS
                 },
-
                 onServiceHistory = {
-
                     section =
                         ServiceMenuSection.HISTORY
                 }
             )
         }
 
-        /*
-         * ========================================================
-         * SERVICE UND INTERVALLE
-         * ========================================================
-         */
         ServiceMenuSection.INTERVALS -> {
 
             ServiceIntervalsScreen(
-
-                store =
-                    store,
-
-                activeVehicle =
-                    activeVehicle,
-
+                store = store,
+                activeVehicle = activeVehicle,
                 onBack = {
-
                     section =
                         ServiceMenuSection.MENU
                 }
             )
         }
 
-        /*
-         * ========================================================
-         * SERVICE HISTORIE
-         * ========================================================
-         */
         ServiceMenuSection.HISTORY -> {
 
             ServiceHistoryScreen(
-
-                store =
-                    store,
-
-                activeVehicle =
-                    activeVehicle,
-
+                store = store,
+                activeVehicle = activeVehicle,
                 onBack = {
-
                     section =
                         ServiceMenuSection.MENU
                 }
@@ -228,8 +193,7 @@ private fun ServiceMenuHome(
         )
 
         VehicleServiceHeader(
-            vehicle =
-                vehicle
+            vehicle = vehicle
         )
 
         Spacer(
@@ -239,13 +203,7 @@ private fun ServiceMenuHome(
                 )
         )
 
-        /*
-         * ========================================================
-         * SERVICE UND INTERVALLE
-         * ========================================================
-         */
         ServiceMenuGoldButton(
-
             title =
                 "🔧  Service und Intervalle",
 
@@ -263,13 +221,7 @@ private fun ServiceMenuHome(
                 )
         )
 
-        /*
-         * ========================================================
-         * SERVICE HISTORIE
-         * ========================================================
-         */
         ServiceMenuGoldButton(
-
             title =
                 "📋  Service Historie",
 
@@ -285,7 +237,7 @@ private fun ServiceMenuHome(
 
 /*
  * ================================================================
- * FAHRZEUGKOPF
+ * FAHRZEUGDATEN + BILD
  * ================================================================
  */
 @Composable
@@ -326,11 +278,6 @@ private fun VehicleServiceHeader(
                 )
         ) {
 
-            /*
-             * ====================================================
-             * LINKE HÄLFTE
-             * ====================================================
-             */
             Column(
                 modifier =
                     Modifier
@@ -348,9 +295,7 @@ private fun VehicleServiceHeader(
                         "AUTODATEN",
 
                     color =
-                        Color(
-                            0xFF9A4DFF
-                        ),
+                        purpleColor,
 
                     fontSize =
                         14.sp,
@@ -466,11 +411,6 @@ private fun VehicleServiceHeader(
                 }
             }
 
-            /*
-             * ====================================================
-             * RECHTE HÄLFTE – BILD
-             * ====================================================
-             */
             Box(
                 modifier =
                     Modifier
@@ -538,7 +478,7 @@ private fun VehicleServiceHeader(
 
 /*
  * ================================================================
- * FAHRZEUGDATEN
+ * FAHRZEUGDATENZEILE
  * ================================================================
  */
 @Composable
@@ -685,7 +625,7 @@ private fun VehicleServiceImage(
 
 /*
  * ================================================================
- * GOLDENE HAUPTBUTTONS
+ * GOLDENE OVALE HAUPTBUTTONS
  * ================================================================
  */
 @Composable
@@ -695,78 +635,84 @@ private fun ServiceMenuGoldButton(
     onClick: () -> Unit
 ) {
 
-    Button(
+    Box(
         modifier =
-            Modifier
-                .fillMaxWidth(
-                    0.92f
-                )
-                .height(
-                    72.dp
-                )
-                .align(
-                    Alignment.CenterHorizontally
-                ),
+            Modifier.fillMaxWidth(),
 
-        onClick =
-            onClick,
-
-        shape =
-            RoundedCornerShape(
-                50.dp
-            ),
-
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor =
-                    goldColor,
-
-                contentColor =
-                    Color.Black
-            ),
-
-        contentPadding =
-            PaddingValues(
-                horizontal = 22.dp,
-                vertical = 8.dp
-            )
+        contentAlignment =
+            Alignment.Center
     ) {
 
-        Column(
+        Button(
             modifier =
-                Modifier.fillMaxWidth(),
+                Modifier
+                    .fillMaxWidth(
+                        0.92f
+                    )
+                    .height(
+                        72.dp
+                    ),
 
-            horizontalAlignment =
-                Alignment.Start,
+            onClick =
+                onClick,
 
-            verticalArrangement =
-                Arrangement.Center
+            shape =
+                RoundedCornerShape(
+                    50.dp
+                ),
+
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor =
+                        goldColor,
+
+                    contentColor =
+                        Color.Black
+                ),
+
+            contentPadding =
+                PaddingValues(
+                    horizontal = 22.dp,
+                    vertical = 8.dp
+                )
         ) {
 
-            Text(
-                text =
-                    title,
+            Column(
+                modifier =
+                    Modifier.fillMaxWidth(),
 
-                fontSize =
-                    17.sp,
+                horizontalAlignment =
+                    Alignment.Start,
 
-                fontWeight =
-                    FontWeight.Bold
-            )
+                verticalArrangement =
+                    Arrangement.Center
+            ) {
 
-            Text(
-                text =
-                    subtitle,
+                Text(
+                    text =
+                        title,
 
-                fontSize =
-                    11.sp,
+                    fontSize =
+                        17.sp,
 
-                maxLines =
-                    1,
+                    fontWeight =
+                        FontWeight.Bold
+                )
 
-                overflow =
-                    TextOverflow.Ellipsis
-            )
+                Text(
+                    text =
+                        subtitle,
+
+                    fontSize =
+                        11.sp,
+
+                    maxLines =
+                        1,
+
+                    overflow =
+                        TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -774,7 +720,7 @@ private fun ServiceMenuGoldButton(
 
 /*
  * ================================================================
- * SEITENKOPF
+ * UNTERSEITEN-KOPF
  * ================================================================
  */
 @Composable
@@ -868,7 +814,9 @@ private fun ServiceIntervalsScreen(
     }
 
     var addingService by remember {
-        mutableStateOf(false)
+        mutableStateOf(
+            false
+        )
     }
 
     var editingId by remember {
@@ -888,7 +836,9 @@ private fun ServiceIntervalsScreen(
     }
 
     var serviceKm by remember {
-        mutableStateOf("")
+        mutableStateOf(
+            ""
+        )
     }
 
     var nextMonth by remember {
@@ -904,27 +854,39 @@ private fun ServiceIntervalsScreen(
     }
 
     var nextKm by remember {
-        mutableStateOf("")
+        mutableStateOf(
+            ""
+        )
     }
 
     var documentation by remember {
-        mutableStateOf("")
+        mutableStateOf(
+            ""
+        )
     }
 
     var cost by remember {
-        mutableStateOf("")
+        mutableStateOf(
+            ""
+        )
     }
 
     var reminderEnabled by remember {
-        mutableStateOf(false)
+        mutableStateOf(
+            false
+        )
     }
 
     var reminderMonths by remember {
-        mutableStateOf(0)
+        mutableStateOf(
+            0
+        )
     }
 
     var reminderExpanded by remember {
-        mutableStateOf(false)
+        mutableStateOf(
+            false
+        )
     }
 
     var pdfData by remember {
@@ -966,11 +928,15 @@ private fun ServiceIntervalsScreen(
                     it.vehicle ==
                         activeVehicle
                 }
-                .sortedByDescending {
-                    serviceSortValue(
-                        it
-                    )
-                }
+                .sortedWith(
+                    compareByDescending<ServiceInterval> {
+                        serviceSortValue(
+                            it
+                        )
+                    }.thenByDescending {
+                        it.id
+                    }
+                )
     }
 
     fun clearForm() {
@@ -1007,6 +973,9 @@ private fun ServiceIntervalsScreen(
 
         reminderMonths =
             0
+
+        reminderExpanded =
+            false
     }
 
     fun loadService(
@@ -1054,17 +1023,21 @@ private fun ServiceIntervalsScreen(
                     3
                 )
 
+        reminderExpanded =
+            false
+
         addingService =
             true
     }
 
-    fun save() {
+    fun saveService() {
 
-        val all =
-            store.loadServiceIntervals()
+        val allServices =
+            store
+                .loadServiceIntervals()
 
         val existing =
-            all.firstOrNull {
+            allServices.firstOrNull {
                 it.id ==
                     editingId
             }
@@ -1120,12 +1093,13 @@ private fun ServiceIntervalsScreen(
                     }
             )
 
-        val updated =
+        val updatedServices =
             if (
                 existing != null
             ) {
 
-                all.map {
+                allServices.map {
+
                     if (
                         it.id ==
                             existing.id
@@ -1138,20 +1112,38 @@ private fun ServiceIntervalsScreen(
 
             } else {
 
-                all + entry
+                allServices +
+                    entry
             }
 
         store.saveServiceIntervals(
-            updated
+            updatedServices
         )
 
-        reload()
+        val vehicleServices =
+            updatedServices
+                .filter {
+                    it.vehicle ==
+                        activeVehicle
+                }
+                .sortedWith(
+                    compareByDescending<ServiceInterval> {
+                        serviceSortValue(
+                            it
+                        )
+                    }.thenByDescending {
+                        it.id
+                    }
+                )
 
-        val newest =
-            services.firstOrNull()
+        services =
+            vehicleServices
+
+        val newestService =
+            vehicleServices.firstOrNull()
 
         if (
-            newest != null
+            newestService != null
         ) {
 
             scheduleServiceReminder(
@@ -1163,16 +1155,16 @@ private fun ServiceIntervalsScreen(
                     activeVehicle,
 
                 nextServiceMonth =
-                    newest.nextServiceMonth,
+                    newestService.nextServiceMonth,
 
                 nextServiceYear =
-                    newest.nextServiceYear,
+                    newestService.nextServiceYear,
 
                 reminderMonths =
                     if (
-                        newest.reminderEnabled
+                        newestService.reminderEnabled
                     ) {
-                        newest.reminderMonthsBefore
+                        newestService.reminderMonthsBefore
                     } else {
                         0
                     }
@@ -1226,8 +1218,18 @@ private fun ServiceIntervalsScreen(
                     service.reminderMonthsBefore
             )
 
+        val safeName =
+            activeVehicle
+                .ifBlank {
+                    "Fahrzeug"
+                }
+                .replace(
+                    " ",
+                    "_"
+                )
+
         pdfLauncher.launch(
-            "Service_${activeVehicle.ifBlank { "Fahrzeug" }}.pdf"
+            "Service_${safeName}.pdf"
         )
     }
 
@@ -1266,10 +1268,10 @@ private fun ServiceIntervalsScreen(
 
                 contentPadding =
                     PaddingValues(
-                        16.dp,
-                        8.dp,
-                        16.dp,
-                        24.dp
+                        start = 16.dp,
+                        top = 8.dp,
+                        end = 16.dp,
+                        bottom = 24.dp
                     ),
 
                 verticalArrangement =
@@ -1374,7 +1376,7 @@ private fun ServiceIntervalsScreen(
                         },
 
                         onSave =
-                            ::save,
+                            ::saveService,
 
                         onCancel = {
 
@@ -1395,10 +1397,10 @@ private fun ServiceIntervalsScreen(
 
                 contentPadding =
                     PaddingValues(
-                        16.dp,
-                        8.dp,
-                        16.dp,
-                        24.dp
+                        start = 16.dp,
+                        top = 8.dp,
+                        end = 16.dp,
+                        bottom = 24.dp
                     ),
 
                 verticalArrangement =
@@ -1409,13 +1411,13 @@ private fun ServiceIntervalsScreen(
 
                 item {
 
-                    val latest =
+                    val latestService =
                         services.firstOrNull()
 
                     ServiceCurrentCard(
 
                         service =
-                            latest,
+                            latestService,
 
                         onNew = {
 
@@ -1428,10 +1430,11 @@ private fun ServiceIntervalsScreen(
                         onEdit = {
 
                             if (
-                                latest != null
+                                latestService != null
                             ) {
+
                                 loadService(
-                                    latest
+                                    latestService
                                 )
                             }
                         },
@@ -1439,10 +1442,11 @@ private fun ServiceIntervalsScreen(
                         onPdf = {
 
                             if (
-                                latest != null
+                                latestService != null
                             ) {
+
                                 exportCurrentPdf(
-                                    latest
+                                    latestService
                                 )
                             }
                         }
@@ -1533,9 +1537,7 @@ private fun ServiceCurrentCard(
                         "Letztes Service",
 
                     color =
-                        Color(
-                            0xFF4CAF50
-                        ),
+                        greenColor,
 
                     fontSize =
                         16.sp,
@@ -1577,7 +1579,7 @@ private fun ServiceCurrentCard(
                 Spacer(
                     modifier =
                         Modifier.height(
-                            4.dp
+                            2.dp
                         )
                 )
 
@@ -1586,9 +1588,7 @@ private fun ServiceCurrentCard(
                         "Nächstes Service",
 
                     color =
-                        Color(
-                            0xFFF44336
-                        ),
+                        redColor,
 
                     fontSize =
                         16.sp,
@@ -1637,13 +1637,6 @@ private fun ServiceCurrentCard(
                     service.documentation.isNotBlank()
                 ) {
 
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                2.dp
-                            )
-                    )
-
                     Text(
                         text =
                             "Dokumentation",
@@ -1670,21 +1663,12 @@ private fun ServiceCurrentCard(
                     )
                 }
 
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            2.dp
-                        )
-                )
-
                 Text(
                     text =
                         "Erinnerung",
 
                     color =
-                        Color(
-                            0xFFF44336
-                        ),
+                        redColor,
 
                     fontSize =
                         16.sp,
@@ -1733,15 +1717,10 @@ private fun ServiceCurrentCard(
             Spacer(
                 modifier =
                     Modifier.height(
-                        4.dp
+                        2.dp
                     )
             )
 
-            /*
-             * ====================================================
-             * NEUES SERVICE
-             * ====================================================
-             */
             Button(
                 modifier =
                     Modifier.fillMaxWidth(),
@@ -1911,9 +1890,7 @@ private fun ServiceEditForm(
                     "Durchgeführtes Service",
 
                 color =
-                    Color(
-                        0xFF4CAF50
-                    ),
+                    greenColor,
 
                 fontSize =
                     17.sp,
@@ -1923,7 +1900,6 @@ private fun ServiceEditForm(
             )
 
             ServiceMonthYearRow(
-
                 month =
                     serviceMonth,
 
@@ -1962,9 +1938,7 @@ private fun ServiceEditForm(
                     "Nächstes Service",
 
                 color =
-                    Color(
-                        0xFFF44336
-                    ),
+                    redColor,
 
                 fontSize =
                     17.sp,
@@ -1974,7 +1948,6 @@ private fun ServiceEditForm(
             )
 
             ServiceMonthYearRow(
-
                 month =
                     nextMonth,
 
@@ -2081,9 +2054,7 @@ private fun ServiceEditForm(
                     "Erinnerung",
 
                 color =
-                    Color(
-                        0xFFF44336
-                    ),
+                    redColor,
 
                 fontSize =
                     17.sp,
@@ -2283,6 +2254,17 @@ private fun ServiceEditForm(
                         )
                     }
                 }
+
+                Text(
+                    text =
+                        "Die Erinnerung erfolgt zeitbasiert. Eine Kilometer-Erinnerung gibt es nicht.",
+
+                    color =
+                        Color.LightGray,
+
+                    fontSize =
+                        12.sp
+                )
             }
 
             Spacer(
@@ -2438,8 +2420,18 @@ private fun ServiceHistoryScreen(
                     services
             )
 
+        val safeName =
+            activeVehicle
+                .ifBlank {
+                    "Fahrzeug"
+                }
+                .replace(
+                    " ",
+                    "_"
+                )
+
         historyPdfLauncher.launch(
-            "Service_Historie_${activeVehicle.ifBlank { "Fahrzeug" }}.pdf"
+            "Service_Historie_${safeName}.pdf"
         )
     }
 
@@ -2476,10 +2468,10 @@ private fun ServiceHistoryScreen(
 
             contentPadding =
                 PaddingValues(
-                    16.dp,
-                    8.dp,
-                    16.dp,
-                    24.dp
+                    start = 16.dp,
+                    top = 8.dp,
+                    end = 16.dp,
+                    bottom = 24.dp
                 ),
 
             verticalArrangement =
@@ -2488,11 +2480,6 @@ private fun ServiceHistoryScreen(
                 )
         ) {
 
-            /*
-             * ====================================================
-             * ÜBERSICHT
-             * ====================================================
-             */
             item {
 
                 Card(
@@ -2570,11 +2557,6 @@ private fun ServiceHistoryScreen(
                 }
             }
 
-            /*
-             * ====================================================
-             * PDF
-             * ====================================================
-             */
             item {
 
                 Button(
@@ -2625,11 +2607,6 @@ private fun ServiceHistoryScreen(
                 }
             }
 
-            /*
-             * ====================================================
-             * LEERE HISTORIE
-             * ====================================================
-             */
             if (
                 services.isEmpty()
             ) {
@@ -2667,11 +2644,6 @@ private fun ServiceHistoryScreen(
 
             } else {
 
-                /*
-                 * =================================================
-                 * ALLE HISTORISCHEN SERVICES
-                 * =================================================
-                 */
                 items(
                     items =
                         services,
@@ -2697,11 +2669,10 @@ private fun ServiceHistoryScreen(
  * HISTORIEN-EINTRAG
  * ================================================================
  *
- * WICHTIG:
+ * Diese Ansicht ist bewusst nur lesbar.
  *
- * Hier gibt es absichtlich KEIN "Bearbeiten" und KEIN "Löschen".
- *
- * Die Historie ist eine reine Ansicht.
+ * Kein Bearbeiten.
+ * Kein Löschen.
  * ================================================================
  */
 @Composable
@@ -2744,9 +2715,7 @@ private fun ServiceHistoryEntry(
                     "${service.serviceMonth} ${service.serviceYear}",
 
                 color =
-                    Color(
-                        0xFF4CAF50
-                    ),
+                    greenColor,
 
                 fontSize =
                     18.sp,
@@ -2828,21 +2797,12 @@ private fun ServiceHistoryEntry(
                 service.nextServiceYear.isNotBlank()
             ) {
 
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            2.dp
-                        )
-                )
-
                 Text(
                     text =
                         "Nächstes Service: ${service.nextServiceMonth} ${service.nextServiceYear}",
 
                     color =
-                        Color(
-                            0xFFF44336
-                        ),
+                        redColor,
 
                     fontSize =
                         13.sp
@@ -2859,9 +2819,7 @@ private fun ServiceHistoryEntry(
                         "Erinnerung: ${service.reminderMonthsBefore} Monate vorher",
 
                     color =
-                        Color(
-                            0xFFF44336
-                        ),
+                        redColor,
 
                     fontSize =
                         13.sp
@@ -2937,12 +2895,12 @@ private fun ServiceMonthYearRow(
 
                 serviceMonths.forEachIndexed {
                     index,
-                    name ->
+                    monthName ->
 
                     DropdownMenuItem(
                         text = {
                             Text(
-                                name
+                                monthName
                             )
                         },
 
@@ -2987,7 +2945,7 @@ private fun ServiceMonthYearRow(
 
 /*
  * ================================================================
- * MONAT HILFSFUNKTIONEN
+ * MONAT
  * ================================================================
  */
 private fun serviceMonthNumber(
@@ -3011,6 +2969,11 @@ private fun serviceMonthNumber(
 }
 
 
+/*
+ * ================================================================
+ * MONATSNAME
+ * ================================================================
+ */
 private fun serviceMonthName(
     value: Int
 ): String {
@@ -3028,7 +2991,7 @@ private fun serviceMonthName(
 
 /*
  * ================================================================
- * SORTIERUNG
+ * SORTIERWERT
  * ================================================================
  */
 private fun serviceSortValue(
@@ -3054,7 +3017,7 @@ private fun serviceSortValue(
 
 /*
  * ================================================================
- * KOSTEN AUSWERTEN
+ * KOSTEN PARSEN
  * ================================================================
  */
 private fun parseCost(
@@ -3085,11 +3048,6 @@ private fun parseCost(
                     ""
                 )
 
-        /*
-         * Österreichische Schreibweise:
-         *
-         * 1.250,50
-         */
         if (
             cleaned.contains(",") &&
             cleaned.contains(".")
@@ -3137,7 +3095,7 @@ private fun formatEuro(
 ): String {
 
     return String.format(
-        java.util.Locale.GERMANY,
+        Locale.GERMANY,
         "%.2f €",
         value
     )
