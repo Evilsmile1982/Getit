@@ -38,7 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autocheck.app.data.ServiceInterval
+import de.autocheck.app.utils.ServiceHistoryPdfData
 import de.autocheck.app.utils.ServicePdfData
+import de.autocheck.app.utils.exportServiceHistoryPdf
 import de.autocheck.app.utils.exportServicePdf
 import de.autocheck.app.utils.scheduleServiceReminder
 import java.time.LocalDate
@@ -228,6 +230,10 @@ fun ServiceScreen(
         mutableStateOf<ServicePdfData?>(null)
     }
 
+    var historyPdfData by remember {
+        mutableStateOf<ServiceHistoryPdfData?>(null)
+    }
+
     val pdfLauncher =
         rememberLauncherForActivityResult(
             contract =
@@ -245,6 +251,27 @@ fun ServiceScreen(
                     context = context,
                     uri = uri,
                     data = pdfData!!
+                )
+            }
+        }
+
+    val historyPdfLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.CreateDocument(
+                    "application/pdf"
+                )
+        ) { uri ->
+
+            if (
+                uri != null &&
+                historyPdfData != null
+            ) {
+
+                exportServiceHistoryPdf(
+                    context = context,
+                    uri = uri,
+                    data = historyPdfData!!
                 )
             }
         }
@@ -519,6 +546,37 @@ fun ServiceScreen(
 
         editingServiceId =
             null
+    }
+
+    fun exportHistoryPdf() {
+
+        if (
+            serviceHistory.isEmpty()
+        ) {
+            return
+        }
+
+        historyPdfData =
+            ServiceHistoryPdfData(
+                vehicle =
+                    activeVehicle,
+                services =
+                    serviceHistory
+            )
+
+        val safeVehicleName =
+            activeVehicle
+                .ifBlank {
+                    "Fahrzeug"
+                }
+                .replace(
+                    " ",
+                    "_"
+                )
+
+        historyPdfLauncher.launch(
+            "Service_Historie_${safeVehicleName}.pdf"
+        )
     }
 
     LaunchedEffect(Unit) {
@@ -832,7 +890,12 @@ fun ServiceScreen(
 
                             ServiceHistoryHeader(
                                 count =
-                                    serviceHistory.size
+                                    serviceHistory.size,
+
+                                onExportHistoryPdf =
+                                    {
+                                        exportHistoryPdf()
+                                    }
                             )
                         }
 
@@ -1318,7 +1381,7 @@ private fun ServiceCurrentCard(
                 ) {
 
                     Text(
-                        "PDF exportieren"
+                        "📄 Aktuelles Service als PDF"
                     )
                 }
             }
@@ -1399,7 +1462,8 @@ private fun ServiceEmptyHistoryCard(
 
 @Composable
 private fun ServiceHistoryHeader(
-    count: Int
+    count: Int,
+    onExportHistoryPdf: () -> Unit
 ) {
 
     Card(
@@ -1415,54 +1479,78 @@ private fun ServiceHistoryHeader(
             )
     ) {
 
-        Row(
+        Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
 
-            horizontalArrangement =
-                Arrangement.SpaceBetween,
-
-            verticalAlignment =
-                Alignment.CenterVertically
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
         ) {
 
-            Text(
-                text =
-                    "📚 Service-Historie",
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
 
-                color =
-                    Color.White,
+                horizontalArrangement =
+                    Arrangement.SpaceBetween,
 
-                fontSize =
-                    19.sp,
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
 
-                fontWeight =
-                    FontWeight.Bold
-            )
+                Text(
+                    text =
+                        "📚 Service-Historie",
 
-            Text(
-                text =
-                    if (
-                        count == 1
-                    ) {
-                        "1 Termin"
-                    } else {
-                        "$count Termine"
-                    },
+                    color =
+                        Color.White,
 
-                color =
-                    Color(
-                        0xFF9A4DFF
-                    ),
+                    fontSize =
+                        19.sp,
 
-                fontSize =
-                    14.sp,
+                    fontWeight =
+                        FontWeight.Bold
+                )
 
-                fontWeight =
-                    FontWeight.Bold
-            )
+                Text(
+                    text =
+                        if (
+                            count == 1
+                        ) {
+                            "1 Termin"
+                        } else {
+                            "$count Termine"
+                        },
+
+                    color =
+                        Color(
+                            0xFF9A4DFF
+                        ),
+
+                    fontSize =
+                        14.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+
+            OutlinedButton(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                onClick =
+                    onExportHistoryPdf
+            ) {
+
+                Text(
+                    "📚 Service-Historie als PDF"
+                )
+            }
         }
     }
 }
