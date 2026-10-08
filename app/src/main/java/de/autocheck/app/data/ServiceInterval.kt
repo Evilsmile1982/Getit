@@ -5,12 +5,12 @@ data class ServiceInterval(
 
     val vehicle: String = "",
 
-    // Letztes Service
-    val lastServiceMonth: String = "",
-    val lastServiceYear: String = "",
-    val lastServiceKm: String = "",
+    // Durchgeführtes Service
+    val serviceMonth: String = "",
+    val serviceYear: String = "",
+    val serviceKm: String = "",
 
-    // Nächstes Service
+    // Nächstes geplantes Service
     val nextServiceMonth: String = "",
     val nextServiceYear: String = "",
     val nextServiceKm: String = "",
