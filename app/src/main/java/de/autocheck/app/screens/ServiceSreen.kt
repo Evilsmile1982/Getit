@@ -790,7 +790,7 @@ private fun ServiceEditCard(
 
                 color =
                     Color(
-                        0xFF9A4DFF
+                        0xFF4CAF50
                     ),
 
                 fontSize =
@@ -847,7 +847,7 @@ private fun ServiceEditCard(
 
                 color =
                     Color(
-                        0xFF9A4DFF
+                        0xFFF44336
                     ),
 
                 fontSize =
@@ -921,7 +921,7 @@ private fun ServiceEditCard(
 
                 color =
                     Color(
-                        0xFF9A4DFF
+                        0xFFFFD700
                     ),
 
                 fontSize =
@@ -999,7 +999,7 @@ private fun ServiceEditCard(
 
                 color =
                     Color(
-                        0xFF9A4DFF
+                        0xFFF44336
                     ),
 
                 fontSize =
@@ -1344,7 +1344,12 @@ private fun ServiceSummaryCard(
 
             ServiceSummarySectionTitle(
                 text =
-                    "Letztes Service"
+                    "Letztes Service",
+
+                color =
+                    Color(
+                        0xFF4CAF50
+                    )
             )
 
             ServiceSummaryRow(
@@ -1371,7 +1376,12 @@ private fun ServiceSummaryCard(
 
             ServiceSummarySectionTitle(
                 text =
-                    "Nächstes Service"
+                    "Nächstes Service",
+
+                color =
+                    Color(
+                        0xFFF44336
+                    )
             )
 
             ServiceSummaryRow(
@@ -1398,7 +1408,12 @@ private fun ServiceSummaryCard(
 
             ServiceSummarySectionTitle(
                 text =
-                    "Dokumentation"
+                    "Dokumentation",
+
+                color =
+                    Color(
+                        0xFFFFD700
+                    )
             )
 
             Text(
@@ -1440,7 +1455,12 @@ private fun ServiceSummaryCard(
 
             ServiceSummarySectionTitle(
                 text =
-                    "Erinnerung"
+                    "Erinnerung",
+
+                color =
+                    Color(
+                        0xFFF44336
+                    )
             )
 
             val reminderText =
@@ -1527,7 +1547,8 @@ private fun ServiceSummaryCard(
 
 @Composable
 private fun ServiceSummarySectionTitle(
-    text: String
+    text: String,
+    color: Color
 ) {
 
     Spacer(
@@ -1542,9 +1563,7 @@ private fun ServiceSummarySectionTitle(
             text,
 
         color =
-            Color(
-                0xFF9A4DFF
-            ),
+            color,
 
         fontSize =
             16.sp,
