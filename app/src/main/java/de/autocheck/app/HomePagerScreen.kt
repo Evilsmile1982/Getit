@@ -57,6 +57,10 @@ fun HomePagerScreen(
         mutableStateOf<String?>(null)
     }
 
+    var showFuelScreen by remember {
+        mutableStateOf(false)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -83,111 +87,131 @@ fun HomePagerScreen(
                 )
             }
     ) {
-        if (currentPage == 0) {
-            HomeScreen(
-                visible = visible,
-                visitedStore = visitedStore,
-                onSelect = onSelect
-            )
-        } else {
-            SecondHomePageContent(
-                onAction = { selectedAction = it }
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(
-                    start = 28.dp,
-                    end = 28.dp,
-                    bottom = 28.dp
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            if (currentPage == 0) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            currentPage = 1
-                        },
-                    shape = RoundedCornerShape(50.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF29251A)
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        CarvitaGold
-                    ),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = 2.dp
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(38.dp)
-                            .padding(horizontal = 14.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "WEITERE FUNKTIONEN",
-                            color = CarvitaGold,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(
-                            modifier = Modifier.width(8.dp)
-                        )
-
-                        Text(
-                            text = "›",
-                            color = CarvitaGold,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+        when {
+            showFuelScreen -> {
+                FuelConsumptionScreen(
+                    onBack = {
+                        showFuelScreen = false
                     }
-                }
+                )
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            currentPage == 0 -> {
+                HomeScreen(
+                    visible = visible,
+                    visitedStore = visitedStore,
+                    onSelect = onSelect
+                )
+            }
+
+            else -> {
+                SecondHomePageContent(
+                    onAction = { action ->
+                        if (action == "Tank und Kilometer – Verbrauch") {
+                            showFuelScreen = true
+                        } else {
+                            selectedAction = action
+                        }
+                    }
+                )
+            }
+        }
+
+        if (!showFuelScreen) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(
+                        start = 28.dp,
+                        end = 28.dp,
+                        bottom = 28.dp
+                    ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                repeat(2) { page ->
-                    Box(
+                if (currentPage == 0) {
+                    Card(
                         modifier = Modifier
-                            .size(
-                                if (currentPage == page) 9.dp else 7.dp
-                            )
-                            .clip(CircleShape)
-                            .background(
-                                if (currentPage == page) {
-                                    CarvitaGold
-                                } else {
-                                    Color.LightGray
-                                }
-                            )
+                            .fillMaxWidth()
                             .clickable {
-                                currentPage = page
-                            }
-                    )
+                                currentPage = 1
+                            },
+                        shape = RoundedCornerShape(50.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF29251A)
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            CarvitaGold
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 2.dp
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .padding(horizontal = 14.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "WEITERE FUNKTIONEN",
+                                color = CarvitaGold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(
+                                modifier = Modifier.width(8.dp)
+                            )
+
+                            Text(
+                                text = "›",
+                                color = CarvitaGold,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
 
-                Text(
-                    text = if (currentPage == 0) {
-                        "Seite 1 von 2"
-                    } else {
-                        "Seite 2 von 2"
-                    },
-                    color = Color(0xFFBBBBBB),
-                    fontSize = 10.sp
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(2) { page ->
+                        Box(
+                            modifier = Modifier
+                                .size(
+                                    if (currentPage == page) 9.dp else 7.dp
+                                )
+                                .clip(CircleShape)
+                                .background(
+                                    if (currentPage == page) {
+                                        CarvitaGold
+                                    } else {
+                                        Color.LightGray
+                                    }
+                                )
+                                .clickable {
+                                    currentPage = page
+                                }
+                        )
+                    }
+
+                    Text(
+                        text = if (currentPage == 0) {
+                            "Seite 1 von 2"
+                        } else {
+                            "Seite 2 von 2"
+                        },
+                        color = Color(0xFFBBBBBB),
+                        fontSize = 10.sp
+                    )
+                }
             }
         }
     }
