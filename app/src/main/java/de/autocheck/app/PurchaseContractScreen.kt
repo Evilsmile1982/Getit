@@ -1,6 +1,7 @@
 
 package de.autocheck.app
 
+import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -20,16 +20,16 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import java.io.ByteArrayOutputStream
 
 private val ContractGold = Color(0xFFD4AF37)
@@ -102,7 +102,7 @@ fun PurchaseContractScreen(
         )
 
         Text(
-            text = "Universelle, leere PDF-Vorlage für den privaten Kauf und Verkauf von Fahrzeugen.",
+            text = "Universelle, leere PDF-Vorlage für Fahrzeuge aller Art.",
             color = Color.LightGray,
             fontSize = 14.sp
         )
@@ -129,7 +129,7 @@ fun PurchaseContractScreen(
                 Text("• Kaufpreis und Zahlungsvereinbarung", color = Color.White)
                 Text("• Zustand, bekannte Mängel und Zubehör", color = Color.White)
                 Text("• Übergabe, Datum und Kilometerstand", color = Color.White)
-                Text("• Unterschriften von Käufer und Verkäufer", color = Color.White)
+                Text("• Unterschriften beider Vertragsparteien", color = Color.White)
             }
         }
 
@@ -161,7 +161,7 @@ fun PurchaseContractScreen(
         }
 
         Text(
-            text = "Nach dem Speichern kannst du die PDF-Datei mit einer PDF-App öffnen, drucken oder teilen.",
+            text = "Nach dem Speichern kannst du die PDF-Datei öffnen, drucken oder teilen.",
             color = Color.LightGray,
             fontSize = 12.sp
         )
@@ -232,16 +232,37 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
         isAntiAlias = true
     }
 
-    var pageNumber = 0
-    var page: PdfDocument.Page
-    var canvas: android.graphics.Canvas
-    var y = 0f
+    var pageNumber = 1
+    var page: PdfDocument.Page = document.startPage(
+        PdfDocument.PageInfo.Builder(
+            pageWidth,
+            pageHeight,
+            pageNumber
+        ).create()
+    )
+    var canvas: Canvas = page.canvas
+    var y = 38f
+
+    fun drawHeader() {
+        canvas.drawText("CARVITA", margin, y, goldPaint)
+        canvas.drawText(
+            "FAHRZEUGKAUFVERTRAG",
+            margin,
+            y + 25f,
+            sectionPaint
+        )
+        canvas.drawLine(
+            margin,
+            y + 35f,
+            pageWidth - margin,
+            y + 35f,
+            linePaint
+        )
+        y += 52f
+    }
 
     fun newPage() {
-        if (pageNumber > 0) {
-            document.finishPage(page)
-        }
-
+        document.finishPage(page)
         pageNumber++
 
         page = document.startPage(
@@ -254,30 +275,7 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
 
         canvas = page.canvas
         y = 38f
-
-        canvas.drawText(
-            "CARVITA",
-            margin,
-            y,
-            goldPaint
-        )
-
-        canvas.drawText(
-            "FAHRZEUGKAUFVERTRAG",
-            margin,
-            y + 25f,
-            sectionPaint
-        )
-
-        canvas.drawLine(
-            margin,
-            y + 35f,
-            pageWidth - margin,
-            y + 35f,
-            linePaint
-        )
-
-        y += 52f
+        drawHeader()
     }
 
     fun ensureSpace(height: Float) {
@@ -288,18 +286,9 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
 
     fun section(title: String) {
         ensureSpace(29f)
-
         y += 5f
-
-        canvas.drawText(
-            title,
-            margin,
-            y,
-            sectionPaint
-        )
-
+        canvas.drawText(title, margin, y, sectionPaint)
         y += 7f
-
         canvas.drawLine(
             margin,
             y,
@@ -307,7 +296,6 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
             y,
             linePaint
         )
-
         y += 15f
     }
 
@@ -317,14 +305,9 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
         height: Float = 25f
     ) {
         ensureSpace(height)
-
-        canvas.drawText(
-            label,
-            margin,
-            y,
-            textPaint
-        )
-
+        if (label.isNotBlank()) {
+            canvas.drawText(label, margin, y, textPaint)
+        }
         canvas.drawLine(
             margin,
             y + 14f,
@@ -332,7 +315,6 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
             y + 14f,
             linePaint
         )
-
         y += height
     }
 
@@ -342,16 +324,9 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
     ) {
         val gap = 18f
         val halfWidth = (contentWidth - gap) / 2f
-
         ensureSpace(27f)
 
-        canvas.drawText(
-            leftLabel,
-            margin,
-            y,
-            textPaint
-        )
-
+        canvas.drawText(leftLabel, margin, y, textPaint)
         canvas.drawLine(
             margin,
             y + 14f,
@@ -361,14 +336,7 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
         )
 
         val rightX = margin + halfWidth + gap
-
-        canvas.drawText(
-            rightLabel,
-            rightX,
-            y,
-            textPaint
-        )
-
+        canvas.drawText(rightLabel, rightX, y, textPaint)
         canvas.drawLine(
             rightX,
             y + 14f,
@@ -382,25 +350,17 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
 
     fun paragraph(text: String) {
         ensureSpace(25f)
-
-        canvas.drawText(
-            text,
-            margin,
-            y,
-            smallPaint
-        )
-
+        canvas.drawText(text, margin, y, smallPaint)
         y += 14f
     }
 
-    newPage()
+    drawHeader()
 
     paragraph(
         "Bitte alle Angaben leserlich eintragen. Nicht zutreffende Felder können gestrichen werden."
     )
 
     section("1. VERTRAGSPARTEIEN")
-
     blankField("Verkäufer/in – vollständiger Name")
     blankField("Straße, Hausnummer")
     twoFields("Postleitzahl / Ort", "Land")
@@ -414,7 +374,6 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
     twoFields("Telefon / E-Mail", "Ausweisnummer (optional)")
 
     section("2. FAHRZEUGDATEN")
-
     twoFields("Fahrzeugart", "Hersteller / Marke")
     twoFields("Modell / Typ", "Erstzulassung / Baujahr")
     twoFields("Fahrzeug-Identifizierungsnummer (FIN)", "Kennzeichen")
@@ -424,60 +383,46 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
     blankField("Mitverkauftes Zubehör")
 
     section("3. KAUFPREIS UND ZAHLUNG")
-
     twoFields("Kaufpreis gesamt", "Währung")
     twoFields("Anzahlung", "Restbetrag")
     blankField("Zahlungsart / Zahlungsvereinbarung")
     blankField("Fälligkeit / vereinbarter Zahlungstermin")
 
     section("4. ZUSTAND UND BESONDERE VEREINBARUNGEN")
-
     paragraph(
         "Fahrzeugzustand (z. B. gebraucht, fahrbereit, nicht fahrbereit):"
     )
     blankField("")
-
     paragraph("Bekannte Mängel / Schäden:")
     blankField("")
     blankField("")
-
     paragraph("Weitere Vereinbarungen:")
     blankField("")
     blankField("")
 
     section("5. ERKLÄRUNGEN DER VERTRAGSPARTEIEN")
-
     paragraph(
         "Die Vertragsparteien bestätigen, die Angaben und Vereinbarungen dieses Vertrags geprüft zu haben."
     )
-
     paragraph(
         "Zusätzliche Bedingungen, Gewährleistungsausschlüsse oder Garantien müssen ausdrücklich und rechtlich wirksam vereinbart werden."
     )
 
     section("6. ÜBERGABE")
-
     twoFields("Übergabedatum", "Uhrzeit")
     twoFields("Übergabeort", "Übergebene Schlüssel (Anzahl)")
     blankField("Übergebene Dokumente / Zubehör")
     twoFields("Kilometerstand bei Übergabe", "Tankfüllstand / Ladezustand")
 
     section("7. UNTERSCHRIFTEN")
-
     paragraph(
         "Mit ihrer Unterschrift bestätigen die Parteien den Abschluss des Vertrags."
     )
-
     y += 10f
-
     twoFields("Ort, Datum", "Ort, Datum")
-
     y += 16f
-
     twoFields("Unterschrift Verkäufer/in", "Unterschrift Käufer/in")
-
     y += 12f
-
     paragraph(
         "CARVITA – neutrale Vertragsvorlage. Die Vorlage ersetzt keine rechtliche Beratung."
     )
