@@ -8,9 +8,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -83,7 +85,7 @@ fun PdfDocumentsScreen(
             } catch (error: Exception) {
                 statusMessage =
                     "Speichern fehlgeschlagen: " +
-                    (error.localizedMessage ?: "Unbekannter Fehler")
+                        (error.localizedMessage ?: "Unbekannter Fehler")
             }
         } else if (uri == null) {
             statusMessage = "Speichern abgebrochen."
@@ -96,14 +98,15 @@ fun PdfDocumentsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(PdfBackground)
-            .padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(top = 28.dp, start = 18.dp, end = 18.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = "PDF & Dokumente",
             color = PdfGold,
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 8.dp)
         )
 
         Text(
@@ -113,11 +116,26 @@ fun PdfDocumentsScreen(
         )
 
         if (vehicles.isEmpty()) {
-            PdfPanelCard {
-                Text(
-                    "Es ist noch kein Fahrzeug gespeichert. Lege zuerst unter „Mein Auto“ ein Fahrzeug an.",
-                    color = Color.White
-                )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                PdfPanelCard {
+                    Text(
+                        "Es ist noch kein Fahrzeug gespeichert. Lege zuerst unter „Mein Auto“ ein Fahrzeug an.",
+                        color = Color.White
+                    )
+                }
+
+                PdfPanelCard {
+                    Text(
+                        statusMessage,
+                        color = Color.White,
+                        fontSize = 13.sp
+                    )
+                }
             }
         } else {
             OutlinedButton(
@@ -152,8 +170,14 @@ fun PdfDocumentsScreen(
 
             selectedVehicle?.let { vehicle ->
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(
+                        top = 8.dp,
+                        bottom = 12.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
                         PdfPanelCard {
@@ -220,7 +244,7 @@ fun PdfDocumentsScreen(
                             pendingPdf = null
                             statusMessage =
                                 "PDF konnte nicht erstellt werden: " +
-                                (error.localizedMessage ?: "Unbekannter Fehler")
+                                    (error.localizedMessage ?: "Unbekannter Fehler")
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -231,14 +255,14 @@ fun PdfDocumentsScreen(
                     )
                 }
             }
-        }
 
-        PdfPanelCard {
-            Text(
-                statusMessage,
-                color = Color.White,
-                fontSize = 13.sp
-            )
+            PdfPanelCard {
+                Text(
+                    statusMessage,
+                    color = Color.White,
+                    fontSize = 13.sp
+                )
+            }
         }
 
         OutlinedButton(
