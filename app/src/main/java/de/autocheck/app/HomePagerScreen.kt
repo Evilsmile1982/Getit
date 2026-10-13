@@ -1,5 +1,6 @@
 package de.autocheck.app
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,6 +40,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val CarvitaGold = Color(0xFFD4AF37)
+private val CarvitaBackground = Color(0xFF101010)
+
 @Composable
 fun HomePagerScreen(
     visible: Boolean,
@@ -56,7 +60,7 @@ fun HomePagerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF101010))
+            .background(CarvitaBackground)
             .pointerInput(Unit) {
                 var dragDistance = 0f
 
@@ -99,12 +103,12 @@ fun HomePagerScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(
-                    start = 20.dp,
-                    end = 20.dp,
-                    bottom = 8.dp
+                    start = 28.dp,
+                    end = 28.dp,
+                    bottom = 16.dp
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (currentPage == 0) {
                 Card(
@@ -113,89 +117,49 @@ fun HomePagerScreen(
                         .clickable {
                             currentPage = 1
                         },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(50.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xFF29251A)
                     ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        Color(0xFFD4AF37)
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = CarvitaGold
                     ),
                     elevation = CardDefaults.cardElevation(
-                        defaultElevation = 4.dp
+                        defaultElevation = 2.dp
                     )
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(
-                                horizontal = 14.dp,
-                                vertical = 9.dp
-                            ),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .height(42.dp)
+                            .padding(horizontal = 14.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "WEITERE FUNKTIONEN",
-                                color = Color(0xFFD4AF37),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-
-                            Spacer(
-                                modifier = Modifier.width(6.dp)
-                            )
-
-                            Text(
-                                text = "›",
-                                color = Color(0xFFD4AF37),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
                         Text(
-                            text = "Wische zur zweiten Seite oder tippe hier",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
+                            text = "WEITERE FUNKTIONEN",
+                            color = CarvitaGold,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFD4AF37))
-                            )
+                        Spacer(
+                            modifier = Modifier.width(8.dp)
+                        )
 
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.LightGray)
-                            )
-
-                            Text(
-                                text = "Seite 1 von 2",
-                                color = Color(0xFFBBBBBB),
-                                fontSize = 10.sp
-                            )
-                        }
+                        Text(
+                            text = "›",
+                            color = CarvitaGold,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 repeat(2) { page ->
@@ -203,15 +167,15 @@ fun HomePagerScreen(
                         modifier = Modifier
                             .size(
                                 if (currentPage == page) {
-                                    12.dp
+                                    9.dp
                                 } else {
-                                    8.dp
+                                    7.dp
                                 }
                             )
                             .clip(CircleShape)
                             .background(
                                 if (currentPage == page) {
-                                    Color(0xFFD4AF37)
+                                    CarvitaGold
                                 } else {
                                     Color.LightGray
                                 }
@@ -221,6 +185,16 @@ fun HomePagerScreen(
                             }
                     )
                 }
+
+                Text(
+                    text = if (currentPage == 0) {
+                        "Seite 1 von 2"
+                    } else {
+                        "Seite 2 von 2"
+                    },
+                    color = Color(0xFFBBBBBB),
+                    fontSize = 10.sp
+                )
             }
         }
     }
@@ -300,7 +274,7 @@ private fun SecondHomePageContent(
 
         Text(
             text = "DEINE FAHRZEUGE. ALLES IM BLICK.",
-            color = Color(0xFFD4AF37),
+            color = CarvitaGold,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -376,7 +350,7 @@ private fun SecondPageButton(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFD4AF37)),
+                    .background(CarvitaGold),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -411,7 +385,7 @@ private fun SecondPageButton(
 
             Text(
                 text = "›",
-                color = Color(0xFFD4AF37),
+                color = CarvitaGold,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
