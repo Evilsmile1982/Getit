@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.foundation.BorderStroke
@@ -319,7 +320,7 @@ private fun SecondHomePageContent(
         ) {
             Image(
                 painter = painterResource(
-                    id = R.drawable.menubild_seite2
+                    id = R.drawable.menuebild_seite2
                 ),
                 contentDescription = "CARVITA Garagenbild",
                 modifier = Modifier
