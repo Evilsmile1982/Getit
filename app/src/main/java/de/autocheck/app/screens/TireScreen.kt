@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.foundation.Image
@@ -28,29 +29,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val tireMonths =
-    (1..12).map {
-        it.toString()
-    }
+    (1..12).map { it.toString() }
 
 private val tireSeasons =
-    listOf(
-        "Sommer",
-        "Winter"
-    )
+    listOf("Sommer", "Winter", "Allwetter")
 
 private val tireRimTypes =
-    listOf(
-        "Alufelgen",
-        "Stahlfelgen"
-    )
+    listOf("Alufelgen", "Stahlfelgen")
 
 @Composable
 fun TireScreen(
@@ -60,15 +55,12 @@ fun TireScreen(
     onActiveVehicle: (String) -> Unit,
     onVisited: () -> Unit
 ) {
-
     LaunchedEffect(Unit) {
         onVisited()
     }
 
     var tires by remember {
-        mutableStateOf(
-            store.loadTires()
-        )
+        mutableStateOf(store.loadTires())
     }
 
     var showForm by remember {
@@ -83,80 +75,39 @@ fun TireScreen(
         mutableStateOf("Sommer")
     }
 
-    var rimType by remember {
-        mutableStateOf("")
+    var rimType by remember { mutableStateOf("") }
+    var dimension by remember { mutableStateOf("") }
+    var brand by remember { mutableStateOf("") }
+    var dot by remember { mutableStateOf("") }
+    var boltPattern by remember { mutableStateOf("") }
+    var offset by remember { mutableStateOf("") }
+    var purchaseMonth by remember { mutableStateOf("") }
+    var purchaseYear by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    var tread by remember { mutableStateOf("") }
+    var condition by remember { mutableStateOf("") }
+    var storage by remember { mutableStateOf("") }
+
+    val vehicleTires = tires.filter {
+        it.vehicle == activeVehicle
     }
 
-    var dimension by remember {
-        mutableStateOf("")
+    val summerTire = vehicleTires.lastOrNull {
+        it.season.equals("Sommer", ignoreCase = true)
     }
 
-    var brand by remember {
-        mutableStateOf("")
+    val winterTire = vehicleTires.lastOrNull {
+        it.season.equals("Winter", ignoreCase = true)
     }
 
-    var dot by remember {
-        mutableStateOf("")
+    val allWeatherTire = vehicleTires.lastOrNull {
+        it.season.equals("Allwetter", ignoreCase = true) ||
+            it.season.equals("Allwetterreifen", ignoreCase = true)
     }
-
-    var boltPattern by remember {
-        mutableStateOf("")
-    }
-
-    var offset by remember {
-        mutableStateOf("")
-    }
-
-    var purchaseMonth by remember {
-        mutableStateOf("")
-    }
-
-    var purchaseYear by remember {
-        mutableStateOf("")
-    }
-
-    var price by remember {
-        mutableStateOf("")
-    }
-
-    var tread by remember {
-        mutableStateOf("")
-    }
-
-    var condition by remember {
-        mutableStateOf("")
-    }
-
-    var storage by remember {
-        mutableStateOf("")
-    }
-
-    val vehicleTires =
-        tires.filter {
-            it.vehicle == activeVehicle
-        }
-
-    val summerTire =
-        vehicleTires.lastOrNull {
-            it.season.equals(
-                "Sommer",
-                ignoreCase = true
-            )
-        }
-
-    val winterTire =
-        vehicleTires.lastOrNull {
-            it.season.equals(
-                "Winter",
-                ignoreCase = true
-            )
-        }
 
     fun resetForm() {
-
         showForm = false
         editingId = null
-
         season = "Sommer"
         rimType = ""
         dimension = ""
@@ -172,12 +123,8 @@ fun TireScreen(
         storage = ""
     }
 
-    fun startNewTire(
-        selectedSeason: String
-    ) {
-
+    fun startNewTire(selectedSeason: String) {
         editingId = null
-
         season = selectedSeason
         rimType = ""
         dimension = ""
@@ -191,451 +138,194 @@ fun TireScreen(
         tread = ""
         condition = ""
         storage = ""
-
         showForm = true
     }
 
-    fun editTire(
-        tire: TireSet
-    ) {
+    fun editTire(tire: TireSet) {
+        editingId = tire.id
 
-        editingId =
-            tire.id
-
-        season =
-            if (
-                tire.season.equals(
-                    "Winter",
-                    ignoreCase = true
-                )
-            ) {
+        season = when {
+            tire.season.equals("Winter", ignoreCase = true) ->
                 "Winter"
-            } else {
-                "Sommer"
-            }
 
-        rimType =
-            tire.rimType
+            tire.season.equals("Allwetter", ignoreCase = true) ||
+                tire.season.equals("Allwetterreifen", ignoreCase = true) ->
+                "Allwetter"
 
-        dimension =
-            tire.dimension
+            else -> "Sommer"
+        }
 
-        brand =
-            tire.brand
-
-        dot =
-            tire.dot
-
-        boltPattern =
-            tire.boltPattern
-
-        offset =
-            tire.offset
-
-        purchaseMonth =
-            tire.purchaseMonth
-
-        purchaseYear =
-            tire.purchaseYear
-
-        price =
-            tire.price
-
-        tread =
-            tire.tread
-
-        condition =
-            tire.condition
-
-        storage =
-            tire.storage
+        rimType = tire.rimType
+        dimension = tire.dimension
+        brand = tire.brand
+        dot = tire.dot
+        boltPattern = tire.boltPattern
+        offset = tire.offset
+        purchaseMonth = tire.purchaseMonth
+        purchaseYear = tire.purchaseYear
+        price = tire.price
+        tread = tire.tread
+        condition = tire.condition
+        storage = tire.storage
 
         showForm = true
     }
 
-    fun deleteTire(
-        tire: TireSet
-    ) {
+    fun deleteTire(tire: TireSet) {
+        val updated = tires.filterNot {
+            it.id == tire.id
+        }
 
-        val updated =
-            tires.filterNot {
-                it.id == tire.id
-            }
-
-        tires =
-            updated
-
-        store.saveTires(
-            updated
-        )
+        tires = updated
+        store.saveTires(updated)
     }
 
     fun saveCurrentTire() {
-
-        val newTire =
-            TireSet(
-
-                id =
-                    editingId
-                        ?: System.currentTimeMillis(),
-
-                vehicle =
-                    activeVehicle,
-
-                season =
-                    season.trim(),
-
-                rimType =
-                    rimType.trim(),
-
-                dimension =
-                    dimension.trim(),
-
-                brand =
-                    brand.trim(),
-
-                dot =
-                    dot.trim(),
-
-                tread =
-                    tread.trim(),
-
-                condition =
-                    condition.trim(),
-
-                storage =
-                    storage.trim(),
-
-                boltPattern =
-                    boltPattern.trim(),
-
-                offset =
-                    offset.trim(),
-
-                purchaseMonth =
-                    purchaseMonth.trim(),
-
-                purchaseYear =
-                    purchaseYear.trim(),
-
-                price =
-                    price.trim()
-            )
-
-        val updated =
-            if (
-                editingId != null
-            ) {
-
-                tires.map { existing ->
-
-                    if (
-                        existing.id ==
-                            editingId
-                    ) {
-
-                        newTire
-
-                    } else {
-
-                        existing
-                    }
-                }
-
-            } else {
-
-                tires.filterNot {
-
-                    it.vehicle ==
-                        activeVehicle &&
-                        it.season.equals(
-                            season,
-                            ignoreCase = true
-                        )
-                } + newTire
-            }
-
-        tires =
-            updated
-
-        store.saveTires(
-            updated
+        val newTire = TireSet(
+            id = editingId ?: System.currentTimeMillis(),
+            vehicle = activeVehicle,
+            season = season.trim(),
+            rimType = rimType.trim(),
+            dimension = dimension.trim(),
+            brand = brand.trim(),
+            dot = dot.trim(),
+            tread = tread.trim(),
+            condition = condition.trim(),
+            storage = storage.trim(),
+            boltPattern = boltPattern.trim(),
+            offset = offset.trim(),
+            purchaseMonth = purchaseMonth.trim(),
+            purchaseYear = purchaseYear.trim(),
+            price = price.trim()
         )
 
+        val updated = if (editingId != null) {
+            tires.map { existing ->
+                if (existing.id == editingId) newTire else existing
+            }
+        } else {
+            tires.filterNot {
+                it.vehicle == activeVehicle &&
+                    it.season.equals(season, ignoreCase = true)
+            } + newTire
+        }
+
+        tires = updated
+        store.saveTires(updated)
         resetForm()
     }
 
     Column(
-        modifier =
-            Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
-
         VehicleSelector(
-            vehicles =
-                vehicles,
-
-            activeVehicle =
-                activeVehicle,
-
-            onSelected =
-                onActiveVehicle
+            vehicles = vehicles,
+            activeVehicle = activeVehicle,
+            onSelected = onActiveVehicle
         )
 
-        Spacer(
-            modifier =
-                Modifier.height(
-                    10.dp
-                )
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        if (
-            vehicles.isEmpty()
-        ) {
+        if (vehicles.isEmpty()) {
             return@Column
         }
 
         LazyColumn(
-            modifier =
-                Modifier.weight(
-                    1f
-                ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    12.dp
-                )
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
-            if (
-                !showForm
-            ) {
-
+            if (!showForm) {
                 item {
-
                     TireSetCard(
-                        title =
-                            "Sommerreifen",
-
-                        tire =
-                            summerTire,
-
-                        imageRes =
-                            R.drawable.sommerreifen,
-
-                        onAdd = {
-
-                            startNewTire(
-                                "Sommer"
-                            )
-                        },
-
+                        title = "Sommerreifen",
+                        tire = summerTire,
+                        imageRes = R.drawable.sommerreifen,
+                        onAdd = { startNewTire("Sommer") },
                         onEdit = {
-
-                            if (
-                                summerTire != null
-                            ) {
-
-                                editTire(
-                                    summerTire
-                                )
-                            }
+                            summerTire?.let { editTire(it) }
                         },
-
                         onDelete = {
-
-                            if (
-                                summerTire != null
-                            ) {
-
-                                deleteTire(
-                                    summerTire
-                                )
-                            }
+                            summerTire?.let { deleteTire(it) }
                         }
                     )
                 }
 
                 item {
-
                     TireSetCard(
-                        title =
-                            "Winterreifen",
-
-                        tire =
-                            winterTire,
-
-                        imageRes =
-                            R.drawable.winterreifen,
-
-                        onAdd = {
-
-                            startNewTire(
-                                "Winter"
-                            )
-                        },
-
+                        title = "Winterreifen",
+                        tire = winterTire,
+                        imageRes = R.drawable.winterreifen,
+                        onAdd = { startNewTire("Winter") },
                         onEdit = {
-
-                            if (
-                                winterTire != null
-                            ) {
-
-                                editTire(
-                                    winterTire
-                                )
-                            }
+                            winterTire?.let { editTire(it) }
                         },
-
                         onDelete = {
-
-                            if (
-                                winterTire != null
-                            ) {
-
-                                deleteTire(
-                                    winterTire
-                                )
-                            }
+                            winterTire?.let { deleteTire(it) }
                         }
                     )
                 }
 
+                item {
+                    TireSetCard(
+                        title = "Allwetterreifen",
+                        tire = allWeatherTire,
+                        imageRes = R.drawable.allwetterreifen,
+                        onAdd = { startNewTire("Allwetter") },
+                        onEdit = {
+                            allWeatherTire?.let { editTire(it) }
+                        },
+                        onDelete = {
+                            allWeatherTire?.let { deleteTire(it) }
+                        }
+                    )
+                }
             } else {
-
                 item {
-
                     TireFormCard(
-
-                        season =
-                            season,
-
-                        onSeasonChanged = {
-                            season = it
-                        },
-
-                        rimType =
-                            rimType,
-
-                        onRimTypeChanged = {
-                            rimType = it
-                        },
-
-                        dimension =
-                            dimension,
-
-                        onDimensionChanged = {
-                            dimension = it
-                        },
-
-                        brand =
-                            brand,
-
-                        onBrandChanged = {
-                            brand = it
-                        },
-
-                        dot =
-                            dot,
-
-                        onDotChanged = {
-                            dot = it
-                        },
-
-                        boltPattern =
-                            boltPattern,
-
-                        onBoltPatternChanged = {
-                            boltPattern = it
-                        },
-
-                        offset =
-                            offset,
-
-                        onOffsetChanged = {
-                            offset = it
-                        },
-
-                        purchaseMonth =
-                            purchaseMonth,
-
-                        onPurchaseMonthChanged = {
-                            purchaseMonth = it
-                        },
-
-                        purchaseYear =
-                            purchaseYear,
-
-                        onPurchaseYearChanged = {
-                            purchaseYear = it
-                        },
-
-                        price =
-                            price,
-
-                        onPriceChanged = {
-                            price = it
-                        },
-
-                        tread =
-                            tread,
-
-                        onTreadChanged = {
-                            tread = it
-                        },
-
-                        condition =
-                            condition,
-
-                        onConditionChanged = {
-                            condition = it
-                        },
-
-                        storage =
-                            storage,
-
-                        onStorageChanged = {
-                            storage = it
-                        },
-
-                        isEditing =
-                            editingId != null,
-
-                        onSave = {
-                            saveCurrentTire()
-                        },
-
-                        onCancel = {
-                            resetForm()
-                        }
+                        season = season,
+                        onSeasonChanged = { season = it },
+                        rimType = rimType,
+                        onRimTypeChanged = { rimType = it },
+                        dimension = dimension,
+                        onDimensionChanged = { dimension = it },
+                        brand = brand,
+                        onBrandChanged = { brand = it },
+                        dot = dot,
+                        onDotChanged = { dot = it },
+                        boltPattern = boltPattern,
+                        onBoltPatternChanged = { boltPattern = it },
+                        offset = offset,
+                        onOffsetChanged = { offset = it },
+                        purchaseMonth = purchaseMonth,
+                        onPurchaseMonthChanged = { purchaseMonth = it },
+                        purchaseYear = purchaseYear,
+                        onPurchaseYearChanged = { purchaseYear = it },
+                        price = price,
+                        onPriceChanged = { price = it },
+                        tread = tread,
+                        onTreadChanged = { tread = it },
+                        condition = condition,
+                        onConditionChanged = { condition = it },
+                        storage = storage,
+                        onStorageChanged = { storage = it },
+                        isEditing = editingId != null,
+                        onSave = { saveCurrentTire() },
+                        onCancel = { resetForm() }
                     )
                 }
             }
         }
 
-        if (
-            !showForm
-        ) {
-
+        if (!showForm) {
             Button(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            top = 8.dp
-                        ),
-
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
                 onClick = {
-
-                    startNewTire(
-                        "Sommer"
-                    )
+                    startNewTire("Sommer")
                 }
             ) {
-
-                Text(
-                    "Reifen bearbeiten / hinzufügen"
-                )
+                Text("Reifen bearbeiten / hinzufügen")
             }
         }
     }
@@ -650,282 +340,122 @@ private fun TireSetCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-
     var menuExpanded by remember {
         mutableStateOf(false)
     }
 
+    val isSummer = title == "Sommerreifen"
+    val isAllWeather = title == "Allwetterreifen"
+
     Card(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11141A)
+        )
     ) {
-
         Row(
-
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    12.dp
-                ),
-
-            verticalAlignment =
-                Alignment.Top
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
         ) {
-
             Column(
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    ),
-
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        6.dp
-                    )
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-
-                Text(
-
-                    text =
-                        title,
-
-                    fontSize =
-                        22.sp,
-
-                    fontWeight =
-                        FontWeight.Bold,
-
-                    color =
-                        if (
-                            title.equals(
-                                "Sommerreifen",
-                                ignoreCase = true
+                if (isAllWeather) {
+                    Text(
+                        text = title,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xFF2196F3),
+                                    Color(0xFF00BFA5),
+                                    Color(0xFF4CAF50)
+                                )
                             )
-                        ) {
-
+                        )
+                    )
+                } else {
+                    Text(
+                        text = title,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSummer) {
                             Color(0xFF4CAF50)
-
                         } else {
-
                             Color(0xFF64B5F6)
                         }
-                )
-
-                if (
-                    tire == null
-                ) {
-
-                    Text(
-                        "Noch keine Daten gespeichert."
                     )
+                }
 
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                4.dp
-                            )
-                    )
+                if (tire == null) {
+                    Text("Noch keine Daten gespeichert.")
 
-                    OutlinedButton(
-                        onClick =
-                            onAdd
-                    ) {
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                        Text(
-                            "Daten hinzufügen"
-                        )
+                    OutlinedButton(onClick = onAdd) {
+                        Text("Daten hinzufügen")
                     }
-
                 } else {
-
+                    TireDataLine("Felgenart", tire.rimType)
+                    TireDataLine("Größe", tire.dimension)
+                    TireDataLine("DOT", tire.dot)
+                    TireDataLine("Lochkreis", tire.boltPattern)
+                    TireDataLine("Einpresstiefe", tire.offset)
                     TireDataLine(
-                        label =
-                            "Felgenart",
-
-                        value =
-                            tire.rimType
-                    )
-
-                    TireDataLine(
-                        label =
-                            "Größe",
-
-                        value =
-                            tire.dimension
-                    )
-
-                    TireDataLine(
-                        label =
-                            "DOT",
-
-                        value =
-                            tire.dot
-                    )
-
-                    TireDataLine(
-                        label =
-                            "Lochkreis",
-
-                        value =
-                            tire.boltPattern
-                    )
-
-                    TireDataLine(
-                        label =
-                            "Einpresstiefe",
-
-                        value =
-                            tire.offset
-                    )
-
-                    TireDataLine(
-                        label =
-                            "Gekauft",
-
-                        value =
-                            purchaseDisplay(
-                                tire.purchaseMonth,
-                                tire.purchaseYear
-                            )
-                    )
-
-                    TireDataLine(
-                        label =
-                            "Preis",
-
-                        value =
-                            tire.price
-                    )
-
-                    if (
-                        tire.brand.isNotBlank()
-                    ) {
-
-                        TireDataLine(
-                            label =
-                                "Marke",
-
-                            value =
-                                tire.brand
+                        "Gekauft",
+                        purchaseDisplay(
+                            tire.purchaseMonth,
+                            tire.purchaseYear
                         )
+                    )
+                    TireDataLine("Preis", tire.price)
+
+                    if (tire.brand.isNotBlank()) {
+                        TireDataLine("Marke", tire.brand)
                     }
 
-                    if (
-                        tire.tread.isNotBlank()
-                    ) {
-
-                        TireDataLine(
-                            label =
-                                "Profiltiefe",
-
-                            value =
-                                tire.tread
-                        )
+                    if (tire.tread.isNotBlank()) {
+                        TireDataLine("Profiltiefe", tire.tread)
                     }
 
-                    if (
-                        tire.condition.isNotBlank()
-                    ) {
-
-                        TireDataLine(
-                            label =
-                                "Zustand",
-
-                            value =
-                                tire.condition
-                        )
+                    if (tire.condition.isNotBlank()) {
+                        TireDataLine("Zustand", tire.condition)
                     }
 
-                    if (
-                        tire.storage.isNotBlank()
-                    ) {
-
-                        TireDataLine(
-                            label =
-                                "Lagerung",
-
-                            value =
-                                tire.storage
-                        )
+                    if (tire.storage.isNotBlank()) {
+                        TireDataLine("Lagerung", tire.storage)
                     }
 
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                4.dp
-                            )
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Box {
-
                         OutlinedButton(
-
-                            onClick = {
-
-                                menuExpanded =
-                                    true
-                            }
+                            onClick = { menuExpanded = true }
                         ) {
-
-                            Text(
-                                "☰  Bearbeiten / Löschen"
-                            )
+                            Text("☰  Bearbeiten / Löschen")
                         }
 
                         DropdownMenu(
-
-                            expanded =
-                                menuExpanded,
-
-                            onDismissRequest = {
-
-                                menuExpanded =
-                                    false
-                            }
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
                         ) {
-
                             DropdownMenuItem(
-
-                                text = {
-                                    Text(
-                                        "Bearbeiten"
-                                    )
-                                },
-
+                                text = { Text("Bearbeiten") },
                                 onClick = {
-
-                                    menuExpanded =
-                                        false
-
+                                    menuExpanded = false
                                     onEdit()
                                 }
                             )
 
                             DropdownMenuItem(
-
-                                text = {
-                                    Text(
-                                        "Löschen"
-                                    )
-                                },
-
+                                text = { Text("Löschen") },
                                 onClick = {
-
-                                    menuExpanded =
-                                        false
-
+                                    menuExpanded = false
                                     onDelete()
                                 }
                             )
@@ -935,27 +465,13 @@ private fun TireSetCard(
             }
 
             Image(
-
-                painter =
-                    painterResource(
-                        id =
-                            imageRes
-                    ),
-
-                contentDescription =
-                    title,
-
-                modifier =
-                    Modifier.size(
-                        width =
-                            135.dp,
-
-                        height =
-                            190.dp
-                    ),
-
-                contentScale =
-                    ContentScale.Fit
+                painter = painterResource(id = imageRes),
+                contentDescription = title,
+                modifier = Modifier.size(
+                    width = 135.dp,
+                    height = 190.dp
+                ),
+                contentScale = ContentScale.Fit
             )
         }
     }
@@ -966,31 +482,14 @@ private fun TireDataLine(
     label: String,
     value: String
 ) {
+    if (value.isBlank()) return
 
-    if (
-        value.isBlank()
-    ) {
-        return
-    }
-
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-    ) {
-
+    Row(modifier = Modifier.fillMaxWidth()) {
         Text(
-
-            text =
-                "$label: ",
-
-            fontWeight =
-                FontWeight.SemiBold
+            text = "$label: ",
+            fontWeight = FontWeight.SemiBold
         )
-
-        Text(
-            text =
-                value
-        )
+        Text(text = value)
     }
 }
 
@@ -998,405 +497,184 @@ private fun purchaseDisplay(
     month: String,
     year: String
 ): String {
-
     return when {
-
-        month.isNotBlank() &&
-            year.isNotBlank() -> {
-
-            "$month/$year"
-        }
-
-        year.isNotBlank() -> {
-
-            year
-        }
-
-        month.isNotBlank() -> {
-
-            month
-        }
-
-        else -> {
-
-            ""
-        }
+        month.isNotBlank() && year.isNotBlank() -> "$month/$year"
+        year.isNotBlank() -> year
+        month.isNotBlank() -> month
+        else -> ""
     }
 }
 
 @Composable
 private fun TireFormCard(
-
     season: String,
     onSeasonChanged: (String) -> Unit,
-
     rimType: String,
     onRimTypeChanged: (String) -> Unit,
-
     dimension: String,
     onDimensionChanged: (String) -> Unit,
-
     brand: String,
     onBrandChanged: (String) -> Unit,
-
     dot: String,
     onDotChanged: (String) -> Unit,
-
     boltPattern: String,
     onBoltPatternChanged: (String) -> Unit,
-
     offset: String,
     onOffsetChanged: (String) -> Unit,
-
     purchaseMonth: String,
     onPurchaseMonthChanged: (String) -> Unit,
-
     purchaseYear: String,
     onPurchaseYearChanged: (String) -> Unit,
-
     price: String,
     onPriceChanged: (String) -> Unit,
-
     tread: String,
     onTreadChanged: (String) -> Unit,
-
     condition: String,
     onConditionChanged: (String) -> Unit,
-
     storage: String,
     onStorageChanged: (String) -> Unit,
-
     isEditing: Boolean,
-
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
-
     Card(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFF11141A)
-            )
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11141A)
+        )
     ) {
-
         Column(
-
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-
             Text(
-
-                text =
-                    if (
-                        isEditing
-                    ) {
-
-                        "Reifen ändern"
-
-                    } else {
-
-                        "Reifen hinzufügen"
-                    },
-
-                fontSize =
-                    21.sp,
-
-                fontWeight =
-                    FontWeight.Bold
+                text = if (isEditing) "Reifen ändern" else "Reifen hinzufügen",
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold
             )
 
-            Text(
-                "Reifentyp"
-            )
+            Text("Reifentyp")
 
             TireSeasonDropdown(
-
-                season =
-                    season,
-
-                onSeasonChanged =
-                    onSeasonChanged
+                season = season,
+                onSeasonChanged = onSeasonChanged
             )
 
-            Text(
-                "Felgenart"
-            )
+            Text("Felgenart")
 
             TireRimTypeDropdown(
-
-                rimType =
-                    rimType,
-
-                onRimTypeChanged =
-                    onRimTypeChanged
+                rimType = rimType,
+                onRimTypeChanged = onRimTypeChanged
             )
 
             TireTextField(
-
-                label =
-                    "Größe",
-
-                value =
-                    dimension,
-
-                placeholder =
-                    "205/55 R16",
-
-                onValueChanged =
-                    onDimensionChanged
+                label = "Größe",
+                value = dimension,
+                placeholder = "205/55 R16",
+                onValueChanged = onDimensionChanged
             )
 
             TireTextField(
-
-                label =
-                    "Marke",
-
-                value =
-                    brand,
-
-                placeholder =
-                    "z. B. Michelin",
-
-                onValueChanged =
-                    onBrandChanged
+                label = "Marke",
+                value = brand,
+                placeholder = "z. B. Michelin",
+                onValueChanged = onBrandChanged
             )
 
             TireTextField(
-
-                label =
-                    "DOT",
-
-                value =
-                    dot,
-
-                placeholder =
-                    "z. B. 2424",
-
-                onValueChanged =
-                    onDotChanged
+                label = "DOT",
+                value = dot,
+                placeholder = "z. B. 2424",
+                onValueChanged = onDotChanged
             )
 
             TireTextField(
-
-                label =
-                    "Lochkreis",
-
-                value =
-                    boltPattern,
-
-                placeholder =
-                    "z. B. 5x112",
-
-                onValueChanged =
-                    onBoltPatternChanged
+                label = "Lochkreis",
+                value = boltPattern,
+                placeholder = "z. B. 5x112",
+                onValueChanged = onBoltPatternChanged
             )
 
             TireTextField(
-
-                label =
-                    "Einpresstiefe",
-
-                value =
-                    offset,
-
-                placeholder =
-                    "z. B. ET45",
-
-                onValueChanged =
-                    onOffsetChanged
+                label = "Einpresstiefe",
+                value = offset,
+                placeholder = "z. B. ET45",
+                onValueChanged = onOffsetChanged
             )
 
-            Text(
-                "Gekauft"
-            )
+            Text("Gekauft")
 
             Row(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-
                 TireMonthDropdown(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    month =
-                        purchaseMonth,
-
-                    onMonthChanged =
-                        onPurchaseMonthChanged
+                    modifier = Modifier.weight(1f),
+                    month = purchaseMonth,
+                    onMonthChanged = onPurchaseMonthChanged
                 )
 
                 OutlinedTextField(
-
-                    value =
-                        purchaseYear,
-
+                    value = purchaseYear,
                     onValueChange = { value ->
-
                         onPurchaseYearChanged(
-
-                            value
-                                .filter {
-                                    it.isDigit()
-                                }
-                                .take(
-                                    4
-                                )
+                            value.filter { it.isDigit() }.take(4)
                         )
                     },
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    label = {
-                        Text(
-                            "Jahr"
-                        )
-                    },
-
-                    placeholder = {
-                        Text(
-                            "2025"
-                        )
-                    },
-
-                    singleLine =
-                        true
+                    modifier = Modifier.weight(1f),
+                    label = { Text("Jahr") },
+                    placeholder = { Text("2025") },
+                    singleLine = true
                 )
             }
 
             TireTextField(
-
-                label =
-                    "Preis",
-
-                value =
-                    price,
-
-                placeholder =
-                    "z. B. 450 €",
-
-                onValueChanged =
-                    onPriceChanged
+                label = "Preis",
+                value = price,
+                placeholder = "z. B. 450 €",
+                onValueChanged = onPriceChanged
             )
 
             TireTextField(
-
-                label =
-                    "Profiltiefe",
-
-                value =
-                    tread,
-
-                placeholder =
-                    "z. B. 6 mm",
-
-                onValueChanged =
-                    onTreadChanged
+                label = "Profiltiefe",
+                value = tread,
+                placeholder = "z. B. 6 mm",
+                onValueChanged = onTreadChanged
             )
 
             TireTextField(
-
-                label =
-                    "Zustand",
-
-                value =
-                    condition,
-
-                placeholder =
-                    "z. B. sehr gut",
-
-                onValueChanged =
-                    onConditionChanged
+                label = "Zustand",
+                value = condition,
+                placeholder = "z. B. sehr gut",
+                onValueChanged = onConditionChanged
             )
 
             TireTextField(
-
-                label =
-                    "Lagerung",
-
-                value =
-                    storage,
-
-                placeholder =
-                    "z. B. Keller / Reifenhotel",
-
-                onValueChanged =
-                    onStorageChanged
+                label = "Lagerung",
+                value = storage,
+                placeholder = "z. B. Keller / Reifenhotel",
+                onValueChanged = onStorageChanged
             )
 
             Row(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-
                 OutlinedButton(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    onClick =
-                        onCancel
+                    modifier = Modifier.weight(1f),
+                    onClick = onCancel
                 ) {
-
-                    Text(
-                        "Abbrechen"
-                    )
+                    Text("Abbrechen")
                 }
 
                 Button(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-
-                    onClick =
-                        onSave
+                    modifier = Modifier.weight(1f),
+                    onClick = onSave
                 ) {
-
                     Text(
-
-                        if (
-                            isEditing
-                        ) {
-
+                        if (isEditing) {
                             "Änderung speichern"
-
                         } else {
-
                             "Speichern"
                         }
                     )
@@ -1408,102 +686,47 @@ private fun TireFormCard(
 
 @Composable
 private fun TireTextField(
-
     label: String,
-
     value: String,
-
     placeholder: String,
-
     onValueChanged: (String) -> Unit
 ) {
-
     OutlinedTextField(
-
-        value =
-            value,
-
-        onValueChange =
-            onValueChanged,
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        label = {
-            Text(
-                label
-            )
-        },
-
-        placeholder = {
-            Text(
-                placeholder
-            )
-        },
-
-        singleLine =
-            true
+        value = value,
+        onValueChange = onValueChanged,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        placeholder = { Text(placeholder) },
+        singleLine = true
     )
 }
 
 @Composable
 private fun TireSeasonDropdown(
-
     season: String,
-
     onSeasonChanged: (String) -> Unit
 ) {
-
     var expanded by remember {
         mutableStateOf(false)
     }
 
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-    ) {
-
+    Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            onClick = {
-                expanded = true
-            }
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { expanded = true }
         ) {
-
-            Text(
-                season
-            )
+            Text(season)
         }
 
         DropdownMenu(
-
-            expanded =
-                expanded,
-
-            onDismissRequest = {
-                expanded = false
-            }
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
         ) {
-
             tireSeasons.forEach { option ->
-
                 DropdownMenuItem(
-
-                    text = {
-                        Text(
-                            option
-                        )
-                    },
-
+                    text = { Text(option) },
                     onClick = {
-
-                        onSeasonChanged(
-                            option
-                        )
-
+                        onSeasonChanged(option)
                         expanded = false
                     }
                 )
@@ -1514,71 +737,36 @@ private fun TireSeasonDropdown(
 
 @Composable
 private fun TireRimTypeDropdown(
-
     rimType: String,
-
     onRimTypeChanged: (String) -> Unit
 ) {
-
     var expanded by remember {
         mutableStateOf(false)
     }
 
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-    ) {
-
+    Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            onClick = {
-                expanded = true
-            }
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { expanded = true }
         ) {
-
             Text(
-                if (
-                    rimType.isBlank()
-                ) {
-
+                if (rimType.isBlank()) {
                     "Felgenart auswählen"
-
                 } else {
-
                     rimType
                 }
             )
         }
 
         DropdownMenu(
-
-            expanded =
-                expanded,
-
-            onDismissRequest = {
-                expanded = false
-            }
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
         ) {
-
             tireRimTypes.forEach { option ->
-
                 DropdownMenuItem(
-
-                    text = {
-                        Text(
-                            option
-                        )
-                    },
-
+                    text = { Text(option) },
                     onClick = {
-
-                        onRimTypeChanged(
-                            option
-                        )
-
+                        onRimTypeChanged(option)
                         expanded = false
                     }
                 )
@@ -1589,73 +777,37 @@ private fun TireRimTypeDropdown(
 
 @Composable
 private fun TireMonthDropdown(
-
     modifier: Modifier = Modifier,
-
     month: String,
-
     onMonthChanged: (String) -> Unit
 ) {
-
     var expanded by remember {
         mutableStateOf(false)
     }
 
-    Box(
-        modifier =
-            modifier
-    ) {
-
+    Box(modifier = modifier) {
         OutlinedButton(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            onClick = {
-                expanded = true
-            }
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { expanded = true }
         ) {
-
             Text(
-                if (
-                    month.isBlank()
-                ) {
-
+                if (month.isBlank()) {
                     "Monat"
-
                 } else {
-
                     month
                 }
             )
         }
 
         DropdownMenu(
-
-            expanded =
-                expanded,
-
-            onDismissRequest = {
-                expanded = false
-            }
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
         ) {
-
             tireMonths.forEach { option ->
-
                 DropdownMenuItem(
-
-                    text = {
-                        Text(
-                            option
-                        )
-                    },
-
+                    text = { Text(option) },
                     onClick = {
-
-                        onMonthChanged(
-                            option
-                        )
-
+                        onMonthChanged(option)
                         expanded = false
                     }
                 )
