@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.runtime.Composable
@@ -31,7 +32,6 @@ fun AutoCheckApp() {
 
     val vehicles =
         remember {
-
             mutableStateListOf<Vehicle>()
                 .apply {
                     addAll(
@@ -46,7 +46,6 @@ fun AutoCheckApp() {
      * ============================================================
      */
     var activeVehicleId by remember {
-
         mutableStateOf(
             store.activeVehicleId()
         )
@@ -119,7 +118,7 @@ fun AutoCheckApp() {
 
     /*
      * ============================================================
-     * HOME
+     * HOME MIT ZWEI STARTSEITEN
      * ============================================================
      */
     if (
@@ -127,7 +126,7 @@ fun AutoCheckApp() {
         Screen.HOME
     ) {
 
-        HomeScreen(
+        HomePagerScreen(
 
             visible =
                 homeReady,
@@ -461,7 +460,7 @@ fun AutoCheckApp() {
 
                         onActiveVehicle = {
                             // Aktives Fahrzeug wird ausschließlich
-                            // in Mein Auto geändert.
+                            // in "Mein Auto" geändert.
                         },
 
                         onVisited = {
@@ -500,7 +499,7 @@ fun AutoCheckApp() {
 
                         onActiveVehicle = {
                             // Aktives Fahrzeug wird ausschließlich
-                            // in Mein Auto geändert.
+                            // in "Mein Auto" geändert.
                         },
 
                         onVisited = {
@@ -515,12 +514,6 @@ fun AutoCheckApp() {
                  * ==================================================
                  * SERVICE UND INTERVALLE
                  * ==================================================
-                 *
-                 * NEU:
-                 *
-                 * Statt direkt die bisherige ServiceScreen-Seite
-                 * zu öffnen, wird jetzt zuerst das neue Service-Menü
-                 * angezeigt.
                  */
                 Screen.SERVICE ->
 
@@ -588,7 +581,7 @@ fun AutoCheckApp() {
 
                         onActiveVehicle = {
                             // Aktives Fahrzeug wird ausschließlich
-                            // in Mein Auto geändert.
+                            // in "Mein Auto" geändert.
                         },
 
                         onVisited = {
