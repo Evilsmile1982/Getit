@@ -50,6 +50,10 @@ fun HomePagerScreen(
         mutableStateOf(0)
     }
 
+    var dragDistance by remember {
+        mutableStateOf(0f)
+    }
+
     var selectedAction by remember {
         mutableStateOf<String?>(null)
     }
@@ -59,18 +63,6 @@ fun HomePagerScreen(
             .fillMaxSize()
             .background(Color(0xFF101010))
             .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { change, _ ->
-                        change.consume()
-                    }
-                ) { change, dragAmount ->
-                    // Die eigentliche Navigation wird unten
-                    // in der eigenen Drag-Erkennung behandelt.
-                }
-            }
-            .pointerInput(currentPage) {
-                var dragDistance = 0f
-
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
@@ -148,9 +140,8 @@ fun HomePagerScreen(
             },
             text = {
                 Text(
-                    "Dieser Bereich ist vorbereitet. " +
-                        "Die eigentliche Funktion wird im " +
-                        "nächsten Schritt eingebaut."
+                    "Dieser Bereich wird im nächsten Schritt " +
+                        "mit seiner eigentlichen Funktion ausgestattet."
                 )
             },
             confirmButton = {
@@ -283,20 +274,14 @@ private fun SecondPageButton(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    horizontal = 12.dp
-                ),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(
-                        RoundedCornerShape(12.dp)
-                    )
-                    .background(
-                        Color(0xFFD4AF37)
-                    ),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFD4AF37)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
