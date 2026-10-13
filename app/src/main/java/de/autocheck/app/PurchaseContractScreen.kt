@@ -9,10 +9,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -84,102 +86,132 @@ fun PurchaseContractScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ContractBackground)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(
+                start = 20.dp,
+                end = 20.dp,
+                top = 28.dp,
+                bottom = 12.dp
+            ),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = "CARVITA",
-            color = ContractGold,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = "Fahrzeugkaufvertrag",
-            color = Color.White,
-            fontSize = 25.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = "Universelle, leere PDF-Vorlage für Fahrzeuge aller Art.",
-            color = Color.LightGray,
-            fontSize = 14.sp
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = ContractPanel
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = 18.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = "Inhalt der PDF-Vorlage",
-                    color = ContractGold,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-
-                Text("• Verkäufer- und Käuferdaten", color = Color.White)
-                Text("• Fahrzeugdaten und Identifikationsnummer", color = Color.White)
-                Text("• Kaufpreis und Zahlungsvereinbarung", color = Color.White)
-                Text("• Zustand, bekannte Mängel und Zubehör", color = Color.White)
-                Text("• Übergabe, Datum und Kilometerstand", color = Color.White)
-                Text("• Unterschriften beider Vertragsparteien", color = Color.White)
-            }
-        }
-
-        Button(
-            onClick = {
-                try {
-                    pendingPdf = createBlankVehiclePurchaseContract()
-                    createDocumentLauncher.launch(
-                        "CARVITA_Fahrzeugkaufvertrag.pdf"
+                item {
+                    Text(
+                        text = "CARVITA",
+                        color = ContractGold,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                    statusMessage = "Bitte wähle den Speicherort für die PDF-Datei."
-                } catch (error: Exception) {
-                    pendingPdf = null
-                    statusMessage = "PDF-Erstellung fehlgeschlagen: ${
-                        error.localizedMessage ?: "Unbekannter Fehler"
-                    }"
+
+                    Text(
+                        text = "Fahrzeugkaufvertrag",
+                        modifier = Modifier.padding(top = 8.dp),
+                        color = Color.White,
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        text = "Universelle, leere PDF-Vorlage für Fahrzeuge aller Art.",
+                        modifier = Modifier.padding(top = 8.dp),
+                        color = Color.LightGray,
+                        fontSize = 14.sp
+                    )
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ContractGold,
-                contentColor = Color.Black
-            )
-        ) {
-            Text(
-                text = "PDF herunterladen / speichern",
-                fontWeight = FontWeight.Bold
-            )
-        }
 
-        Text(
-            text = "Nach dem Speichern kannst du die PDF-Datei öffnen, drucken oder teilen.",
-            color = Color.LightGray,
-            fontSize = 12.sp
-        )
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = ContractPanel
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Inhalt der PDF-Vorlage",
+                                color = ContractGold,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
 
-        Spacer(modifier = Modifier.weight(1f))
+                            Text("• Verkäufer- und Käuferdaten", color = Color.White)
+                            Text("• Fahrzeugdaten und Identifikationsnummer", color = Color.White)
+                            Text("• Kaufpreis und Zahlungsvereinbarung", color = Color.White)
+                            Text("• Zustand, bekannte Mängel und Zubehör", color = Color.White)
+                            Text("• Übergabe, Datum und Kilometerstand", color = Color.White)
+                            Text("• Unterschriften beider Vertragsparteien", color = Color.White)
+                        }
+                    }
+                }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = ContractPanel
-            )
-        ) {
-            Text(
-                text = statusMessage,
-                modifier = Modifier.padding(14.dp),
-                color = Color.White,
-                fontSize = 13.sp
-            )
+                item {
+                    Button(
+                        onClick = {
+                            try {
+                                pendingPdf = createBlankVehiclePurchaseContract()
+                                createDocumentLauncher.launch(
+                                    "CARVITA_Fahrzeugkaufvertrag.pdf"
+                                )
+                                statusMessage =
+                                    "Bitte wähle den Speicherort für die PDF-Datei."
+                            } catch (error: Exception) {
+                                pendingPdf = null
+                                statusMessage = "PDF-Erstellung fehlgeschlagen: ${
+                                    error.localizedMessage ?: "Unbekannter Fehler"
+                                }"
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ContractGold,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text(
+                            text = "PDF herunterladen / speichern",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Text(
+                        text = "Nach dem Speichern kannst du die PDF-Datei öffnen, drucken oder teilen.",
+                        modifier = Modifier.padding(top = 8.dp),
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = ContractPanel
+                        )
+                    ) {
+                        Text(
+                            text = statusMessage,
+                            modifier = Modifier.padding(14.dp),
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
         }
 
         OutlinedButton(
