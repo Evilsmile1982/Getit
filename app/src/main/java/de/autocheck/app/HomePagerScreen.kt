@@ -94,35 +94,133 @@ fun HomePagerScreen(
             )
         }
 
-        Row(
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 9.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    bottom = 8.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            repeat(2) { page ->
-                Box(
+            if (currentPage == 0) {
+                Card(
                     modifier = Modifier
-                        .size(
-                            if (currentPage == page) {
-                                12.dp
-                            } else {
-                                8.dp
-                            }
-                        )
-                        .clip(CircleShape)
-                        .background(
-                            if (currentPage == page) {
-                                Color(0xFFD4AF37)
-                            } else {
-                                Color.LightGray
-                            }
-                        )
+                        .fillMaxWidth()
                         .clickable {
-                            currentPage = page
+                            currentPage = 1
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF29251A)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        Color(0xFFD4AF37)
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 4.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 14.dp,
+                                vertical = 9.dp
+                            ),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "WEITERE FUNKTIONEN",
+                                color = Color(0xFFD4AF37),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+
+                            Spacer(
+                                modifier = Modifier.width(6.dp)
+                            )
+
+                            Text(
+                                text = "›",
+                                color = Color(0xFFD4AF37),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                )
+
+                        Text(
+                            text = "Wische zur zweiten Seite oder tippe hier",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFD4AF37))
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray)
+                            )
+
+                            Text(
+                                text = "Seite 1 von 2",
+                                color = Color(0xFFBBBBBB),
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(2) { page ->
+                    Box(
+                        modifier = Modifier
+                            .size(
+                                if (currentPage == page) {
+                                    12.dp
+                                } else {
+                                    8.dp
+                                }
+                            )
+                            .clip(CircleShape)
+                            .background(
+                                if (currentPage == page) {
+                                    Color(0xFFD4AF37)
+                                } else {
+                                    Color.LightGray
+                                }
+                            )
+                            .clickable {
+                                currentPage = page
+                            }
+                    )
+                }
             }
         }
     }
