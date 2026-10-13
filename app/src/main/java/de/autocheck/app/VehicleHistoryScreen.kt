@@ -1,13 +1,16 @@
+
 package de.autocheck.app
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,7 +91,6 @@ fun VehicleHistoryScreen(
                                     if (repair.workshop.isNotBlank()) {
                                         append("Werkstatt: ${repair.workshop}")
                                     }
-
                                     if (repair.mileage.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append("${repair.mileage} km")
@@ -115,7 +117,6 @@ fun VehicleHistoryScreen(
                                     if (maintenance.workshop.isNotBlank()) {
                                         append("Werkstatt: ${maintenance.workshop}")
                                     }
-
                                     if (maintenance.mileage.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append("${maintenance.mileage} km")
@@ -140,12 +141,10 @@ fun VehicleHistoryScreen(
                                     if (pickerl.lastDate.isNotBlank()) {
                                         append("Letzte Prüfung: ${pickerl.lastDate}")
                                     }
-
                                     if (pickerl.nextDate.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append("Nächster Termin: ${pickerl.nextDate}")
                                     }
-
                                     if (pickerl.notes.isNotBlank()) {
                                         if (isNotEmpty()) append("\n")
                                         append(pickerl.notes)
@@ -174,17 +173,14 @@ fun VehicleHistoryScreen(
                                     if (tires.dimension.isNotBlank()) {
                                         append(tires.dimension)
                                     }
-
                                     if (tires.rimType.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append(tires.rimType)
                                     }
-
                                     if (tires.tread.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append("Profil: ${tires.tread}")
                                     }
-
                                     if (tires.storage.isNotBlank()) {
                                         if (isNotEmpty()) append("\n")
                                         append("Lagerung: ${tires.storage}")
@@ -210,206 +206,230 @@ fun VehicleHistoryScreen(
         it.cost ?: 0.0
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 28.dp)
     ) {
-        item {
-            Text(
-                text = "Fahrzeughistorie",
-                color = HistoryGold,
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                text = "Alle vorhandenen Fahrzeugereignisse auf einen Blick.",
-                color = HistoryMuted,
-                fontSize = 13.sp
-            )
-        }
-
-        item {
-            if (vehicles.isEmpty()) {
-                HistoryCard {
-                    Text(
-                        "Noch kein Fahrzeug angelegt. Lege zuerst unter „Mein Auto“ ein Fahrzeug an.",
-                        color = Color.White
-                    )
-                }
-            } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                top = 16.dp,
+                bottom = 20.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "Fahrzeug",
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Fahrzeughistorie",
+                        color = HistoryGold,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
                     )
 
-                    OutlinedButton(
-                        onClick = {
-                            vehicleMenuExpanded = true
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    Text(
+                        text = "Alle vorhandenen Fahrzeugereignisse auf einen Blick.",
+                        color = HistoryMuted,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            item {
+                if (vehicles.isEmpty()) {
+                    HistoryCard {
                         Text(
-                            selectedVehicle?.let {
-                                "${it.name} · ${it.make} ${it.model}"
-                            } ?: "Fahrzeug auswählen",
+                            "Noch kein Fahrzeug angelegt. Lege zuerst unter „Mein Auto“ ein Fahrzeug an.",
                             color = Color.White
                         )
                     }
-
-                    DropdownMenu(
-                        expanded = vehicleMenuExpanded,
-                        onDismissRequest = {
-                            vehicleMenuExpanded = false
-                        }
-                    ) {
-                        vehicles.forEach { vehicle ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "${vehicle.name} · ${vehicle.make} ${vehicle.model}"
-                                    )
-                                },
-                                onClick = {
-                                    selectedVehicleId = vehicle.id
-                                    vehicleMenuExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (selectedVehicle != null) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HistoryCard(
-                        modifier = Modifier.weight(1f)
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            "Ereignisse",
-                            color = HistoryMuted,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            history.size.toString(),
-                            color = HistoryGold,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    HistoryCard(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            "Erfasste Kosten",
-                            color = HistoryMuted,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            String.format(
-                                Locale.GERMANY,
-                                "%.2f €",
-                                totalCosts
-                            ),
-                            color = HistoryGold,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            item {
-                Text(
-                    "Chronologischer Verlauf",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (history.isEmpty()) {
-                item {
-                    HistoryCard {
-                        Text(
-                            "Für dieses Fahrzeug sind noch keine Reparaturen, Wartungen, Pickerl- oder Reifeneinträge vorhanden.",
-                            color = HistoryMuted
-                        )
-                    }
-                }
-            } else {
-                items(
-                    items = history,
-                    key = { "${it.category}_${it.date}_${it.title}_${it.details}" }
-                ) { entry ->
-                    HistoryCard {
-                        Text(
-                            text = entry.category.uppercase(Locale.GERMANY),
-                            color = HistoryGold,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = entry.title,
+                            "Fahrzeug auswählen",
                             color = Color.White,
-                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
 
-                        if (entry.date.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                vehicleMenuExpanded = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
-                                text = "Datum: ${entry.date}",
+                                selectedVehicle?.let {
+                                    "${it.name} · ${it.make} ${it.model}"
+                                } ?: "Fahrzeug auswählen",
+                                color = Color.White
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = vehicleMenuExpanded,
+                            onDismissRequest = {
+                                vehicleMenuExpanded = false
+                            }
+                        ) {
+                            vehicles.forEach { vehicle ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "${vehicle.name} · ${vehicle.make} ${vehicle.model}"
+                                        )
+                                    },
+                                    onClick = {
+                                        selectedVehicleId = vehicle.id
+                                        vehicleMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (selectedVehicle != null) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        HistoryCard(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                "Ereignisse",
                                 color = HistoryMuted,
                                 fontSize = 12.sp
                             )
-                        }
-
-                        if (entry.details.isNotBlank()) {
                             Text(
-                                text = entry.details,
-                                color = HistoryMuted,
-                                fontSize = 13.sp
+                                history.size.toString(),
+                                color = HistoryGold,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
 
-                        entry.cost?.let { cost ->
+                        HistoryCard(
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text(
-                                text = String.format(
+                                "Erfasste Kosten",
+                                color = HistoryMuted,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                String.format(
                                     Locale.GERMANY,
-                                    "Kosten: %.2f €",
-                                    cost
+                                    "%.2f €",
+                                    totalCosts
                                 ),
                                 color = HistoryGold,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    Text(
+                        "Chronologischer Verlauf",
+                        color = Color.White,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (history.isEmpty()) {
+                    item {
+                        HistoryCard {
+                            Text(
+                                "Für dieses Fahrzeug sind noch keine Reparaturen, Wartungen, Pickerl- oder Reifeneinträge vorhanden.",
+                                color = HistoryMuted
+                            )
+                        }
+                    }
+                } else {
+                    items(
+                        items = history,
+                        key = {
+                            "${it.category}_${it.date}_${it.title}_${it.details}"
+                        }
+                    ) { entry ->
+                        HistoryCard {
+                            Text(
+                                text = entry.category.uppercase(Locale.GERMANY),
+                                color = HistoryGold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = entry.title,
+                                color = Color.White,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
+
+                            if (entry.date.isNotBlank()) {
+                                Text(
+                                    text = "Datum: ${entry.date}",
+                                    color = HistoryMuted,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            if (entry.details.isNotBlank()) {
+                                Text(
+                                    text = entry.details,
+                                    color = HistoryMuted,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            entry.cost?.let { cost ->
+                                Text(
+                                    text = String.format(
+                                        Locale.GERMANY,
+                                        "Kosten: %.2f €",
+                                        cost
+                                    ),
+                                    color = HistoryGold,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        item {
-            Spacer(Modifier.height(4.dp))
-
-            OutlinedButton(
-                onClick = onBack,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Zurück zur zweiten Startseite")
-            }
+        OutlinedButton(
+            onClick = onBack,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = 18.dp,
+                    end = 18.dp,
+                    top = 6.dp,
+                    bottom = 12.dp
+                )
+        ) {
+            Text("Zurück zur zweiten Startseite")
         }
     }
 }
