@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +50,12 @@ fun HomePagerScreen(
     visitedStore: VisitedStore,
     onSelect: (Screen) -> Unit
 ) {
+    val context = LocalContext.current
+
+    val vehicleStore = remember {
+        VehicleStore(context)
+    }
+
     var currentPage by remember {
         mutableStateOf(0)
     }
@@ -61,11 +68,18 @@ fun HomePagerScreen(
         mutableStateOf(false)
     }
 
+    var showHistoryScreen by remember {
+        mutableStateOf(false)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(CarvitaBackground)
-            .pointerInput(Unit) {
+            .pointerInput(
+                showFuelScreen,
+                showHistoryScreen
+            ) {
                 var dragDistance = 0f
 
                 detectHorizontalDragGestures(
@@ -74,11 +88,14 @@ fun HomePagerScreen(
                         dragDistance += dragAmount
                     },
                     onDragEnd = {
-                        if (dragDistance < -70f) {
-                            currentPage = 1
-                        } else if (dragDistance > 70f) {
-                            currentPage = 0
+                        if (!showFuelScreen && !showHistoryScreen) {
+                            if (dragDistance < -70f) {
+                                currentPage = 1
+                            } else if (dragDistance > 70f) {
+                                currentPage = 0
+                            }
                         }
+
                         dragDistance = 0f
                     },
                     onDragCancel = {
@@ -96,6 +113,21 @@ fun HomePagerScreen(
                 )
             }
 
+            showHistoryScreen -> {
+                val vehicles = remember {
+                    vehicleStore.load()
+                }
+
+                VehicleHistoryScreen(
+                    store = vehicleStore,
+                    vehicles = vehicles,
+                    activeVehicleId = vehicleStore.activeVehicleId(),
+                    onBack = {
+                        showHistoryScreen = false
+                    }
+                )
+            }
+
             currentPage == 0 -> {
                 HomeScreen(
                     visible = visible,
@@ -107,17 +139,25 @@ fun HomePagerScreen(
             else -> {
                 SecondHomePageContent(
                     onAction = { action ->
-                        if (action == "Tank und Kilometer – Verbrauch") {
-                            showFuelScreen = true
-                        } else {
-                            selectedAction = action
+                        when (action) {
+                            "Tank und Kilometer – Verbrauch" -> {
+                                showFuelScreen = true
+                            }
+
+                            "Fahrzeughistorie" -> {
+                                showHistoryScreen = true
+                            }
+
+                            else -> {
+                                selectedAction = action
+                            }
                         }
                     }
                 )
             }
         }
 
-        if (!showFuelScreen) {
+        if (!showFuelScreen && !showHistoryScreen) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -279,7 +319,7 @@ private fun SecondHomePageContent(
         ) {
             Image(
                 painter = painterResource(
-                    id = R.drawable.menuebild_seite2
+                    id = R.drawable.menubild_seite2
                 ),
                 contentDescription = "CARVITA Garagenbild",
                 modifier = Modifier
