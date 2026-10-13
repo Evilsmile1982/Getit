@@ -77,6 +77,10 @@ fun HomePagerScreen(
         mutableStateOf(false)
     }
 
+    var showPurchaseContractScreen by remember {
+        mutableStateOf(false)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -84,7 +88,8 @@ fun HomePagerScreen(
             .pointerInput(
                 showFuelScreen,
                 showHistoryScreen,
-                showPdfScreen
+                showPdfScreen,
+                showPurchaseContractScreen
             ) {
                 var dragDistance = 0f
 
@@ -97,7 +102,8 @@ fun HomePagerScreen(
                         if (
                             !showFuelScreen &&
                             !showHistoryScreen &&
-                            !showPdfScreen
+                            !showPdfScreen &&
+                            !showPurchaseContractScreen
                         ) {
                             if (dragDistance < -70f) {
                                 currentPage = 1
@@ -153,6 +159,14 @@ fun HomePagerScreen(
                 )
             }
 
+            showPurchaseContractScreen -> {
+                PurchaseContractScreen(
+                    onBack = {
+                        showPurchaseContractScreen = false
+                    }
+                )
+            }
+
             currentPage == 0 -> {
                 HomeScreen(
                     visible = visible,
@@ -177,6 +191,10 @@ fun HomePagerScreen(
                                 showPdfScreen = true
                             }
 
+                            "Kaufvertrag" -> {
+                                showPurchaseContractScreen = true
+                            }
+
                             else -> {
                                 selectedAction = action
                             }
@@ -189,7 +207,8 @@ fun HomePagerScreen(
         if (
             !showFuelScreen &&
             !showHistoryScreen &&
-            !showPdfScreen
+            !showPdfScreen &&
+            !showPurchaseContractScreen
         ) {
             Column(
                 modifier = Modifier
@@ -399,8 +418,8 @@ private fun SecondHomePageContent(
 
         SecondPageButton(
             number = "4",
-            title = "Kaufvertrag",
-            subtitle = "Originalvorlage und digitaler Vertrag",
+            title = "CARVITA Kaufvertrag",
+            subtitle = "Leere Fahrzeugkaufvertrag-Vorlage als PDF",
             onClick = {
                 onAction("Kaufvertrag")
             }
