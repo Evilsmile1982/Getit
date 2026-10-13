@@ -75,7 +75,6 @@ fun HomePagerScreen(
                         } else if (dragDistance > 70f) {
                             currentPage = 0
                         }
-
                         dragDistance = 0f
                     },
                     onDragCancel = {
@@ -92,9 +91,7 @@ fun HomePagerScreen(
             )
         } else {
             SecondHomePageContent(
-                onAction = {
-                    selectedAction = it
-                }
+                onAction = { selectedAction = it }
             )
         }
 
@@ -105,10 +102,10 @@ fun HomePagerScreen(
                 .padding(
                     start = 28.dp,
                     end = 28.dp,
-                    bottom = 16.dp
+                    bottom = 28.dp
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(7.dp)
         ) {
             if (currentPage == 0) {
                 Card(
@@ -122,8 +119,8 @@ fun HomePagerScreen(
                         containerColor = Color(0xFF29251A)
                     ),
                     border = BorderStroke(
-                        width = 1.dp,
-                        color = CarvitaGold
+                        1.dp,
+                        CarvitaGold
                     ),
                     elevation = CardDefaults.cardElevation(
                         defaultElevation = 2.dp
@@ -132,7 +129,7 @@ fun HomePagerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(42.dp)
+                            .height(38.dp)
                             .padding(horizontal = 14.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -166,11 +163,7 @@ fun HomePagerScreen(
                     Box(
                         modifier = Modifier
                             .size(
-                                if (currentPage == page) {
-                                    9.dp
-                                } else {
-                                    7.dp
-                                }
+                                if (currentPage == page) 9.dp else 7.dp
                             )
                             .clip(CircleShape)
                             .background(
@@ -329,9 +322,7 @@ private fun SecondPageButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(70.dp)
-            .clickable(
-                onClick = onClick
-            ),
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF222222)
