@@ -199,16 +199,29 @@ fun TireScreen(
             price = price.trim()
         )
 
-        val updated = if (editingId != null) {
-            tires.map { existing ->
-                if (existing.id == editingId) newTire else existing
+        fun normalizedSeason(value: String): String {
+            return when {
+                value.equals("Allwetterreifen", ignoreCase = true) ->
+                    "allwetter"
+
+                else -> value.trim().lowercase()
             }
-        } else {
-            tires.filterNot {
-                it.vehicle == activeVehicle &&
-                    it.season.equals(season, ignoreCase = true)
-            } + newTire
         }
+
+        // Den bearbeiteten Eintrag entfernen und bei diesem Fahrzeug
+        // vorhandene Duplikate derselben Ziel-Reifenart bereinigen.
+        // Danach wird der aktuelle Datensatz genau einmal hinzugefügt.
+        val updated = tires.filterNot { existing ->
+            val isEditedEntry =
+                editingId != null && existing.id == editingId
+
+            val isSameVehicleAndSeason =
+                existing.vehicle == activeVehicle &&
+                    normalizedSeason(existing.season) ==
+                    normalizedSeason(season)
+
+            isEditedEntry || isSameVehicleAndSeason
+        } + newTire
 
         tires = updated
         store.saveTires(updated)
