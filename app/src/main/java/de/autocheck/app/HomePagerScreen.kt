@@ -73,13 +73,18 @@ fun HomePagerScreen(
         mutableStateOf(false)
     }
 
+    var showPdfScreen by remember {
+        mutableStateOf(false)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(CarvitaBackground)
             .pointerInput(
                 showFuelScreen,
-                showHistoryScreen
+                showHistoryScreen,
+                showPdfScreen
             ) {
                 var dragDistance = 0f
 
@@ -89,7 +94,11 @@ fun HomePagerScreen(
                         dragDistance += dragAmount
                     },
                     onDragEnd = {
-                        if (!showFuelScreen && !showHistoryScreen) {
+                        if (
+                            !showFuelScreen &&
+                            !showHistoryScreen &&
+                            !showPdfScreen
+                        ) {
                             if (dragDistance < -70f) {
                                 currentPage = 1
                             } else if (dragDistance > 70f) {
@@ -129,6 +138,21 @@ fun HomePagerScreen(
                 )
             }
 
+            showPdfScreen -> {
+                val vehicles = remember {
+                    vehicleStore.load()
+                }
+
+                PdfDocumentsScreen(
+                    store = vehicleStore,
+                    vehicles = vehicles,
+                    activeVehicleId = vehicleStore.activeVehicleId(),
+                    onBack = {
+                        showPdfScreen = false
+                    }
+                )
+            }
+
             currentPage == 0 -> {
                 HomeScreen(
                     visible = visible,
@@ -149,6 +173,10 @@ fun HomePagerScreen(
                                 showHistoryScreen = true
                             }
 
+                            "PDF & Dokumente" -> {
+                                showPdfScreen = true
+                            }
+
                             else -> {
                                 selectedAction = action
                             }
@@ -158,7 +186,11 @@ fun HomePagerScreen(
             }
         }
 
-        if (!showFuelScreen && !showHistoryScreen) {
+        if (
+            !showFuelScreen &&
+            !showHistoryScreen &&
+            !showPdfScreen
+        ) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
