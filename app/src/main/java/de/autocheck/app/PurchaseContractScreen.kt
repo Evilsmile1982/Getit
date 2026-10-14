@@ -1,21 +1,28 @@
 
 package de.autocheck.app
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,9 +35,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -111,11 +122,13 @@ fun PurchaseContractScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item {
-                    Text(
-                        text = "CARVITA",
-                        color = ContractGold,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                    Image(
+                        painter = painterResource(id = R.drawable.bild_4),
+                        contentDescription = "CARVITA-Logo",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(105.dp),
+                        contentScale = ContentScale.Fit
                     )
 
                     Text(
@@ -166,7 +179,7 @@ fun PurchaseContractScreen(
                     Button(
                         onClick = {
                             try {
-                                pendingPdf = createBlankVehiclePurchaseContract()
+                                pendingPdf = createBlankVehiclePurchaseContract(context)
                                 createDocumentLauncher.launch(
                                     "CARVITA_Fahrzeugkaufvertrag.pdf"
                                 )
@@ -226,81 +239,59 @@ fun PurchaseContractScreen(
     }
 }
 
-private fun createBlankVehiclePurchaseContract(): ByteArray {
+private fun createBlankVehiclePurchaseContract(
+    context: android.content.Context
+): ByteArray {
     val document = PdfDocument()
     val output = ByteArrayOutputStream()
 
-    val pageWidth = 595
-    val pageHeight = 842
-    val margin = 42f
-    val contentWidth = pageWidth - margin * 2
-
-    val goldPaint = Paint().apply {
-        color = android.graphics.Color.rgb(145, 108, 20)
-        textSize = 18f
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-
-    val sectionPaint = Paint().apply {
-        color = android.graphics.Color.rgb(40, 40, 40)
-        textSize = 11f
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-
-    val textPaint = Paint().apply {
-        color = android.graphics.Color.rgb(35, 35, 35)
-        textSize = 9.5f
-        isAntiAlias = true
-    }
-
-    val smallPaint = Paint().apply {
-        color = android.graphics.Color.rgb(90, 90, 90)
-        textSize = 8f
-        isAntiAlias = true
-    }
-
-    val linePaint = Paint().apply {
-        color = android.graphics.Color.rgb(150, 150, 150)
-        strokeWidth = 0.8f
-        isAntiAlias = true
-    }
-
-    var pageNumber = 1
-    var page: PdfDocument.Page = document.startPage(
-        PdfDocument.PageInfo.Builder(
-            pageWidth,
-            pageHeight,
-            pageNumber
-        ).create()
+    val logo = BitmapFactory.decodeResource(
+        context.resources,
+        R.drawable.bild_4
+    ) ?: throw IllegalStateException(
+        "Das CARVITA-Logo bild_4.png konnte nicht geladen werden."
     )
-    var canvas: Canvas = page.canvas
-    var y = 38f
 
-    fun drawHeader() {
-        canvas.drawText("CARVITA", margin, y, goldPaint)
-        canvas.drawText(
-            "FAHRZEUGKAUFVERTRAG",
-            margin,
-            y + 25f,
-            sectionPaint
-        )
-        canvas.drawLine(
-            margin,
-            y + 35f,
-            pageWidth - margin,
-            y + 35f,
-            linePaint
-        )
-        y += 52f
-    }
+    try {
+        val pageWidth = 595
+        val pageHeight = 842
+        val margin = 42f
+        val contentWidth = pageWidth - margin * 2
 
-    fun newPage() {
-        document.finishPage(page)
-        pageNumber++
+        val goldPaint = Paint().apply {
+            color = android.graphics.Color.rgb(145, 108, 20)
+            textSize = 18f
+            isFakeBoldText = true
+            isAntiAlias = true
+        }
 
-        page = document.startPage(
+        val sectionPaint = Paint().apply {
+            color = android.graphics.Color.rgb(40, 40, 40)
+            textSize = 11f
+            isFakeBoldText = true
+            isAntiAlias = true
+        }
+
+        val textPaint = Paint().apply {
+            color = android.graphics.Color.rgb(35, 35, 35)
+            textSize = 9.5f
+            isAntiAlias = true
+        }
+
+        val smallPaint = Paint().apply {
+            color = android.graphics.Color.rgb(90, 90, 90)
+            textSize = 8f
+            isAntiAlias = true
+        }
+
+        val linePaint = Paint().apply {
+            color = android.graphics.Color.rgb(150, 150, 150)
+            strokeWidth = 0.8f
+            isAntiAlias = true
+        }
+
+        var pageNumber = 1
+        var page: PdfDocument.Page = document.startPage(
             PdfDocument.PageInfo.Builder(
                 pageWidth,
                 pageHeight,
@@ -308,163 +299,233 @@ private fun createBlankVehiclePurchaseContract(): ByteArray {
             ).create()
         )
 
-        canvas = page.canvas
-        y = 38f
+        var canvas: Canvas = page.canvas
+        var y = 38f
+
+        fun drawHeader() {
+            val logoRect = Rect(
+                0,
+                0,
+                logo.width,
+                logo.height
+            )
+
+            val maxLogoWidth = 125f
+            val maxLogoHeight = 42f
+            val scale = minOf(
+                maxLogoWidth / logo.width,
+                maxLogoHeight / logo.height
+            )
+
+            val drawWidth = logo.width * scale
+            val drawHeight = logo.height * scale
+
+            val destination = RectF(
+                margin,
+                y - 20f,
+                margin + drawWidth,
+                y - 20f + drawHeight
+            )
+
+            canvas.drawBitmap(
+                logo,
+                logoRect,
+                destination,
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            )
+
+            canvas.drawText(
+                "FAHRZEUGKAUFVERTRAG",
+                margin,
+                y + 34f,
+                sectionPaint
+            )
+
+            canvas.drawLine(
+                margin,
+                y + 44f,
+                pageWidth - margin,
+                y + 44f,
+                linePaint
+            )
+
+            y += 61f
+        }
+
+        fun newPage() {
+            document.finishPage(page)
+            pageNumber++
+
+            page = document.startPage(
+                PdfDocument.PageInfo.Builder(
+                    pageWidth,
+                    pageHeight,
+                    pageNumber
+                ).create()
+            )
+
+            canvas = page.canvas
+            y = 38f
+            drawHeader()
+        }
+
+        fun ensureSpace(height: Float) {
+            if (y + height > pageHeight - 48f) {
+                newPage()
+            }
+        }
+
+        fun section(title: String) {
+            ensureSpace(29f)
+            y += 5f
+            canvas.drawText(title, margin, y, sectionPaint)
+            y += 7f
+            canvas.drawLine(
+                margin,
+                y,
+                pageWidth - margin,
+                y,
+                linePaint
+            )
+            y += 15f
+        }
+
+        fun blankField(
+            label: String,
+            width: Float = contentWidth,
+            height: Float = 25f
+        ) {
+            ensureSpace(height)
+
+            if (label.isNotBlank()) {
+                canvas.drawText(label, margin, y, textPaint)
+            }
+
+            canvas.drawLine(
+                margin,
+                y + 14f,
+                margin + width,
+                y + 14f,
+                linePaint
+            )
+
+            y += height
+        }
+
+        fun twoFields(
+            leftLabel: String,
+            rightLabel: String
+        ) {
+            val gap = 18f
+            val halfWidth = (contentWidth - gap) / 2f
+            ensureSpace(27f)
+
+            canvas.drawText(leftLabel, margin, y, textPaint)
+            canvas.drawLine(
+                margin,
+                y + 14f,
+                margin + halfWidth,
+                y + 14f,
+                linePaint
+            )
+
+            val rightX = margin + halfWidth + gap
+            canvas.drawText(rightLabel, rightX, y, textPaint)
+            canvas.drawLine(
+                rightX,
+                y + 14f,
+                rightX + halfWidth,
+                y + 14f,
+                linePaint
+            )
+
+            y += 27f
+        }
+
+        fun paragraph(text: String) {
+            ensureSpace(25f)
+            canvas.drawText(text, margin, y, smallPaint)
+            y += 14f
+        }
+
         drawHeader()
-    }
 
-    fun ensureSpace(height: Float) {
-        if (y + height > pageHeight - 48f) {
-            newPage()
-        }
-    }
-
-    fun section(title: String) {
-        ensureSpace(29f)
-        y += 5f
-        canvas.drawText(title, margin, y, sectionPaint)
-        y += 7f
-        canvas.drawLine(
-            margin,
-            y,
-            pageWidth - margin,
-            y,
-            linePaint
-        )
-        y += 15f
-    }
-
-    fun blankField(
-        label: String,
-        width: Float = contentWidth,
-        height: Float = 25f
-    ) {
-        ensureSpace(height)
-        if (label.isNotBlank()) {
-            canvas.drawText(label, margin, y, textPaint)
-        }
-        canvas.drawLine(
-            margin,
-            y + 14f,
-            margin + width,
-            y + 14f,
-            linePaint
-        )
-        y += height
-    }
-
-    fun twoFields(
-        leftLabel: String,
-        rightLabel: String
-    ) {
-        val gap = 18f
-        val halfWidth = (contentWidth - gap) / 2f
-        ensureSpace(27f)
-
-        canvas.drawText(leftLabel, margin, y, textPaint)
-        canvas.drawLine(
-            margin,
-            y + 14f,
-            margin + halfWidth,
-            y + 14f,
-            linePaint
+        paragraph(
+            "Bitte alle Angaben leserlich eintragen. Nicht zutreffende Felder können gestrichen werden."
         )
 
-        val rightX = margin + halfWidth + gap
-        canvas.drawText(rightLabel, rightX, y, textPaint)
-        canvas.drawLine(
-            rightX,
-            y + 14f,
-            rightX + halfWidth,
-            y + 14f,
-            linePaint
+        section("1. VERTRAGSPARTEIEN")
+        blankField("Verkäufer/in – vollständiger Name")
+        blankField("Straße, Hausnummer")
+        twoFields("Postleitzahl / Ort", "Land")
+        twoFields("Telefon / E-Mail", "Ausweisnummer (optional)")
+
+        y += 4f
+
+        blankField("Käufer/in – vollständiger Name")
+        blankField("Straße, Hausnummer")
+        twoFields("Postleitzahl / Ort", "Land")
+        twoFields("Telefon / E-Mail", "Ausweisnummer (optional)")
+
+        section("2. FAHRZEUGDATEN")
+        twoFields("Fahrzeugart", "Hersteller / Marke")
+        twoFields("Modell / Typ", "Erstzulassung / Baujahr")
+        twoFields("Fahrzeug-Identifizierungsnummer (FIN)", "Kennzeichen")
+        twoFields("Kilometerstand bei Übergabe", "Anzahl Vorbesitzer")
+        twoFields("Antriebsart / Kraftstoff", "Getriebe")
+        twoFields("Farbe", "Leistung / Hubraum")
+        blankField("Mitverkauftes Zubehör")
+
+        section("3. KAUFPREIS UND ZAHLUNG")
+        twoFields("Kaufpreis gesamt", "Währung")
+        twoFields("Anzahlung", "Restbetrag")
+        blankField("Zahlungsart / Zahlungsvereinbarung")
+        blankField("Fälligkeit / vereinbarter Zahlungstermin")
+
+        section("4. ZUSTAND UND BESONDERE VEREINBARUNGEN")
+        paragraph(
+            "Fahrzeugzustand (z. B. gebraucht, fahrbereit, nicht fahrbereit):"
+        )
+        blankField("")
+        paragraph("Bekannte Mängel / Schäden:")
+        blankField("")
+        blankField("")
+        paragraph("Weitere Vereinbarungen:")
+        blankField("")
+        blankField("")
+
+        section("5. ERKLÄRUNGEN DER VERTRAGSPARTEIEN")
+        paragraph(
+            "Die Vertragsparteien bestätigen, die Angaben und Vereinbarungen dieses Vertrags geprüft zu haben."
+        )
+        paragraph(
+            "Zusätzliche Bedingungen, Gewährleistungsausschlüsse oder Garantien müssen ausdrücklich und rechtlich wirksam vereinbart werden."
         )
 
-        y += 27f
+        section("6. ÜBERGABE")
+        twoFields("Übergabedatum", "Uhrzeit")
+        twoFields("Übergabeort", "Übergebene Schlüssel (Anzahl)")
+        blankField("Übergebene Dokumente / Zubehör")
+        twoFields("Kilometerstand bei Übergabe", "Tankfüllstand / Ladezustand")
+
+        section("7. UNTERSCHRIFTEN")
+        paragraph(
+            "Mit ihrer Unterschrift bestätigen die Parteien den Abschluss des Vertrags."
+        )
+        y += 10f
+        twoFields("Ort, Datum", "Ort, Datum")
+        y += 16f
+        twoFields("Unterschrift Verkäufer/in", "Unterschrift Käufer/in")
+        y += 12f
+        paragraph(
+            "CARVITA – neutrale Vertragsvorlage. Die Vorlage ersetzt keine rechtliche Beratung."
+        )
+
+        document.finishPage(page)
+        document.writeTo(output)
+        return output.toByteArray()
+    } finally {
+        logo.recycle()
+        document.close()
     }
-
-    fun paragraph(text: String) {
-        ensureSpace(25f)
-        canvas.drawText(text, margin, y, smallPaint)
-        y += 14f
-    }
-
-    drawHeader()
-
-    paragraph(
-        "Bitte alle Angaben leserlich eintragen. Nicht zutreffende Felder können gestrichen werden."
-    )
-
-    section("1. VERTRAGSPARTEIEN")
-    blankField("Verkäufer/in – vollständiger Name")
-    blankField("Straße, Hausnummer")
-    twoFields("Postleitzahl / Ort", "Land")
-    twoFields("Telefon / E-Mail", "Ausweisnummer (optional)")
-
-    y += 4f
-
-    blankField("Käufer/in – vollständiger Name")
-    blankField("Straße, Hausnummer")
-    twoFields("Postleitzahl / Ort", "Land")
-    twoFields("Telefon / E-Mail", "Ausweisnummer (optional)")
-
-    section("2. FAHRZEUGDATEN")
-    twoFields("Fahrzeugart", "Hersteller / Marke")
-    twoFields("Modell / Typ", "Erstzulassung / Baujahr")
-    twoFields("Fahrzeug-Identifizierungsnummer (FIN)", "Kennzeichen")
-    twoFields("Kilometerstand bei Übergabe", "Anzahl Vorbesitzer")
-    twoFields("Antriebsart / Kraftstoff", "Getriebe")
-    twoFields("Farbe", "Leistung / Hubraum")
-    blankField("Mitverkauftes Zubehör")
-
-    section("3. KAUFPREIS UND ZAHLUNG")
-    twoFields("Kaufpreis gesamt", "Währung")
-    twoFields("Anzahlung", "Restbetrag")
-    blankField("Zahlungsart / Zahlungsvereinbarung")
-    blankField("Fälligkeit / vereinbarter Zahlungstermin")
-
-    section("4. ZUSTAND UND BESONDERE VEREINBARUNGEN")
-    paragraph(
-        "Fahrzeugzustand (z. B. gebraucht, fahrbereit, nicht fahrbereit):"
-    )
-    blankField("")
-    paragraph("Bekannte Mängel / Schäden:")
-    blankField("")
-    blankField("")
-    paragraph("Weitere Vereinbarungen:")
-    blankField("")
-    blankField("")
-
-    section("5. ERKLÄRUNGEN DER VERTRAGSPARTEIEN")
-    paragraph(
-        "Die Vertragsparteien bestätigen, die Angaben und Vereinbarungen dieses Vertrags geprüft zu haben."
-    )
-    paragraph(
-        "Zusätzliche Bedingungen, Gewährleistungsausschlüsse oder Garantien müssen ausdrücklich und rechtlich wirksam vereinbart werden."
-    )
-
-    section("6. ÜBERGABE")
-    twoFields("Übergabedatum", "Uhrzeit")
-    twoFields("Übergabeort", "Übergebene Schlüssel (Anzahl)")
-    blankField("Übergebene Dokumente / Zubehör")
-    twoFields("Kilometerstand bei Übergabe", "Tankfüllstand / Ladezustand")
-
-    section("7. UNTERSCHRIFTEN")
-    paragraph(
-        "Mit ihrer Unterschrift bestätigen die Parteien den Abschluss des Vertrags."
-    )
-    y += 10f
-    twoFields("Ort, Datum", "Ort, Datum")
-    y += 16f
-    twoFields("Unterschrift Verkäufer/in", "Unterschrift Käufer/in")
-    y += 12f
-    paragraph(
-        "CARVITA – neutrale Vertragsvorlage. Die Vorlage ersetzt keine rechtliche Beratung."
-    )
-
-    document.finishPage(page)
-    document.writeTo(output)
-    document.close()
-
-    return output.toByteArray()
 }
