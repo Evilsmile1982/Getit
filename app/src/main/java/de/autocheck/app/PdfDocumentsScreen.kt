@@ -1,6 +1,7 @@
 
 package de.autocheck.app
 
+import android.content.Context
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -9,15 +10,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
@@ -27,12 +31,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONArray
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -41,6 +49,16 @@ import java.util.Locale
 private val PdfGold = Color(0xFFD4AF37)
 private val PdfBackground = Color(0xFF101010)
 private val PdfPanel = Color(0xFF222222)
+
+private val pdfSections = listOf(
+    "Fahrzeugdaten",
+    "Wartungen",
+    "Reparaturen",
+    "Pickerl / TÜV",
+    "Serviceintervalle",
+    "Reifen",
+    "Tankhistorie"
+)
 
 @Composable
 fun PdfDocumentsScreen(
@@ -54,14 +72,28 @@ fun PdfDocumentsScreen(
     var selectedVehicleId by remember(activeVehicleId) {
         mutableStateOf(activeVehicleId)
     }
+
     var vehicleMenuExpanded by remember {
         mutableStateOf(false)
     }
+
     var statusMessage by remember {
-        mutableStateOf("Wähle ein Fahrzeug und erstelle deinen PDF-Bericht.")
+        mutableStateOf(
+            "Wähle die gewünschten Inhalte und erstelle deinen PDF-Bericht."
+        )
     }
+
     var pendingPdf by remember {
         mutableStateOf<ByteArray?>(null)
+    }
+
+    val selections = remember {
+        mutableStateMapOf<String, Boolean>().apply {
+            pdfSections.forEach { section ->
+                this[section] = section == "Fahrzeugdaten" ||
+                    section == "Wartungen"
+            }
+        }
     }
 
     val selectedVehicle = vehicles.firstOrNull {
@@ -76,7 +108,9 @@ fun PdfDocumentsScreen(
         if (uri != null && bytes != null) {
             try {
                 val output = context.contentResolver.openOutputStream(uri)
-                    ?: throw IllegalStateException("Datei konnte nicht geöffnet werden.")
+                    ?: throw IllegalStateException(
+                        "Datei konnte nicht geöffnet werden."
+                    )
 
                 output.use {
                     it.write(bytes)
@@ -89,7 +123,7 @@ fun PdfDocumentsScreen(
                     "Speichern fehlgeschlagen: " +
                         (error.localizedMessage ?: "Unbekannter Fehler")
             }
-        } else if (uri == null) {
+        } else {
             statusMessage = "Speichern abgebrochen."
         }
 
@@ -101,11 +135,16 @@ fun PdfDocumentsScreen(
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.navigationBars)
             .background(PdfBackground)
-            .padding(top = 28.dp, start = 18.dp, end = 18.dp, bottom = 12.dp),
+            .padding(
+                top = 28.dp,
+                start = 18.dp,
+                end = 18.dp,
+                bottom = 12.dp
+            ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "PDF & Dokumente",
+            text = "PDF erstellen",
             color = PdfGold,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
@@ -113,32 +152,17 @@ fun PdfDocumentsScreen(
         )
 
         Text(
-            text = "Erstelle einen PDF-Bericht mit Fahrzeugdaten und gespeicherten Einträgen.",
+            text = "Kreuze an, welche Inhalte im PDF-Bericht enthalten sein sollen.",
             color = Color.LightGray,
             fontSize = 14.sp
         )
 
         if (vehicles.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                PdfPanelCard {
-                    Text(
-                        "Es ist noch kein Fahrzeug gespeichert. Lege zuerst unter „Mein Auto“ ein Fahrzeug an.",
-                        color = Color.White
-                    )
-                }
-
-                PdfPanelCard {
-                    Text(
-                        statusMessage,
-                        color = Color.White,
-                        fontSize = 13.sp
-                    )
-                }
+            PdfPanelCard {
+                Text(
+                    "Es ist noch kein Fahrzeug gespeichert. Lege zuerst unter „Mein Auto“ ein Fahrzeug an.",
+                    color = Color.White
+                )
             }
         } else {
             OutlinedButton(
@@ -171,55 +195,78 @@ fun PdfDocumentsScreen(
                 }
             }
 
-            selectedVehicle?.let { vehicle ->
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(
-                        top = 8.dp,
-                        bottom = 12.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        PdfPanelCard {
-                            Text(
-                                "Im PDF-Bericht enthalten",
-                                color = PdfGold,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text("• Fahrzeugstammdaten", color = Color.White)
-                            Text("• Reparaturen und Wartungen", color = Color.White)
-                            Text("• Pickerl / TÜV", color = Color.White)
-                            Text("• Serviceintervalle", color = Color.White)
-                            Text("• Reifen und erfasste Kosten", color = Color.White)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(
+                    top = 4.dp,
+                    bottom = 12.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    PdfPanelCard {
+                        Text(
+                            "Inhalte auswählen",
+                            color = PdfGold,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+
+                        pdfSections.forEach { section ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = selections[section] == true,
+                                    onCheckedChange = { checked ->
+                                        selections[section] = checked
+                                    }
+                                )
+
+                                Text(
+                                    text = section,
+                                    color = Color.White,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
+                }
 
+                selectedVehicle?.let { vehicle ->
                     item {
                         PdfPanelCard {
                             Text(
-                                "Fahrzeug",
+                                "Fahrzeugvorschau",
                                 color = PdfGold,
                                 fontWeight = FontWeight.Bold
                             )
+
                             Text(
                                 "${vehicle.name} – ${vehicle.make} ${vehicle.model}",
                                 color = Color.White
                             )
+
                             Text(
                                 "Fahrzeugart: ${vehicle.vehicleType}",
                                 color = Color.LightGray
                             )
+
                             Text(
                                 "Baujahr: ${vehicle.year}",
                                 color = Color.LightGray
                             )
+
                             Text(
                                 "Kennzeichen: ${vehicle.plate.ifBlank { "–" }}",
                                 color = Color.LightGray
                             )
+
                             Text(
                                 "FIN: ${vehicle.vin.ifBlank { "–" }}",
                                 color = Color.LightGray
@@ -228,43 +275,67 @@ fun PdfDocumentsScreen(
                     }
                 }
 
-                OutlinedButton(
-                    onClick = {
-                        try {
-                            pendingPdf = createVehiclePdf(store, vehicle)
+                item {
+                    Button(
+                        onClick = {
+                            val vehicle = selectedVehicle
 
-                            val safeName = vehicle.name
-                                .replace(Regex("[^A-Za-z0-9_-]"), "_")
-                                .ifBlank { "Fahrzeug" }
+                            if (vehicle == null) {
+                                statusMessage = "Bitte wähle ein Fahrzeug aus."
+                            } else if (selections.values.none { it }) {
+                                statusMessage =
+                                    "Bitte wähle mindestens einen PDF-Inhalt aus."
+                            } else {
+                                try {
+                                    pendingPdf = createVehiclePdf(
+                                        context = context,
+                                        store = store,
+                                        vehicle = vehicle,
+                                        selections = selections.toMap()
+                                    )
 
-                            savePdfLauncher.launch(
-                                "CARVITA_${safeName}_Bericht.pdf"
-                            )
+                                    val safeName = vehicle.name
+                                        .replace(
+                                            Regex("[^A-Za-z0-9_-]"),
+                                            "_"
+                                        )
+                                        .ifBlank { "Fahrzeug" }
 
-                            statusMessage =
-                                "Wähle im nächsten Fenster den Speicherort."
-                        } catch (error: Exception) {
-                            pendingPdf = null
-                            statusMessage =
-                                "PDF konnte nicht erstellt werden: " +
-                                    (error.localizedMessage ?: "Unbekannter Fehler")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "PDF erstellen und speichern",
-                        color = PdfGold
-                    )
+                                    savePdfLauncher.launch(
+                                        "CARVITA_${safeName}_Bericht.pdf"
+                                    )
+
+                                    statusMessage =
+                                        "Wähle im nächsten Fenster den Speicherort."
+                                } catch (error: Exception) {
+                                    pendingPdf = null
+                                    statusMessage =
+                                        "PDF konnte nicht erstellt werden: " +
+                                            (
+                                                error.localizedMessage
+                                                    ?: "Unbekannter Fehler"
+                                            )
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "PDF erstellen und speichern",
+                            color = Color.Black
+                        )
+                    }
                 }
-            }
 
-            PdfPanelCard {
-                Text(
-                    statusMessage,
-                    color = Color.White,
-                    fontSize = 13.sp
-                )
+                item {
+                    PdfPanelCard {
+                        Text(
+                            statusMessage,
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
         }
 
@@ -297,8 +368,10 @@ private fun PdfPanelCard(
 }
 
 private fun createVehiclePdf(
+    context: Context,
     store: VehicleStore,
-    vehicle: Vehicle
+    vehicle: Vehicle,
+    selections: Map<String, Boolean>
 ): ByteArray {
     val document = PdfDocument()
     val output = ByteArrayOutputStream()
@@ -337,113 +410,208 @@ private fun createVehiclePdf(
         lines.add(value to 0)
     }
 
-    section("FAHRZEUGDATEN")
-    line("Name: ${vehicle.name}")
-    line("Marke / Modell: ${vehicle.make} ${vehicle.model}")
-    line("Fahrzeugart: ${vehicle.vehicleType}")
-    line("Baujahr: ${vehicle.year}")
-    line("Motorisierung: ${vehicle.motorization.ifBlank { "–" }}")
-    line("Leistung: ${vehicle.power.ifBlank { "–" }}")
-    line("Kennzeichen: ${vehicle.plate.ifBlank { "–" }}")
-    line("Fahrzeug-Identifizierungsnummer: ${vehicle.vin.ifBlank { "–" }}")
-    line("Kaufpreis: ${vehicle.purchasePrice.ifBlank { "–" }}")
-    line("")
-
-    val repairs = store.loadRepairs()
-        .filter { it.vehicle == vehicle.name }
-
-    section("REPARATUREN (${repairs.size})")
-    if (repairs.isEmpty()) {
-        line("Keine Reparaturen gespeichert.")
+    if (selections["Fahrzeugdaten"] == true) {
+        section("FAHRZEUGDATEN")
+        line("Name: ${vehicle.name}")
+        line("Marke / Modell: ${vehicle.make} ${vehicle.model}")
+        line("Fahrzeugart: ${vehicle.vehicleType}")
+        line("Baujahr: ${vehicle.year}")
+        line("Motorisierung: ${vehicle.motorization.ifBlank { "–" }}")
+        line("Leistung: ${vehicle.power.ifBlank { "–" }}")
+        line("Kennzeichen: ${vehicle.plate.ifBlank { "–" }}")
+        line("FIN: ${vehicle.vin.ifBlank { "–" }}")
+        line("Kaufpreis: ${vehicle.purchasePrice.ifBlank { "–" }}")
+        line("")
     }
 
-    repairs.forEach {
-        line(
-            "${it.date} · ${
-                it.description.ifBlank {
-                    it.repairDescription.ifBlank { "Reparatur" }
-                }
-            }"
-        )
-        if (it.workshop.isNotBlank()) line("  Werkstatt: ${it.workshop}")
-        if (it.mileage.isNotBlank()) line("  Kilometerstand: ${it.mileage} km")
-        if (it.cost.isNotBlank()) line("  Kosten: ${it.cost} €")
-    }
-    line("")
+    if (selections["Reparaturen"] == true) {
+        val repairs = store.loadRepairs()
+            .filter { it.vehicle == vehicle.name }
 
-    val maintenance = store.loadMaintenance()
-        .filter { it.vehicle == vehicle.name }
+        section("REPARATUREN (${repairs.size})")
 
-    section("WARTUNGEN (${maintenance.size})")
-    if (maintenance.isEmpty()) {
-        line("Keine Wartungen gespeichert.")
-    }
-
-    maintenance.forEach {
-        line("${it.date} · ${it.notes.ifBlank { "Wartung" }}")
-        if (it.workshop.isNotBlank()) line("  Werkstatt: ${it.workshop}")
-        if (it.mileage.isNotBlank()) line("  Kilometerstand: ${it.mileage} km")
-        if (it.cost.isNotBlank()) line("  Kosten: ${it.cost} €")
-    }
-    line("")
-
-    val pickerl = store.loadPickerl()
-        .filter { it.vehicle == vehicle.name }
-
-    section("PICKERL / TÜV (${pickerl.size})")
-    if (pickerl.isEmpty()) {
-        line("Keine Pickerl-/TÜV-Einträge gespeichert.")
-    }
-
-    pickerl.forEach {
-        line("Letzte Prüfung: ${it.lastDate.ifBlank { "–" }}")
-        line("Nächster Termin: ${it.nextDate.ifBlank { "–" }}")
-        if (it.notes.isNotBlank()) line("Hinweise: ${it.notes}")
-    }
-    line("")
-
-    val services = store.loadServiceIntervals()
-        .filter { it.vehicle == vehicle.name }
-
-    section("SERVICEINTERVALLE (${services.size})")
-    if (services.isEmpty()) {
-        line("Keine Serviceintervalle gespeichert.")
-    }
-
-    services.forEach {
-        line(
-            "Durchgeführt: ${it.serviceMonth}/${it.serviceYear} · " +
-                "${it.serviceKm.ifBlank { "–" }} km"
-        )
-        line(
-            "Nächster Service: " +
-                "${it.nextServiceMonth.ifBlank { "–" }}/" +
-                "${it.nextServiceYear.ifBlank { "–" }} · " +
-                "${it.nextServiceKm.ifBlank { "–" }} km"
-        )
-        if (it.documentation.isNotBlank()) {
-            line("Dokumentation: ${it.documentation}")
+        if (repairs.isEmpty()) {
+            line("Keine Reparaturen gespeichert.")
         }
-        if (it.cost.isNotBlank()) line("Kosten: ${it.cost} €")
+
+        repairs.forEach {
+            line(
+                "${it.date} · ${
+                    it.description.ifBlank {
+                        it.repairDescription.ifBlank { "Reparatur" }
+                    }
+                }"
+            )
+
+            if (it.workshop.isNotBlank()) {
+                line("Werkstatt: ${it.workshop}")
+            }
+
+            if (it.mileage.isNotBlank()) {
+                line("Kilometerstand: ${it.mileage} km")
+            }
+
+            if (it.cost.isNotBlank()) {
+                line("Kosten: ${it.cost} €")
+            }
+        }
+
+        line("")
     }
-    line("")
 
-    val tires = store.loadTires()
-        .filter { it.vehicle == vehicle.name }
+    if (selections["Wartungen"] == true) {
+        val maintenance = store.loadMaintenance()
+            .filter { it.vehicle == vehicle.name }
 
-    section("REIFEN (${tires.size})")
-    if (tires.isEmpty()) {
-        line("Keine Reifeneinträge gespeichert.")
+        section("WARTUNGEN (${maintenance.size})")
+
+        if (maintenance.isEmpty()) {
+            line("Keine Wartungen gespeichert.")
+        }
+
+        maintenance.forEach {
+            line("${it.date} · ${it.notes.ifBlank { "Wartung" }}")
+
+            if (it.workshop.isNotBlank()) {
+                line("Werkstatt: ${it.workshop}")
+            }
+
+            if (it.mileage.isNotBlank()) {
+                line("Kilometerstand: ${it.mileage} km")
+            }
+
+            if (it.cost.isNotBlank()) {
+                line("Kosten: ${it.cost} €")
+            }
+        }
+
+        line("")
     }
 
-    tires.forEach {
-        line("${it.season} · ${it.brand} · ${it.dimension}")
-        if (it.rimType.isNotBlank()) line("Felgen: ${it.rimType}")
-        if (it.dot.isNotBlank()) line("DOT: ${it.dot}")
-        if (it.tread.isNotBlank()) line("Profil: ${it.tread}")
-        if (it.condition.isNotBlank()) line("Zustand: ${it.condition}")
-        if (it.storage.isNotBlank()) line("Lagerung: ${it.storage}")
-        if (it.price.isNotBlank()) line("Preis: ${it.price} €")
+    if (selections["Pickerl / TÜV"] == true) {
+        val pickerl = store.loadPickerl()
+            .filter { it.vehicle == vehicle.name }
+
+        section("PICKERL / TÜV (${pickerl.size})")
+
+        if (pickerl.isEmpty()) {
+            line("Keine Pickerl-/TÜV-Einträge gespeichert.")
+        }
+
+        pickerl.forEach {
+            line("Letzte Prüfung: ${it.lastDate.ifBlank { "–" }}")
+            line("Nächster Termin: ${it.nextDate.ifBlank { "–" }}")
+
+            if (it.notes.isNotBlank()) {
+                line("Hinweise: ${it.notes}")
+            }
+        }
+
+        line("")
+    }
+
+    if (selections["Serviceintervalle"] == true) {
+        val services = store.loadServiceIntervals()
+            .filter { it.vehicle == vehicle.name }
+
+        section("SERVICEINTERVALLE (${services.size})")
+
+        if (services.isEmpty()) {
+            line("Keine Serviceintervalle gespeichert.")
+        }
+
+        services.forEach {
+            line(
+                "Durchgeführt: ${it.serviceMonth}/${it.serviceYear} · " +
+                    "${it.serviceKm.ifBlank { "–" }} km"
+            )
+
+            line(
+                "Nächster Service: " +
+                    "${it.nextServiceMonth.ifBlank { "–" }}/" +
+                    "${it.nextServiceYear.ifBlank { "–" }} · " +
+                    "${it.nextServiceKm.ifBlank { "–" }} km"
+            )
+
+            if (it.documentation.isNotBlank()) {
+                line("Dokumentation: ${it.documentation}")
+            }
+
+            if (it.cost.isNotBlank()) {
+                line("Kosten: ${it.cost} €")
+            }
+        }
+
+        line("")
+    }
+
+    if (selections["Reifen"] == true) {
+        val tires = store.loadTires()
+            .filter { it.vehicle == vehicle.name }
+
+        section("REIFEN (${tires.size})")
+
+        if (tires.isEmpty()) {
+            line("Keine Reifeneinträge gespeichert.")
+        }
+
+        tires.forEach {
+            line("${it.season} · ${it.brand} · ${it.dimension}")
+
+            if (it.rimType.isNotBlank()) line("Felgen: ${it.rimType}")
+            if (it.dot.isNotBlank()) line("DOT: ${it.dot}")
+            if (it.tread.isNotBlank()) line("Profil: ${it.tread}")
+            if (it.condition.isNotBlank()) line("Zustand: ${it.condition}")
+            if (it.storage.isNotBlank()) line("Lagerung: ${it.storage}")
+            if (it.price.isNotBlank()) line("Preis: ${it.price} €")
+        }
+
+        line("")
+    }
+
+    if (selections["Tankhistorie"] == true) {
+        val preferences = context.getSharedPreferences(
+            "carvita_fuel_data",
+            Context.MODE_PRIVATE
+        )
+
+        val json = preferences.getString("fuel_${vehicle.id}", "[]") ?: "[]"
+        val fuelEntries = JSONArray(json)
+
+        section("TANKHISTORIE (${fuelEntries.length()})")
+
+        if (fuelEntries.length() == 0) {
+            line("Keine Tankvorgänge gespeichert.")
+        }
+
+        for (index in 0 until fuelEntries.length()) {
+            val entry = fuelEntries.optJSONObject(index) ?: continue
+
+            val rawDate = entry.optString("date")
+            val date = formatFuelDateForPdf(rawDate)
+
+            line("Datum: $date")
+            line("Kilometerstand: ${entry.optInt("odometer")} km")
+            line(
+                "Getankt: ${
+                    String.format(
+                        Locale.GERMANY,
+                        "%.2f l",
+                        entry.optDouble("liters")
+                    )
+                }"
+            )
+            line(
+                "Gesamtpreis: ${
+                    String.format(
+                        Locale.GERMANY,
+                        "%.2f €",
+                        entry.optDouble("totalCost")
+                    )
+                }"
+            )
+            line("")
+        }
     }
 
     val date = SimpleDateFormat(
@@ -452,6 +620,7 @@ private fun createVehiclePdf(
     ).format(Date())
 
     var pageNumber = 1
+
     var page = document.startPage(
         PdfDocument.PageInfo.Builder(
             pageWidth,
@@ -477,12 +646,14 @@ private fun createVehiclePdf(
 
         canvas = page.canvas
         y = 48f
+
         canvas.drawText(
             "CARVITA · Fahrzeugbericht",
             margin,
             y,
             titlePaint
         )
+
         y += 24f
     }
 
@@ -492,6 +663,7 @@ private fun createVehiclePdf(
         y,
         titlePaint
     )
+
     y += 22f
 
     canvas.drawText(
@@ -500,6 +672,7 @@ private fun createVehiclePdf(
         y,
         bodyPaint
     )
+
     y += 26f
 
     lines.forEach { (text, type) ->
@@ -511,6 +684,7 @@ private fun createVehiclePdf(
             y += 8f
         } else {
             val paint = if (type == 1) sectionPaint else bodyPaint
+
             if (type == 1) y += 5f
 
             val maxChars = if (type == 1) 78 else 95
@@ -531,4 +705,29 @@ private fun createVehiclePdf(
     document.close()
 
     return output.toByteArray()
+}
+
+private fun formatFuelDateForPdf(value: String): String {
+    val formats = listOf(
+        SimpleDateFormat("yyyy-MM-dd", Locale.ROOT),
+        SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    )
+
+    formats.forEach { format ->
+        format.isLenient = false
+
+        try {
+            val parsed = format.parse(value)
+            if (parsed != null) {
+                return SimpleDateFormat(
+                    "dd.MM.yyyy",
+                    Locale.GERMANY
+                ).format(parsed)
+            }
+        } catch (_: Exception) {
+            // Nächstes Format probieren.
+        }
+    }
+
+    return value
 }
