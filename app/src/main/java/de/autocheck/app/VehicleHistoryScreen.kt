@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -79,7 +78,35 @@ fun VehicleHistoryScreen(
         it.id == selectedVehicleId
     }
 
-    val history = remember(selectedVehicleId, vehicles) {
+    /*
+     * Dokumente separat laden. Dadurch bleiben sie in ihrem
+     * eigenen Speicher und verändern keine Pickerl-Erinnerungen.
+     */
+    val documentStore = remember {
+        PickerlDocumentStore(
+            androidx.compose.ui.platform.LocalContext.current
+        )
+    }
+
+    val allDocuments = remember(selectedVehicleId, vehicles) {
+        val vehicle = vehicles.firstOrNull {
+            it.id == selectedVehicleId
+        }
+
+        if (vehicle == null) {
+            emptyList()
+        } else {
+            documentStore.load().filter {
+                it.vehicle == vehicle.name
+            }
+        }
+    }
+
+    val history = remember(
+        selectedVehicleId,
+        vehicles,
+        allDocuments
+    ) {
         val vehicle = vehicles.firstOrNull {
             it.id == selectedVehicleId
         }
@@ -90,6 +117,7 @@ fun VehicleHistoryScreen(
             val vehicleName = vehicle.name
 
             buildList {
+
                 store.loadRepairs()
                     .filter { it.vehicle == vehicleName }
                     .forEach { repair ->
@@ -203,6 +231,7 @@ fun VehicleHistoryScreen(
                                             }"
                                         )
                                     }
+
                                     if (pickerl.nextDate.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append(
@@ -211,6 +240,7 @@ fun VehicleHistoryScreen(
                                             }"
                                         )
                                     }
+
                                     if (pickerl.notes.isNotBlank()) {
                                         if (isNotEmpty()) append("\n")
                                         append(pickerl.notes)
@@ -221,6 +251,34 @@ fun VehicleHistoryScreen(
                             )
                         )
                     }
+
+                /*
+                 * NEU: Prüfberichte und Rechnungen werden
+                 * als chronologische Ereignisse angezeigt.
+                 */
+                allDocuments.forEach { document ->
+                    add(
+                        VehicleHistoryEntry(
+                            date = document.date,
+                            category = "Pickerl-Dokument",
+                            title = document.type.ifBlank {
+                                "Pickerl-Dokument"
+                            },
+                            details = buildString {
+                                if (document.name.isNotBlank()) {
+                                    append(document.name)
+                                }
+
+                                if (document.includeInPdf) {
+                                    if (isNotEmpty()) append("\n")
+                                    append("Für PDF-Auswahl vorgemerkt")
+                                }
+                            },
+                            mileage = null,
+                            cost = null
+                        )
+                    )
+                }
 
                 store.loadTires()
                     .filter { it.vehicle == vehicleName }
@@ -239,14 +297,17 @@ fun VehicleHistoryScreen(
                                     if (tires.dimension.isNotBlank()) {
                                         append(tires.dimension)
                                     }
+
                                     if (tires.rimType.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append(tires.rimType)
                                     }
+
                                     if (tires.tread.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append("Profil: ${tires.tread}")
                                     }
+
                                     if (tires.storage.isNotBlank()) {
                                         if (isNotEmpty()) append("\n")
                                         append("Lagerung: ${tires.storage}")
@@ -305,7 +366,7 @@ fun VehicleHistoryScreen(
                     )
 
                     Text(
-                        text = "Alle vorhandenen Fahrzeugereignisse auf einen Blick.",
+                        text = "Reparaturen, Wartungen, Pickerl-Dokumente und Reifen chronologisch im Überblick.",
                         color = HistoryMuted,
                         fontSize = 14.sp
                     )
@@ -425,7 +486,7 @@ fun VehicleHistoryScreen(
                     item {
                         HistoryCard {
                             Text(
-                                "Für dieses Fahrzeug sind noch keine Reparaturen, Wartungen, Pickerl- oder Reifeneinträge vorhanden.",
+                                "Für dieses Fahrzeug sind noch keine Reparaturen, Wartungen, Pickerl-Dokumente oder Reifeneinträge vorhanden.",
                                 color = HistoryMuted
                             )
                         }
@@ -596,7 +657,6 @@ private fun decodeHistoryMaintenance(
             notes = json.optString("notes", "").trim()
         )
     } catch (_: Exception) {
-        // Bei beschädigten JSON-Daten den Rohtext nicht als JSON anzeigen.
         HistoryMaintenanceData(
             title = "Wartung",
             date = fallbackDate,
@@ -638,9 +698,7 @@ private fun historyMoneyText(value: Double): String {
 }
 
 /**
- * Formatiert Datumswerte für die Anzeige im europäischen Format.
- * Unterstützt ISO-Daten (JJJJ-MM-TT), Monatsangaben (JJJJ-MM)
- * und bereits formatierte deutsche Daten (TT.MM.JJJJ).
+ * Unterstützt ISO-Daten, Monatsangaben und deutsche Datumsangaben.
  */
 private fun formatHistoryDate(value: String): String {
     val trimmed = value.trim()
