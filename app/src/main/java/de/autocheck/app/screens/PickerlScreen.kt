@@ -1,5 +1,6 @@
 package de.autocheck.app
 
+import de.autocheck.app.data.Pickerl
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
