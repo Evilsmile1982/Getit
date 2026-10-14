@@ -1,11 +1,9 @@
-
 package de.autocheck.app
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -141,11 +139,15 @@ fun VehicleHistoryScreen(
                                 title = "Letzte Überprüfung",
                                 details = buildString {
                                     if (pickerl.lastDate.isNotBlank()) {
-                                        append("Letzte Prüfung: ${pickerl.lastDate}")
+                                        append(
+                                            "Letzte Prüfung: ${formatHistoryDate(pickerl.lastDate)}"
+                                        )
                                     }
                                     if (pickerl.nextDate.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
-                                        append("Nächster Termin: ${pickerl.nextDate}")
+                                        append(
+                                            "Nächster Termin: ${formatHistoryDate(pickerl.nextDate)}"
+                                        )
                                     }
                                     if (pickerl.notes.isNotBlank()) {
                                         if (isNotEmpty()) append("\n")
@@ -390,7 +392,7 @@ fun VehicleHistoryScreen(
 
                             if (entry.date.isNotBlank()) {
                                 Text(
-                                    text = "Datum: ${entry.date}",
+                                    text = "Datum: ${formatHistoryDate(entry.date)}",
                                     color = HistoryMuted,
                                     fontSize = 12.sp
                                 )
@@ -475,6 +477,33 @@ private fun historyMoney(value: String): Double {
     } catch (_: NumberFormatException) {
         0.0
     }
+}
+
+/**
+ * Formatiert Datumswerte für die Anzeige im europäischen Format TT.MM.JJJJ.
+ * Unterstützt ISO-Daten (JJJJ-MM-TT), bereits formatierte deutsche Daten
+ * (TT.MM.JJJJ) und Monatsangaben (JJJJ-MM).
+ * Der ursprüngliche gespeicherte Wert wird nicht verändert.
+ */
+private fun formatHistoryDate(value: String): String {
+    val trimmed = value.trim()
+
+    if (trimmed.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
+        val parts = trimmed.split("-")
+        return "${parts[2]}.${parts[1]}.${parts[0]}"
+    }
+
+    if (trimmed.matches(Regex("""\d{4}-\d{1,2}"""))) {
+        val parts = trimmed.split("-")
+        return "${parts[1].padStart(2, '0')}.${parts[0]}"
+    }
+
+    if (trimmed.matches(Regex("""\d{1,2}\.\d{1,2}\.\d{4}"""))) {
+        val parts = trimmed.split(".")
+        return "${parts[0].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[2]}"
+    }
+
+    return trimmed
 }
 
 private fun historySortDate(value: String): String {
