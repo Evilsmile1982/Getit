@@ -390,36 +390,40 @@ private fun SecondHomePageContent(
         )
 
         SecondPageButton(
-            number = "1",
+            iconRes = R.drawable.tank_icoon,
             title = "Tank und Kilometer – Verbrauch",
             subtitle = "Tankvorgänge, Kilometer und Verbrauch",
+            contentDescription = "Tank-Icon",
             onClick = {
                 onAction("Tank und Kilometer – Verbrauch")
             }
         )
 
         SecondPageButton(
-            number = "2",
+            iconRes = R.drawable.fahrzeughistorie_icoon,
             title = "Fahrzeughistorie",
             subtitle = "Alle gespeicherten Fahrzeugereignisse",
+            contentDescription = "Fahrzeughistorie-Icon",
             onClick = {
                 onAction("Fahrzeughistorie")
             }
         )
 
         SecondPageButton(
-            number = "3",
+            iconRes = R.drawable.pdf_icoon,
             title = "PDF & Dokumente",
             subtitle = "Berichte auswählen, speichern und drucken",
+            contentDescription = "PDF-Icon",
             onClick = {
                 onAction("PDF & Dokumente")
             }
         )
 
         SecondPageButton(
-            number = "4",
+            iconRes = R.drawable.kaufvertrag_icoon,
             title = "CARVITA Kaufvertrag",
             subtitle = "Leere Fahrzeugkaufvertrag-Vorlage als PDF",
+            contentDescription = "Kaufvertrag-Icon",
             onClick = {
                 onAction("Kaufvertrag")
             }
@@ -429,15 +433,16 @@ private fun SecondHomePageContent(
 
 @Composable
 private fun SecondPageButton(
-    number: String,
+    iconRes: Int,
     title: String,
     subtitle: String,
+    contentDescription: String,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(76.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
@@ -453,20 +458,14 @@ private fun SecondPageButton(
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = contentDescription,
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CarvitaGold),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = number,
-                    color = Color.Black,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            }
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(9.dp)),
+                contentScale = ContentScale.Fit
+            )
 
             Spacer(
                 modifier = Modifier.width(12.dp)
