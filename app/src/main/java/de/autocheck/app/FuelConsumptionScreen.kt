@@ -42,6 +42,7 @@ import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 private val FuelGold = Color(0xFFD4AF37)
 private val FuelPanel = Color(0xFF1C1C1C)
@@ -106,7 +107,7 @@ fun FuelConsumptionScreen(
     var date by remember {
         mutableStateOf(
             SimpleDateFormat(
-                "yyyy-MM-dd",
+                "dd.MM.yyyy",
                 Locale.GERMANY
             ).format(Date())
         )
@@ -331,7 +332,8 @@ fun FuelConsumptionScreen(
                                     date = it
                                     errorMessage = null
                                 },
-                                label = { Text("Datum (JJJJ-MM-TT)") },
+                                label = { Text("Datum (TT.MM.JJJJ)") },
+                                placeholder = { Text("14.10.2026") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -412,10 +414,12 @@ fun FuelConsumptionScreen(
                                     val km = odometerText.toIntOrNull()
                                     val liters = parseFuelNumber(litersText)
                                     val cost = parseFuelNumber(totalCostText)
+                                    val normalizedDate = normalizeFuelDate(date)
 
                                     when {
-                                        date.isBlank() -> {
-                                            errorMessage = "Bitte gib ein Datum ein."
+                                        normalizedDate == null -> {
+                                            errorMessage =
+                                                "Bitte gib ein gültiges Datum im Format TT.MM.JJJJ ein, z. B. 14.10.2026."
                                         }
 
                                         km == null || km < 0 -> {
@@ -441,8 +445,8 @@ fun FuelConsumptionScreen(
                                         else -> {
                                             entries.add(
                                                 FuelEntry(
-                                                    id = java.util.UUID.randomUUID().toString(),
-                                                    date = date.trim(),
+                                                    id = UUID.randomUUID().toString(),
+                                                    date = normalizedDate,
                                                     odometer = km,
                                                     liters = liters,
                                                     totalCost = cost
@@ -456,6 +460,7 @@ fun FuelConsumptionScreen(
                                                 )
                                                 .apply()
 
+                                            date = normalizedDate
                                             odometerText = ""
                                             litersText = ""
                                             totalCostText = ""
@@ -517,7 +522,7 @@ fun FuelConsumptionScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    entry.date,
+                                    displayFuelDate(entry.date),
                                     color = FuelGold,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -642,6 +647,67 @@ private fun fuelMoney(value: Double): String {
         "%.2f €",
         value
     )
+}
+
+/**
+ * Wandelt eingegebene Daten in ISO-Format um.
+ * Die App speichert Datum weiterhin als JJJJ-MM-TT,
+ * damit ältere Einträge und Sortierung kompatibel bleiben.
+ */
+private fun normalizeFuelDate(value: String): String? {
+    val input = value.trim()
+
+    val formats = listOf(
+        SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY),
+        SimpleDateFormat("yyyy-MM-dd", Locale.GERMANY)
+    )
+
+    formats.forEach { format ->
+        format.isLenient = false
+        try {
+            val parsed = format.parse(input)
+            if (parsed != null) {
+                return SimpleDateFormat(
+                    "yyyy-MM-dd",
+                    Locale.ROOT
+                ).format(parsed)
+            }
+        } catch (_: Exception) {
+            // Nächstes erlaubtes Format versuchen.
+        }
+    }
+
+    return null
+}
+
+/**
+ * Zeigt sowohl neue ISO-Daten als auch ältere gespeicherte
+ * Einträge im deutschen Format TT.MM.JJJJ an.
+ */
+private fun displayFuelDate(value: String): String {
+    val input = value.trim()
+
+    val formats = listOf(
+        SimpleDateFormat("yyyy-MM-dd", Locale.ROOT),
+        SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    )
+
+    formats.forEach { format ->
+        format.isLenient = false
+        try {
+            val parsed = format.parse(input)
+            if (parsed != null) {
+                return SimpleDateFormat(
+                    "dd.MM.yyyy",
+                    Locale.GERMANY
+                ).format(parsed)
+            }
+        } catch (_: Exception) {
+            // Nächstes erlaubtes Format versuchen.
+        }
+    }
+
+    return input
 }
 
 private fun loadFuelEntries(json: String): List<FuelEntry> {
