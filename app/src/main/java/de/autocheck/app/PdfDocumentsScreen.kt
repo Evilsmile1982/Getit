@@ -1,8 +1,8 @@
-
 package de.autocheck.app
 
 import android.content.Context
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import android.os.Bundle
 import android.os.CancellationSignal
@@ -12,8 +12,6 @@ import android.print.PrintAttributes
 import android.print.PrintDocumentAdapter
 import android.print.PrintDocumentInfo
 import android.print.PrintManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,10 +34,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,8 +45,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.autocheck.app.data.PickerlDocument
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -66,6 +66,7 @@ private val pdfSections = listOf(
     "Wartungen",
     "Reparaturen",
     "Pickerl / TÜV",
+    "Pickerl-Dokumente",
     "Serviceintervalle",
     "Reifen",
     "Tankhistorie"
@@ -79,6 +80,10 @@ fun PdfDocumentsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+
+    val documentStore = remember {
+        PickerlDocumentStore(context)
+    }
 
     var selectedVehicleId by remember(activeVehicleId) {
         mutableStateOf(activeVehicleId)
@@ -97,14 +102,45 @@ fun PdfDocumentsScreen(
     val selections = remember {
         mutableStateMapOf<String, Boolean>().apply {
             pdfSections.forEach { section ->
-                this[section] = section == "Fahrzeugdaten" ||
+                this[section] =
+                    section == "Fahrzeugdaten" ||
                     section == "Wartungen"
             }
         }
     }
 
+    var pickerlDocuments by remember(selectedVehicleId) {
+        mutableStateOf(
+            documentStore.load().filter { document ->
+                val vehicle = vehicles.firstOrNull {
+                    it.id == selectedVehicleId
+                }
+                vehicle != null && document.vehicle == vehicle.name
+            }
+        )
+    }
+
     val selectedVehicle = vehicles.firstOrNull {
         it.id == selectedVehicleId
+    }
+
+    fun updateDocumentSelection(
+        document: PickerlDocument,
+        checked: Boolean
+    ) {
+        val updated = documentStore.load().map { saved ->
+            if (saved.id == document.id) {
+                saved.copy(includeInPdf = checked)
+            } else {
+                saved
+            }
+        }
+
+        documentStore.save(updated)
+
+        pickerlDocuments = updated.filter {
+            it.vehicle == selectedVehicle?.name
+        }
     }
 
     fun openPdfPreview() {
@@ -184,7 +220,9 @@ fun PdfDocumentsScreen(
             }
         } else {
             OutlinedButton(
-                onClick = { vehicleMenuExpanded = true },
+                onClick = {
+                    vehicleMenuExpanded = true
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -203,11 +241,17 @@ fun PdfDocumentsScreen(
                 vehicles.forEach { vehicle ->
                     DropdownMenuItem(
                         text = {
-                            Text("${vehicle.name} · ${vehicle.make} ${vehicle.model}")
+                            Text(
+                                "${vehicle.name} · ${vehicle.make} ${vehicle.model}"
+                            )
                         },
                         onClick = {
                             selectedVehicleId = vehicle.id
                             vehicleMenuExpanded = false
+                            pickerlDocuments =
+                                documentStore.load().filter {
+                                    it.vehicle == vehicle.name
+                                }
                         }
                     )
                 }
@@ -251,6 +295,80 @@ fun PdfDocumentsScreen(
                                     color = Color.White,
                                     modifier = Modifier.weight(1f)
                                 )
+                            }
+                        }
+                    }
+                }
+
+                if (selections["Pickerl-Dokumente"] == true) {
+                    item {
+                        PdfPanelCard {
+                            Text(
+                                "Pickerl-Dokumente auswählen",
+                                color = PdfGold,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp
+                            )
+
+                            Text(
+                                "Die Häkchen werden dauerhaft gespeichert. Nur markierte Dokumente werden an den Bericht angehängt.",
+                                color = Color.LightGray,
+                                fontSize = 13.sp
+                            )
+
+                            if (pickerlDocuments.isEmpty()) {
+                                Text(
+                                    "Für dieses Fahrzeug sind keine Pickerl-Dokumente gespeichert.",
+                                    color = Color.White
+                                )
+                            } else {
+                                pickerlDocuments
+                                    .sortedByDescending {
+                                        pdfSortDate(it.date)
+                                    }
+                                    .forEach { document ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Checkbox(
+                                                checked = document.includeInPdf,
+                                                onCheckedChange = { checked ->
+                                                    updateDocumentSelection(
+                                                        document,
+                                                        checked
+                                                    )
+                                                }
+                                            )
+
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement =
+                                                    Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    document.type,
+                                                    color = Color.White,
+                                                    fontWeight =
+                                                        FontWeight.SemiBold
+                                                )
+
+                                                Text(
+                                                    document.name,
+                                                    color = Color.LightGray,
+                                                    fontSize = 12.sp
+                                                )
+
+                                                Text(
+                                                    document.date,
+                                                    color = PdfGold,
+                                                    fontSize = 12.sp
+                                                )
+                                            }
+                                        }
+                                    }
                             }
                         }
                     }
@@ -348,10 +466,6 @@ private fun PdfPanelCard(
 
 /**
  * Öffnet die native Android-Druckvorschau.
- *
- * Das PDF wird zunächst nur im Arbeitsspeicher erzeugt.
- * Erst wenn der Nutzer in der Druckansicht einen Speicherort
- * auswählt, wird dort eine PDF-Datei angelegt.
  */
 private fun openVehiclePrintPreview(
     context: Context,
@@ -379,8 +493,12 @@ private fun openVehiclePrintPreview(
             val info = PrintDocumentInfo.Builder(
                 "$documentName.pdf"
             )
-                .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                .setPageCount(PrintDocumentInfo.PAGE_COUNT_UNKNOWN)
+                .setContentType(
+                    PrintDocumentInfo.CONTENT_TYPE_DOCUMENT
+                )
+                .setPageCount(
+                    PrintDocumentInfo.PAGE_COUNT_UNKNOWN
+                )
                 .build()
 
             callback.onLayoutFinished(info, true)
@@ -412,7 +530,8 @@ private fun openVehiclePrintPreview(
                 }
             } catch (error: Exception) {
                 callback.onWriteFailed(
-                    error.localizedMessage ?: "PDF konnte nicht ausgegeben werden."
+                    error.localizedMessage
+                        ?: "PDF konnte nicht ausgegeben werden."
                 )
             }
         }
@@ -436,6 +555,8 @@ private fun createVehiclePdf(
     selections: Map<String, Boolean>
 ): ByteArray {
     val document = PdfDocument()
+    val renderedPickerlPages =
+        mutableListOf<Pair<String, android.graphics.Bitmap>>()
 
     try {
         val pageWidth = 595
@@ -498,9 +619,11 @@ private fun createVehiclePdf(
 
             repairs.forEach {
                 line(
-                    "${it.date} · ${
+                    "${formatPdfDate(it.date)} · ${
                         it.description.ifBlank {
-                            it.repairDescription.ifBlank { "Reparatur" }
+                            it.repairDescription.ifBlank {
+                                "Reparatur"
+                            }
                         }
                     }"
                 )
@@ -539,7 +662,9 @@ private fun createVehiclePdf(
                     fallbackCost = it.cost
                 )
 
-                line("${decoded.date} · ${decoded.name}")
+                line(
+                    "${formatPdfDate(decoded.date)} · ${decoded.name}"
+                )
 
                 if (it.workshop.isNotBlank()) {
                     line("Werkstatt: ${it.workshop}")
@@ -573,11 +698,13 @@ private fun createVehiclePdf(
                     )
                 }
 
-                val total = decoded.materialCost + decoded.laborCost
+                val total =
+                    decoded.materialCost + decoded.laborCost
 
                 if (total > 0.0) {
                     line("Gesamtkosten: ${pdfMoneyText(total)}")
-                } else if (decoded.materialCost == 0.0 &&
+                } else if (
+                    decoded.materialCost == 0.0 &&
                     decoded.laborCost == 0.0 &&
                     it.cost.isNotBlank()
                 ) {
@@ -603,14 +730,76 @@ private fun createVehiclePdf(
             }
 
             pickerl.forEach {
-                line("Letzte Prüfung: ${it.lastDate.ifBlank { "–" }}")
-                line("Nächster Termin: ${it.nextDate.ifBlank { "–" }}")
+                line(
+                    "Letzte Prüfung: ${
+                        formatPdfDate(it.lastDate).ifBlank { "–" }
+                    }"
+                )
+
+                line(
+                    "Nächster Termin: ${
+                        formatPdfDate(it.nextDate).ifBlank { "–" }
+                    }"
+                )
 
                 if (it.notes.isNotBlank()) {
                     line("Hinweise: ${it.notes}")
                 }
 
                 line("")
+            }
+        }
+
+        if (selections["Pickerl-Dokumente"] == true) {
+            val selectedDocuments = PickerlDocumentStore(context)
+                .load()
+                .filter {
+                    it.vehicle == vehicle.name &&
+                        it.includeInPdf &&
+                        it.uri.isNotBlank()
+                }
+                .sortedBy {
+                    pdfSortDate(it.date)
+                }
+
+            section(
+                "PICKERL-DOKUMENTE (${selectedDocuments.size})"
+            )
+
+            if (selectedDocuments.isEmpty()) {
+                line("Keine Pickerl-Dokumente für die PDF-Ausgabe ausgewählt.")
+            } else {
+                selectedDocuments.forEach { item ->
+                    line(
+                        "${formatPdfDate(item.date)} · ${item.type}"
+                    )
+                    line("Datei: ${item.name}")
+                    line("")
+                }
+
+                /*
+                 * Die Dokumente werden anschließend tatsächlich
+                 * als Bildseiten an den PDF-Bericht angehängt.
+                 */
+                renderedPickerlPages.addAll(
+                    PickerlPdfPages.renderSelectedDocuments(
+                        context = context,
+                        vehicleName = vehicle.name
+                    )
+                )
+
+                val requestedCount = selectedDocuments.size
+                val renderedCount = renderedPickerlPages.size
+
+                if (renderedCount == 0) {
+                    line(
+                        "Hinweis: Die ausgewählten Dateien konnten nicht als Seiten gerendert werden. Bitte Dateizugriff prüfen."
+                    )
+                } else if (renderedCount < requestedCount) {
+                    line(
+                        "Hinweis: Mindestens ein Dokument konnte nicht vollständig gerendert werden."
+                    )
+                }
             }
         }
 
@@ -626,7 +815,8 @@ private fun createVehiclePdf(
 
             services.forEach {
                 line(
-                    "Durchgeführt: ${it.serviceMonth}/${it.serviceYear} · " +
+                    "Durchgeführt: " +
+                        "${it.serviceMonth}/${it.serviceYear} · " +
                         "${it.serviceKm.ifBlank { "–" }} km"
                 )
 
@@ -660,14 +850,33 @@ private fun createVehiclePdf(
             }
 
             tires.forEach {
-                line("${it.season} · ${it.brand} · ${it.dimension}")
+                line(
+                    "${it.season} · ${it.brand} · ${it.dimension}"
+                )
 
-                if (it.rimType.isNotBlank()) line("Felgen: ${it.rimType}")
-                if (it.dot.isNotBlank()) line("DOT: ${it.dot}")
-                if (it.tread.isNotBlank()) line("Profil: ${it.tread}")
-                if (it.condition.isNotBlank()) line("Zustand: ${it.condition}")
-                if (it.storage.isNotBlank()) line("Lagerung: ${it.storage}")
-                if (it.price.isNotBlank()) line("Preis: ${it.price} €")
+                if (it.rimType.isNotBlank()) {
+                    line("Felgen: ${it.rimType}")
+                }
+
+                if (it.dot.isNotBlank()) {
+                    line("DOT: ${it.dot}")
+                }
+
+                if (it.tread.isNotBlank()) {
+                    line("Profil: ${it.tread}")
+                }
+
+                if (it.condition.isNotBlank()) {
+                    line("Zustand: ${it.condition}")
+                }
+
+                if (it.storage.isNotBlank()) {
+                    line("Lagerung: ${it.storage}")
+                }
+
+                if (it.price.isNotBlank()) {
+                    line("Preis: ${it.price} €")
+                }
 
                 line("")
             }
@@ -693,13 +902,16 @@ private fun createVehiclePdf(
             }
 
             for (index in 0 until fuelEntries.length()) {
-                val entry = fuelEntries.optJSONObject(index) ?: continue
+                val entry =
+                    fuelEntries.optJSONObject(index) ?: continue
 
                 val rawDate = entry.optString("date")
                 val date = formatFuelDateForPdf(rawDate)
 
                 line("Datum: $date")
-                line("Kilometerstand: ${entry.optInt("odometer")} km")
+                line(
+                    "Kilometerstand: ${entry.optInt("odometer")} km"
+                )
                 line(
                     "Getankt: ${
                         String.format(
@@ -761,7 +973,6 @@ private fun createVehiclePdf(
                     y,
                     bodyPaint
                 )
-
                 y += 26f
             } else {
                 y += 4f
@@ -795,9 +1006,12 @@ private fun createVehiclePdf(
             if (text.isBlank()) {
                 y += 8f
             } else {
-                val paint = if (type == 1) sectionPaint else bodyPaint
+                val paint =
+                    if (type == 1) sectionPaint else bodyPaint
 
-                if (type == 1) y += 5f
+                if (type == 1) {
+                    y += 5f
+                }
 
                 val maxChars = if (type == 1) 78 else 95
 
@@ -806,7 +1020,13 @@ private fun createVehiclePdf(
                         startPage()
                     }
 
-                    canvas.drawText(part, margin, y, paint)
+                    canvas.drawText(
+                        part,
+                        margin,
+                        y,
+                        paint
+                    )
+
                     y += if (type == 1) 17f else 14f
                 }
             }
@@ -814,12 +1034,96 @@ private fun createVehiclePdf(
 
         document.finishPage(page)
 
-        val output = java.io.ByteArrayOutputStream()
+        /*
+         * Jede gerenderte PDF-Seite bzw. jedes Foto kommt
+         * als eigene A4-Seite an das Ende des Fahrzeugberichts.
+         */
+        renderedPickerlPages.forEach { (label, bitmap) ->
+            pageNumber++
+
+            val attachmentPage = document.startPage(
+                PdfDocument.PageInfo.Builder(
+                    pageWidth,
+                    pageHeight,
+                    pageNumber
+                ).create()
+            )
+
+            val attachmentCanvas = attachmentPage.canvas
+
+            attachmentCanvas.drawText(
+                "CARVITA · Pickerl-Dokumentation",
+                margin,
+                38f,
+                titlePaint
+            )
+
+            val labelPaint = Paint(bodyPaint).apply {
+                textSize = 9f
+            }
+
+            attachmentCanvas.drawText(
+                label.take(90),
+                margin,
+                56f,
+                labelPaint
+            )
+
+            val available = RectF(
+                margin,
+                72f,
+                pageWidth - margin,
+                pageHeight - 30f
+            )
+
+            val scale = minOf(
+                available.width() / bitmap.width.toFloat(),
+                available.height() / bitmap.height.toFloat()
+            )
+
+            val drawWidth = bitmap.width * scale
+            val drawHeight = bitmap.height * scale
+
+            val left = available.left +
+                (available.width() - drawWidth) / 2f
+
+            val top = available.top +
+                (available.height() - drawHeight) / 2f
+
+            val destination = RectF(
+                left,
+                top,
+                left + drawWidth,
+                top + drawHeight
+            )
+
+            val imagePaint = Paint().apply {
+                isAntiAlias = true
+                isFilterBitmap = true
+            }
+
+            attachmentCanvas.drawBitmap(
+                bitmap,
+                null,
+                destination,
+                imagePaint
+            )
+
+            document.finishPage(attachmentPage)
+        }
+
+        val output = ByteArrayOutputStream()
         document.writeTo(output)
 
         return output.toByteArray()
     } finally {
         document.close()
+
+        renderedPickerlPages.forEach { (_, bitmap) ->
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+        }
     }
 }
 
@@ -863,7 +1167,9 @@ private fun decodePdfMaintenance(
         val month = json.optString("month", "").trim()
         val year = json.optString("year", "").trim()
 
-        val date = if (month.isNotBlank() && year.isNotBlank()) {
+        val date = if (
+            month.isNotBlank() && year.isNotBlank()
+        ) {
             "${year}-${month.padStart(2, '0')}"
         } else {
             fallbackDate
@@ -913,7 +1219,9 @@ private fun pdfMoney(value: String): Double {
 
     return try {
         if (cleaned.contains(",") && cleaned.contains(".")) {
-            cleaned.replace(".", "").replace(",", ".").toDouble()
+            cleaned.replace(".", "")
+                .replace(",", ".")
+                .toDouble()
         } else {
             cleaned.replace(",", ".").toDouble()
         }
@@ -953,4 +1261,47 @@ private fun formatFuelDateForPdf(value: String): String {
     }
 
     return value
+}
+
+private fun formatPdfDate(value: String): String {
+    val trimmed = value.trim()
+
+    if (trimmed.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
+        val parts = trimmed.split("-")
+        return "${parts[2]}.${parts[1]}.${parts[0]}"
+    }
+
+    if (trimmed.matches(Regex("""\d{4}-\d{1,2}"""))) {
+        val parts = trimmed.split("-")
+        return "${parts[1].padStart(2, '0')}.${parts[0]}"
+    }
+
+    if (trimmed.matches(Regex("""\d{1,2}\.\d{1,2}\.\d{4}"""))) {
+        val parts = trimmed.split(".")
+        return "${parts[0].padStart(2, '0')}." +
+            "${parts[1].padStart(2, '0')}." +
+            parts[2]
+    }
+
+    return trimmed
+}
+
+private fun pdfSortDate(value: String): String {
+    val trimmed = value.trim()
+
+    if (trimmed.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
+        return trimmed
+    }
+
+    if (trimmed.matches(Regex("""\d{4}-\d{1,2}"""))) {
+        val parts = trimmed.split("-")
+        return "${parts[0]}-${parts[1].padStart(2, '0')}-01"
+    }
+
+    if (trimmed.matches(Regex("""\d{2}\.\d{2}\.\d{4}"""))) {
+        val parts = trimmed.split(".")
+        return "${parts[2]}-${parts[1]}-${parts[0]}"
+    }
+
+    return trimmed
 }
