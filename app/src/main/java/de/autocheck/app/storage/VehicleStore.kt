@@ -1,5 +1,6 @@
 package de.autocheck.app
 
+import de.autocheck.app.data.Pickerl
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
