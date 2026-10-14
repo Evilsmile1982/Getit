@@ -1,5 +1,6 @@
 package de.autocheck.app
 
+import de.autocheck.app.data.Pickerl
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
