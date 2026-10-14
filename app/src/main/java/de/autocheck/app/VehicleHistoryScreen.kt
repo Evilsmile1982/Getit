@@ -30,7 +30,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONObject
 import java.util.Locale
+
+private const val HISTORY_MAINTENANCE_V3 =
+    "[WARTUNG_ENTRY_V3]"
 
 private val HistoryGold = Color(0xFFD4AF37)
 private val HistoryPanel = Color(0xFF1C1C1C)
@@ -43,6 +47,17 @@ private data class VehicleHistoryEntry(
     val details: String,
     val mileage: Int?,
     val cost: Double?
+)
+
+private data class HistoryMaintenanceData(
+    val title: String,
+    val date: String,
+    val mileage: String,
+    val used: String,
+    val partNumber: String,
+    val materialCost: Double,
+    val laborCost: Double,
+    val notes: String
 )
 
 @Composable
@@ -106,25 +121,68 @@ fun VehicleHistoryScreen(
                 store.loadMaintenance()
                     .filter { it.vehicle == vehicleName }
                     .forEach { maintenance ->
+                        val decoded = decodeHistoryMaintenance(
+                            encodedNotes = maintenance.notes,
+                            fallbackDate = maintenance.date,
+                            fallbackMileage = maintenance.mileage,
+                            fallbackCost = maintenance.cost
+                        )
+
+                        val details = buildString {
+                            if (maintenance.workshop.isNotBlank()) {
+                                append("Werkstatt: ${maintenance.workshop}")
+                            }
+
+                            if (decoded.mileage.isNotBlank()) {
+                                if (isNotEmpty()) append(" · ")
+                                append("${decoded.mileage} km")
+                            }
+
+                            if (decoded.used.isNotBlank()) {
+                                if (isNotEmpty()) append("\n")
+                                append("Verwendet: ${decoded.used}")
+                            }
+
+                            if (decoded.partNumber.isNotBlank()) {
+                                if (isNotEmpty()) append("\n")
+                                append("Teilenummer: ${decoded.partNumber}")
+                            }
+
+                            if (decoded.materialCost > 0.0) {
+                                if (isNotEmpty()) append("\n")
+                                append(
+                                    "Material: ${
+                                        historyMoneyText(decoded.materialCost)
+                                    }"
+                                )
+                            }
+
+                            if (decoded.laborCost > 0.0) {
+                                if (isNotEmpty()) append("\n")
+                                append(
+                                    "Arbeitskosten: ${
+                                        historyMoneyText(decoded.laborCost)
+                                    }"
+                                )
+                            }
+
+                            if (decoded.notes.isNotBlank()) {
+                                if (isNotEmpty()) append("\n")
+                                append("Notiz: ${decoded.notes}")
+                            }
+                        }
+
+                        val totalCost =
+                            decoded.materialCost + decoded.laborCost
+
                         add(
                             VehicleHistoryEntry(
-                                date = maintenance.date,
+                                date = decoded.date,
                                 category = "Wartung",
-                                title = maintenance.notes.ifBlank {
-                                    "Wartung"
-                                },
-                                details = buildString {
-                                    if (maintenance.workshop.isNotBlank()) {
-                                        append("Werkstatt: ${maintenance.workshop}")
-                                    }
-                                    if (maintenance.mileage.isNotBlank()) {
-                                        if (isNotEmpty()) append(" · ")
-                                        append("${maintenance.mileage} km")
-                                    }
-                                },
-                                mileage = maintenance.mileage.toIntOrNull(),
-                                cost = historyMoney(maintenance.cost)
-                                    .takeIf { it > 0.0 }
+                                title = decoded.title,
+                                details = details,
+                                mileage = decoded.mileage.toIntOrNull(),
+                                cost = totalCost.takeIf { it > 0.0 }
                             )
                         )
                     }
@@ -140,13 +198,17 @@ fun VehicleHistoryScreen(
                                 details = buildString {
                                     if (pickerl.lastDate.isNotBlank()) {
                                         append(
-                                            "Letzte Prüfung: ${formatHistoryDate(pickerl.lastDate)}"
+                                            "Letzte Prüfung: ${
+                                                formatHistoryDate(pickerl.lastDate)
+                                            }"
                                         )
                                     }
                                     if (pickerl.nextDate.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append(
-                                            "Nächster Termin: ${formatHistoryDate(pickerl.nextDate)}"
+                                            "Nächster Termin: ${
+                                                formatHistoryDate(pickerl.nextDate)
+                                            }"
                                         )
                                     }
                                     if (pickerl.notes.isNotBlank()) {
@@ -460,6 +522,94 @@ private fun HistoryCard(
     }
 }
 
+/**
+ * Liest das V3-Wartungsformat aus und wandelt es in
+ * lesbare Daten für die Fahrzeughistorie um.
+ *
+ * Alte Einträge ohne V3-Marker bleiben ebenfalls sichtbar.
+ */
+private fun decodeHistoryMaintenance(
+    encodedNotes: String,
+    fallbackDate: String,
+    fallbackMileage: String,
+    fallbackCost: String
+): HistoryMaintenanceData {
+    val notes = encodedNotes.trim()
+
+    if (!notes.startsWith(HISTORY_MAINTENANCE_V3)) {
+        return HistoryMaintenanceData(
+            title = notes.ifBlank { "Wartung" },
+            date = fallbackDate,
+            mileage = fallbackMileage,
+            used = "",
+            partNumber = "",
+            materialCost = historyMoney(fallbackCost),
+            laborCost = 0.0,
+            notes = ""
+        )
+    }
+
+    return try {
+        val json = JSONObject(
+            notes.removePrefix(HISTORY_MAINTENANCE_V3)
+        )
+
+        val month = json.optString("month", "").trim()
+        val year = json.optString("year", "").trim()
+
+        val date = if (month.isNotBlank() && year.isNotBlank()) {
+            "${year}-${month.padStart(2, '0')}"
+        } else {
+            fallbackDate
+        }
+
+        val mileage = json.optString(
+            "mileage",
+            fallbackMileage
+        ).trim().ifBlank {
+            fallbackMileage
+        }
+
+        val materialCost = historyMoney(
+            json.optString("materialCost", "")
+        )
+
+        val laborCost = historyMoney(
+            json.optString("laborCost", "")
+        )
+
+        val title = json.optString(
+            "name",
+            "Wartung"
+        ).trim().ifBlank {
+            "Wartung"
+        }
+
+        HistoryMaintenanceData(
+            title = title,
+            date = date,
+            mileage = mileage,
+            used = json.optString("used", "").trim(),
+            partNumber = json.optString("partNumber", "").trim(),
+            materialCost = materialCost,
+            laborCost = laborCost,
+            notes = json.optString("notes", "").trim()
+        )
+    } catch (_: Exception) {
+        // Bei beschädigten JSON-Daten den Rohtext nicht als JSON anzeigen.
+        HistoryMaintenanceData(
+            title = "Wartung",
+            date = fallbackDate,
+            mileage = fallbackMileage,
+            used = "",
+            partNumber = "",
+            materialCost = historyMoney(fallbackCost),
+            laborCost = 0.0,
+            notes = ""
+        )
+    }
+}
+
 private fun historyMoney(value: String): Double {
     val cleaned = value
         .replace("€", "")
@@ -479,11 +629,18 @@ private fun historyMoney(value: String): Double {
     }
 }
 
+private fun historyMoneyText(value: Double): String {
+    return String.format(
+        Locale.GERMANY,
+        "%.2f €",
+        value
+    )
+}
+
 /**
- * Formatiert Datumswerte für die Anzeige im europäischen Format TT.MM.JJJJ.
- * Unterstützt ISO-Daten (JJJJ-MM-TT), bereits formatierte deutsche Daten
- * (TT.MM.JJJJ) und Monatsangaben (JJJJ-MM).
- * Der ursprüngliche gespeicherte Wert wird nicht verändert.
+ * Formatiert Datumswerte für die Anzeige im europäischen Format.
+ * Unterstützt ISO-Daten (JJJJ-MM-TT), Monatsangaben (JJJJ-MM)
+ * und bereits formatierte deutsche Daten (TT.MM.JJJJ).
  */
 private fun formatHistoryDate(value: String): String {
     val trimmed = value.trim()
