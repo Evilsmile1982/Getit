@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,14 +79,10 @@ fun VehicleHistoryScreen(
         it.id == selectedVehicleId
     }
 
-    /*
-     * Dokumente separat laden. Dadurch bleiben sie in ihrem
-     * eigenen Speicher und verändern keine Pickerl-Erinnerungen.
-     */
-    val documentStore = remember {
-        PickerlDocumentStore(
-            androidx.compose.ui.platform.LocalContext.current
-        )
+    val context = LocalContext.current
+
+    val documentStore = remember(context) {
+        PickerlDocumentStore(context)
     }
 
     val allDocuments = remember(selectedVehicleId, vehicles) {
@@ -117,7 +114,6 @@ fun VehicleHistoryScreen(
             val vehicleName = vehicle.name
 
             buildList {
-
                 store.loadRepairs()
                     .filter { it.vehicle == vehicleName }
                     .forEach { repair ->
@@ -134,6 +130,7 @@ fun VehicleHistoryScreen(
                                     if (repair.workshop.isNotBlank()) {
                                         append("Werkstatt: ${repair.workshop}")
                                     }
+
                                     if (repair.mileage.isNotBlank()) {
                                         if (isNotEmpty()) append(" · ")
                                         append("${repair.mileage} km")
@@ -252,10 +249,6 @@ fun VehicleHistoryScreen(
                         )
                     }
 
-                /*
-                 * NEU: Prüfberichte und Rechnungen werden
-                 * als chronologische Ereignisse angezeigt.
-                 */
                 allDocuments.forEach { document ->
                     add(
                         VehicleHistoryEntry(
@@ -583,12 +576,6 @@ private fun HistoryCard(
     }
 }
 
-/**
- * Liest das V3-Wartungsformat aus und wandelt es in
- * lesbare Daten für die Fahrzeughistorie um.
- *
- * Alte Einträge ohne V3-Marker bleiben ebenfalls sichtbar.
- */
 private fun decodeHistoryMaintenance(
     encodedNotes: String,
     fallbackDate: String,
@@ -697,9 +684,6 @@ private fun historyMoneyText(value: Double): String {
     )
 }
 
-/**
- * Unterstützt ISO-Daten, Monatsangaben und deutsche Datumsangaben.
- */
 private fun formatHistoryDate(value: String): String {
     val trimmed = value.trim()
 
