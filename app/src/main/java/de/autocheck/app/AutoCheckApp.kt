@@ -1,6 +1,10 @@
-
 package de.autocheck.app
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -8,217 +12,155 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun AutoCheckApp() {
 
-    val context =
-        LocalContext.current
+    val context = LocalContext.current
 
-    val store =
-        remember {
-            VehicleStore(
-                context
-            )
+    val store = remember {
+        VehicleStore(context)
+    }
+
+    val visitedStore = remember {
+        VisitedStore(context)
+    }
+
+    val vehicles = remember {
+        mutableStateListOf<Vehicle>().apply {
+            addAll(store.load())
         }
-
-    val visitedStore =
-        remember {
-            VisitedStore(
-                context
-            )
-        }
-
-    val vehicles =
-        remember {
-            mutableStateListOf<Vehicle>()
-                .apply {
-                    addAll(
-                        store.load()
-                    )
-                }
-        }
-
-    /*
-     * ============================================================
-     * EINZIGE QUELLE FÜR DAS AKTIVE FAHRZEUG
-     * ============================================================
-     */
-    var activeVehicleId by remember {
-        mutableStateOf(
-            store.activeVehicleId()
-        )
     }
 
     /*
-     * Aktives Fahrzeug anhand der stabilen ID bestimmen.
+     * EINZIGE QUELLE FÜR DAS AKTIVE FAHRZEUG
      */
-    val activeVehicle =
-        vehicles.firstOrNull {
-            it.id == activeVehicleId
-        }
+    var activeVehicleId by remember {
+        mutableStateOf(store.activeVehicleId())
+    }
 
-    /*
-     * Bestehende Untermenüs arbeiten weiterhin mit dem
-     * Fahrzeugnamen.
-     */
-    val activeVehicleName =
-        activeVehicle?.name ?: ""
+    val activeVehicle = vehicles.firstOrNull {
+        it.id == activeVehicleId
+    }
+
+    val activeVehicleName = activeVehicle?.name ?: ""
 
     var screen by remember {
-        mutableStateOf(
-            Screen.HOME
-        )
+        mutableStateOf(Screen.HOME)
+    }
+
+    var showPickerlDocuments by remember {
+        mutableStateOf(false)
     }
 
     var homeReady by remember {
-        mutableStateOf(
-            false
-        )
+        mutableStateOf(false)
     }
 
     /*
-     * ============================================================
      * START
-     * ============================================================
      */
     LaunchedEffect(Unit) {
 
-        kotlinx.coroutines
-            .delay(
-                300
-            )
+        kotlinx.coroutines.delay(300)
 
-        homeReady =
-            true
+        homeReady = true
 
-        /*
-         * Falls keine gültige aktive ID vorhanden ist,
-         * wird automatisch das erste Fahrzeug aktiv.
-         */
         if (
             vehicles.isNotEmpty() &&
             vehicles.none {
                 it.id == activeVehicleId
             }
         ) {
+            val firstVehicle = vehicles.first()
 
-            val firstVehicle =
-                vehicles.first()
+            activeVehicleId = firstVehicle.id
 
-            activeVehicleId =
-                firstVehicle.id
-
-            store.setActiveVehicleId(
-                firstVehicle.id
-            )
+            store.setActiveVehicleId(firstVehicle.id)
         }
     }
 
     /*
-     * ============================================================
-     * HOME MIT ZWEI STARTSEITEN
-     * ============================================================
+     * HOME
      */
-    if (
-        screen ==
-        Screen.HOME
-    ) {
+    if (screen == Screen.HOME) {
 
         HomePagerScreen(
-
-            visible =
-                homeReady,
-
-            visitedStore =
-                visitedStore,
-
+            visible = homeReady,
+            visitedStore = visitedStore,
             onSelect = {
-                screen =
-                    it
+                showPickerlDocuments = false
+                screen = it
             }
         )
 
     } else {
 
         /*
-         * ========================================================
          * TITEL
-         * ========================================================
          */
-        val title =
-            when (screen) {
+        val title = when (screen) {
 
-                Screen.AUTO ->
-                    "Mein Auto"
+            Screen.AUTO -> "Mein Auto"
 
-                Screen.REPARATUREN ->
-                    "Reparaturen"
+            Screen.REPARATUREN -> "Reparaturen"
 
-                Screen.PICKERL ->
+            Screen.PICKERL ->
+                if (showPickerlDocuments) {
+                    "Pickerl-Dokumentation"
+                } else {
                     "Pickerl / TÜV"
+                }
 
-                Screen.WARTUNGEN ->
-                    "Wartungen"
+            Screen.WARTUNGEN -> "Wartungen"
 
-                Screen.GESAMTBLICK ->
-                    "Gesamtblick"
+            Screen.GESAMTBLICK -> "Gesamtblick"
 
-                Screen.SERVICE ->
-                    "Service und Intervalle"
+            Screen.SERVICE -> "Service und Intervalle"
 
-                Screen.REIFEN ->
-                    "Reifen"
+            Screen.REIFEN -> "Reifen"
 
-                Screen.HOME ->
-                    "CARVITA"
-            }
+            Screen.HOME -> "CARVITA"
+        }
 
         DetailScaffold(
-
-            title =
-                title,
-
+            title = title,
             onBack = {
-                screen =
-                    Screen.HOME
+                if (
+                    screen == Screen.PICKERL &&
+                    showPickerlDocuments
+                ) {
+                    showPickerlDocuments = false
+                } else {
+                    screen = Screen.HOME
+                }
             }
-
         ) {
 
             when (screen) {
 
                 /*
-                 * ==================================================
                  * MEIN AUTO
-                 * ==================================================
                  */
                 Screen.AUTO ->
 
                     VehicleScreen(
+                        vehicles = vehicles,
+                        activeVehicle = activeVehicleId,
 
-                        vehicles =
-                            vehicles,
-
-                        activeVehicle =
-                            activeVehicleId,
-
-                        onActiveVehicle = {
-                            selectedVehicleId ->
+                        onActiveVehicle = { selectedVehicleId ->
 
                             val selectedVehicle =
                                 vehicles.firstOrNull {
-                                    it.id ==
-                                        selectedVehicleId
+                                    it.id == selectedVehicleId
                                 }
 
-                            if (
-                                selectedVehicle != null
-                            ) {
+                            if (selectedVehicle != null) {
 
-                                activeVehicleId =
-                                    selectedVehicle.id
+                                activeVehicleId = selectedVehicle.id
 
                                 store.setActiveVehicleId(
                                     selectedVehicle.id
@@ -226,42 +168,26 @@ fun AutoCheckApp() {
                             }
                         },
 
-                        onSave = {
-                                vehicle,
-                                oldName ->
+                        onSave = { vehicle, oldName ->
 
                             val index =
                                 vehicles.indexOfFirst {
-                                    it.id ==
-                                        vehicle.id
+                                    it.id == vehicle.id
+                                }.takeIf {
+                                    it >= 0
+                                } ?: vehicles.indexOfFirst {
+                                    it.name == oldName
                                 }
-                                    .takeIf {
-                                        it >= 0
-                                    }
-                                    ?: vehicles.indexOfFirst {
-                                        it.name ==
-                                            oldName
-                                    }
 
-                            if (
-                                index >= 0
-                            ) {
+                            if (index >= 0) {
 
-                                val oldVehicle =
-                                    vehicles[index]
+                                val oldVehicle = vehicles[index]
 
-                                vehicles[index] =
-                                    vehicle
+                                vehicles[index] = vehicle
 
-                                /*
-                                 * Bestehende Daten bei einer
-                                 * Namensänderung übernehmen.
-                                 */
                                 if (
-                                    oldVehicle.name !=
-                                    vehicle.name
+                                    oldVehicle.name != vehicle.name
                                 ) {
-
                                     migrateVehicleName(
                                         store,
                                         oldVehicle.name,
@@ -269,73 +195,42 @@ fun AutoCheckApp() {
                                     )
                                 }
 
-                            } else if (
-                                vehicles.size < 5
-                            ) {
+                            } else if (vehicles.size < 5) {
 
-                                vehicles.add(
-                                    vehicle
-                                )
+                                vehicles.add(vehicle)
                             }
 
-                            store.save(
-                                vehicles
-                            )
+                            store.save(vehicles)
 
-                            /*
-                             * Gespeichertes Fahrzeug wird
-                             * automatisch aktives Fahrzeug.
-                             */
-                            activeVehicleId =
-                                vehicle.id
+                            activeVehicleId = vehicle.id
 
-                            store.setActiveVehicleId(
-                                vehicle.id
-                            )
+                            store.setActiveVehicleId(vehicle.id)
                         },
 
-                        onDelete = {
-                                vehicle ->
+                        onDelete = { vehicle ->
 
                             val wasActive =
-                                vehicle.id ==
-                                    activeVehicleId
+                                vehicle.id == activeVehicleId
 
-                            vehicles.remove(
-                                vehicle
-                            )
+                            vehicles.remove(vehicle)
 
-                            store.deleteVehicleData(
-                                vehicle.name
-                            )
+                            store.deleteVehicleData(vehicle.name)
 
                             cancelPickerlReminder(
                                 context,
                                 vehicle.name
                             )
 
-                            store.save(
-                                vehicles
-                            )
+                            store.save(vehicles)
 
-                            /*
-                             * Wenn das aktive Fahrzeug gelöscht
-                             * wurde, wird genau ein anderes Fahrzeug
-                             * aktiv.
-                             */
-                            if (
-                                wasActive
-                            ) {
+                            if (wasActive) {
 
                                 val nextVehicle =
                                     vehicles.firstOrNull()
 
-                                if (
-                                    nextVehicle != null
-                                ) {
+                                if (nextVehicle != null) {
 
-                                    activeVehicleId =
-                                        nextVehicle.id
+                                    activeVehicleId = nextVehicle.id
 
                                     store.setActiveVehicleId(
                                         nextVehicle.id
@@ -343,50 +238,35 @@ fun AutoCheckApp() {
 
                                 } else {
 
-                                    activeVehicleId =
-                                        ""
+                                    activeVehicleId = ""
 
-                                    store.setActiveVehicleId(
-                                        ""
-                                    )
+                                    store.setActiveVehicleId("")
                                 }
                             }
                         }
                     )
 
                 /*
-                 * ==================================================
                  * REPARATUREN
-                 * ==================================================
                  */
                 Screen.REPARATUREN ->
 
                     RepairScreen(
+                        store = store,
 
-                        store =
-                            store,
+                        vehicles = if (activeVehicle != null) {
+                            listOf(activeVehicle)
+                        } else {
+                            emptyList()
+                        },
 
-                        vehicles =
-                            if (
-                                activeVehicle != null
-                            ) {
-                                listOf(
-                                    activeVehicle
-                                )
-                            } else {
-                                emptyList()
-                            },
-
-                        activeVehicle =
-                            activeVehicleName,
+                        activeVehicle = activeVehicleName,
 
                         onActiveVehicle = {
-                            // Aktives Fahrzeug wird ausschließlich
-                            // in Mein Auto geändert.
+                            // Fahrzeugwechsel nur unter Mein Auto.
                         },
 
                         onVisited = {
-
                             visitedStore.markVisited(
                                 Screen.REPARATUREN
                             )
@@ -394,77 +274,80 @@ fun AutoCheckApp() {
                     )
 
                 /*
-                 * ==================================================
-                 * PICKERL
-                 * ==================================================
+                 * PICKERL UND DOKUMENTATION
                  */
-                Screen.PICKERL ->
+                Screen.PICKERL -> {
 
-                    PickerlScreen(
+                    if (showPickerlDocuments) {
 
-                        store =
-                            store,
+                        PickerlDocumentsScreen(
+                            vehicle = activeVehicleName,
+                            onBack = {
+                                showPickerlDocuments = false
+                            }
+                        )
 
-                        vehicles =
-                            if (
-                                activeVehicle != null
-                            ) {
-                                listOf(
-                                    activeVehicle
-                                )
-                            } else {
-                                emptyList()
-                            },
+                    } else {
 
-                        activeVehicle =
-                            activeVehicleName,
+                        Column {
 
-                        onActiveVehicle = {
-                            // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
-                        },
+                            PickerlScreen(
+                                store = store,
 
-                        onVisited = {
+                                vehicles = if (activeVehicle != null) {
+                                    listOf(activeVehicle)
+                                } else {
+                                    emptyList()
+                                },
 
-                            visitedStore.markVisited(
-                                Screen.PICKERL
+                                activeVehicle = activeVehicleName,
+
+                                onActiveVehicle = {
+                                    // Fahrzeugwechsel nur unter Mein Auto.
+                                },
+
+                                onVisited = {
+                                    visitedStore.markVisited(
+                                        Screen.PICKERL
+                                    )
+                                }
                             )
+
+                            Button(
+                                onClick = {
+                                    showPickerlDocuments = true
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text("Prüfberichte und Rechnungen")
+                            }
                         }
-                    )
+                    }
+                }
 
                 /*
-                 * ==================================================
                  * WARTUNGEN
-                 * ==================================================
                  */
                 Screen.WARTUNGEN ->
 
                     MaintenanceScreen(
+                        store = store,
 
-                        store =
-                            store,
+                        vehicles = if (activeVehicle != null) {
+                            listOf(activeVehicle)
+                        } else {
+                            emptyList()
+                        },
 
-                        vehicles =
-                            if (
-                                activeVehicle != null
-                            ) {
-                                listOf(
-                                    activeVehicle
-                                )
-                            } else {
-                                emptyList()
-                            },
-
-                        activeVehicle =
-                            activeVehicleName,
+                        activeVehicle = activeVehicleName,
 
                         onActiveVehicle = {
-                            // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
+                            // Fahrzeugwechsel nur unter Mein Auto.
                         },
 
                         onVisited = {
-
                             visitedStore.markVisited(
                                 Screen.WARTUNGEN
                             )
@@ -472,38 +355,26 @@ fun AutoCheckApp() {
                     )
 
                 /*
-                 * ==================================================
                  * GESAMTBLICK
-                 * ==================================================
                  */
                 Screen.GESAMTBLICK ->
 
                     OverviewScreen(
+                        store = store,
 
-                        store =
-                            store,
+                        vehicles = if (activeVehicle != null) {
+                            listOf(activeVehicle)
+                        } else {
+                            emptyList()
+                        },
 
-                        vehicles =
-                            if (
-                                activeVehicle != null
-                            ) {
-                                listOf(
-                                    activeVehicle
-                                )
-                            } else {
-                                emptyList()
-                            },
-
-                        activeVehicle =
-                            activeVehicleName,
+                        activeVehicle = activeVehicleName,
 
                         onActiveVehicle = {
-                            // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
+                            // Fahrzeugwechsel nur unter Mein Auto.
                         },
 
                         onVisited = {
-
                             visitedStore.markVisited(
                                 Screen.GESAMTBLICK
                             )
@@ -511,42 +382,28 @@ fun AutoCheckApp() {
                     )
 
                 /*
-                 * ==================================================
                  * SERVICE UND INTERVALLE
-                 * ==================================================
                  */
                 Screen.SERVICE ->
 
                     ServiceMenuScreen(
+                        store = store,
 
-                        store =
-                            store,
+                        vehicles = if (activeVehicle != null) {
+                            listOf(activeVehicle)
+                        } else {
+                            emptyList()
+                        },
 
-                        vehicles =
-                            if (
-                                activeVehicle != null
-                            ) {
-                                listOf(
-                                    activeVehicle
-                                )
-                            } else {
-                                emptyList()
-                            },
+                        activeVehicle = activeVehicleName,
 
-                        activeVehicle =
-                            activeVehicleName,
-
-                        activeVehicleData =
-                            activeVehicle,
+                        activeVehicleData = activeVehicle,
 
                         onActiveVehicle = {
-                            // Das aktive Fahrzeug wird weiterhin
-                            // ausschließlich in "Mein Auto"
-                            // geändert.
+                            // Fahrzeugwechsel nur unter Mein Auto.
                         },
 
                         onVisited = {
-
                             visitedStore.markVisited(
                                 Screen.SERVICE
                             )
@@ -554,38 +411,26 @@ fun AutoCheckApp() {
                     )
 
                 /*
-                 * ==================================================
                  * REIFEN
-                 * ==================================================
                  */
                 Screen.REIFEN ->
 
                     TireScreen(
+                        store = store,
 
-                        store =
-                            store,
+                        vehicles = if (activeVehicle != null) {
+                            listOf(activeVehicle)
+                        } else {
+                            emptyList()
+                        },
 
-                        vehicles =
-                            if (
-                                activeVehicle != null
-                            ) {
-                                listOf(
-                                    activeVehicle
-                                )
-                            } else {
-                                emptyList()
-                            },
-
-                        activeVehicle =
-                            activeVehicleName,
+                        activeVehicle = activeVehicleName,
 
                         onActiveVehicle = {
-                            // Aktives Fahrzeug wird ausschließlich
-                            // in "Mein Auto" geändert.
+                            // Fahrzeugwechsel nur unter Mein Auto.
                         },
 
                         onVisited = {
-
                             visitedStore.markVisited(
                                 Screen.REIFEN
                             )
