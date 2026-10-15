@@ -975,39 +975,29 @@ private fun PickerlDocumentPreview(
             )
 
             if (previewBitmap != null) {
-                Image(
-                    bitmap = previewBitmap.asImageBitmap(),
-                    contentDescription = "Vorschau ${document.name}",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp)
-                        .clickable {
-                            // Die Vollbildansicht wird unten eingeblendet.
-                        },
-                    contentScale = ContentScale.Fit
-                )
-
                 ZoomableDocumentImage(
                     bitmap = previewBitmap,
                     contentDescription = "Vorschau ${document.name}"
                 )
 
-                if (
-                    document.mimeType.equals(
-                        "application/pdf",
-                        ignoreCase = true
-                    ) ||
-                    document.name.endsWith(
-                        ".pdf",
-                        ignoreCase = true
-                    )
-                ) {
-                    Text(
-                        text = "Vorschau der ersten PDF-Seite – antippen zum Vergrößern",
-                        color = Color(0xFFB8BEC8),
-                        fontSize = 12.sp
-                    )
-                }
+                Text(
+                    text = if (
+                        document.mimeType.equals(
+                            "application/pdf",
+                            ignoreCase = true
+                        ) ||
+                        document.name.endsWith(
+                            ".pdf",
+                            ignoreCase = true
+                        )
+                    ) {
+                        "PDF-Vorschau der ersten Seite – antippen zum Vergrößern"
+                    } else {
+                        "Bild antippen zum Vergrößern"
+                    },
+                    color = Color(0xFFB8BEC8),
+                    fontSize = 12.sp
+                )
             } else {
                 Text(
                     text = "Vorschau nicht verfügbar. Bitte prüfe, ob die Originaldatei noch erreichbar ist.",
@@ -1025,6 +1015,22 @@ private fun ZoomableDocumentImage(
     contentDescription: String
 ) {
     var showZoom by remember { mutableStateOf(false) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+
+    val transformState = rememberTransformableState {
+            zoomChange,
+            panChange,
+            _ ->
+        val newScale = (scale * zoomChange).coerceIn(1f, 6f)
+        scale = newScale
+
+        offset = if (newScale <= 1f) {
+            Offset.Zero
+        } else {
+            offset + panChange
+        }
+    }
 
     Image(
         bitmap = bitmap.asImageBitmap(),
@@ -1033,28 +1039,14 @@ private fun ZoomableDocumentImage(
             .fillMaxWidth()
             .height(260.dp)
             .clickable {
+                scale = 1f
+                offset = Offset.Zero
                 showZoom = true
             },
         contentScale = ContentScale.Fit
     )
 
     if (showZoom) {
-        var scale by remember { mutableFloatStateOf(1f) }
-        var offset by remember { mutableStateOf(Offset.Zero) }
-
-        val transformState = rememberTransformableState {
-                zoomChange,
-                panChange,
-                _ ->
-            scale = (scale * zoomChange).coerceIn(1f, 6f)
-
-            offset = if (scale <= 1f) {
-                Offset.Zero
-            } else {
-                offset + panChange
-            }
-        }
-
         Dialog(
             onDismissRequest = {
                 showZoom = false
@@ -1119,11 +1111,7 @@ private fun ZoomableDocumentImage(
 
                 Text(
                     text = "Mit zwei Fingern zoomen und verschieben · " +
-                        String.format(
-                            Locale.GERMANY,
-                            "%.1f×",
-                            scale
-                        ),
+                        String.format(Locale.GERMANY, "%.1f×", scale),
                     color = Color.LightGray,
                     fontSize = 13.sp,
                     modifier = Modifier
