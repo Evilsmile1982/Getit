@@ -55,9 +55,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val pickerlIsoFormatter =
-    DateTimeFormatter.ofPattern(
-        "yyyy-MM-dd"
-    )
+    DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
 private val pickerlMonths =
     listOf(
@@ -75,45 +73,23 @@ private val pickerlMonths =
         "DEZEMBER"
     )
 
-private fun pickerlMonthName(
-    month: Int
-): String {
-
-    return pickerlMonths.getOrElse(
-        month - 1
-    ) {
+private fun pickerlMonthName(month: Int): String {
+    return pickerlMonths.getOrElse(month - 1) {
         "JANUAR"
     }
 }
 
-private fun pickerlParseDate(
-    value: String
-): LocalDate? {
+private fun pickerlParseDate(value: String): LocalDate? {
+    val text = value.trim()
 
-    val text =
-        value.trim()
-
-    if (text.isBlank()) {
-        return null
-    }
+    if (text.isBlank()) return null
 
     return try {
-
-        LocalDate.parse(
-            text,
-            pickerlIsoFormatter
-        )
-
+        LocalDate.parse(text, pickerlIsoFormatter)
     } catch (_: Exception) {
-
         try {
-
-            LocalDate.parse(
-                text
-            )
-
+            LocalDate.parse(text)
         } catch (_: Exception) {
-
             null
         }
     }
@@ -123,34 +99,19 @@ private fun pickerlStorageDate(
     month: Int,
     year: String
 ): String {
+    val cleanYear = year.trim()
 
-    val cleanYear =
-        year.trim()
+    if (cleanYear.length != 4) return ""
 
-    if (
-        cleanYear.length != 4
-    ) {
-        return ""
-    }
+    val numericYear = cleanYear.toIntOrNull() ?: return ""
 
-    val numericYear =
-        cleanYear.toIntOrNull()
-            ?: return ""
-
-    if (
-        numericYear !in 1900..2200
-    ) {
-        return ""
-    }
+    if (numericYear !in 1900..2200) return ""
 
     return String.format(
         Locale.US,
         "%04d-%02d-01",
         numericYear,
-        month.coerceIn(
-            1,
-            12
-        )
+        month.coerceIn(1, 12)
     )
 }
 
@@ -158,13 +119,8 @@ private fun pickerlMonthYear(
     month: Int,
     year: String
 ): String {
-
-    if (
-        year.length != 4
-    ) {
-        return pickerlMonthName(
-            month
-        )
+    if (year.length != 4) {
+        return pickerlMonthName(month)
     }
 
     return "${pickerlMonthName(month)} $year"
@@ -174,49 +130,30 @@ private fun copyPickerlImage(
     context: Context,
     uri: Uri
 ): String? {
-
     return try {
+        val type = context.contentResolver.getType(uri)
 
-        val type =
-            context.contentResolver
-                .getType(uri)
+        val extension = when (type) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
 
-        val extension =
-            when (type) {
-                "image/png" ->
-                    "png"
-
-                "image/webp" ->
-                    "webp"
-
-                else ->
-                    "jpg"
-            }
-
-        val file =
-            File(
-                context.filesDir,
-                "pickerl_${System.currentTimeMillis()}.$extension"
-            )
+        val file = File(
+            context.filesDir,
+            "pickerl_${System.currentTimeMillis()}.$extension"
+        )
 
         context.contentResolver
             .openInputStream(uri)
             ?.use { input ->
-
-                FileOutputStream(file)
-                    .use { output ->
-
-                        input.copyTo(
-                            output
-                        )
-                    }
-            }
-            ?: return null
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return null
 
         file.absolutePath
-
     } catch (_: Exception) {
-
         null
     }
 }
@@ -225,29 +162,22 @@ private fun savePickerlCameraImage(
     context: Context,
     bitmap: Bitmap
 ): String? {
-
     return try {
+        val file = File(
+            context.filesDir,
+            "pickerl_${System.currentTimeMillis()}.jpg"
+        )
 
-        val file =
-            File(
-                context.filesDir,
-                "pickerl_${System.currentTimeMillis()}.jpg"
+        FileOutputStream(file).use { output ->
+            bitmap.compress(
+                Bitmap.CompressFormat.JPEG,
+                92,
+                output
             )
-
-        FileOutputStream(file)
-            .use { output ->
-
-                bitmap.compress(
-                    Bitmap.CompressFormat.JPEG,
-                    92,
-                    output
-                )
-            }
+        }
 
         file.absolutePath
-
     } catch (_: Exception) {
-
         null
     }
 }
@@ -260,7 +190,6 @@ private fun PickerlMonthYear(
     onMonthChanged: (Int) -> Unit,
     onYearChanged: (String) -> Unit
 ) {
-
     var expanded by remember {
         mutableStateOf(false)
     }
@@ -272,37 +201,21 @@ private fun PickerlMonthYear(
         fontSize = 16.sp
     )
 
-    Spacer(
-        modifier = Modifier.height(6.dp)
-    )
+    Spacer(modifier = Modifier.height(6.dp))
 
     Row(
-        modifier =
-            Modifier.fillMaxWidth(),
-        horizontalArrangement =
-            Arrangement.spacedBy(8.dp),
-        verticalAlignment =
-            Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Box(
-            modifier =
-                Modifier.weight(1f)
-        ) {
-
+        Box(modifier = Modifier.weight(1f)) {
             OutlinedButton(
-                modifier =
-                    Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     expanded = true
                 }
             ) {
-
-                Text(
-                    pickerlMonthName(
-                        month
-                    )
-                )
+                Text(pickerlMonthName(month))
             }
 
             DropdownMenu(
@@ -311,56 +224,35 @@ private fun PickerlMonthYear(
                     expanded = false
                 }
             ) {
-
-                pickerlMonths
-                    .forEachIndexed {
-                        index,
-                        name ->
-
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    name
-                                )
-                            },
-                            onClick = {
-
-                                onMonthChanged(
-                                    index + 1
-                                )
-
-                                expanded =
-                                    false
-                            }
-                        )
-                    }
+                pickerlMonths.forEachIndexed { index, name ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(name)
+                        },
+                        onClick = {
+                            onMonthChanged(index + 1)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
 
         OutlinedTextField(
-            modifier =
-                Modifier.weight(1f),
+            modifier = Modifier.weight(1f),
             value = year,
             onValueChange = { value ->
-
                 if (
                     value.length <= 4 &&
-                    value.all {
-                        it.isDigit()
-                    }
+                    value.all { it.isDigit() }
                 ) {
-
-                    onYearChanged(
-                        value
-                    )
+                    onYearChanged(value)
                 }
             },
             label = {
-                Text(
-                    "Jahr"
-                )
+                Text("Jahr")
             },
-            singleLine = true,
+            singleLine = true
         )
     }
 }
@@ -373,21 +265,15 @@ fun PickerlScreen(
     onActiveVehicle: (String) -> Unit,
     onVisited: () -> Unit
 ) {
-
-    val context =
-        LocalContext.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         onVisited()
     }
 
-    val currentYear =
-        remember {
-            LocalDate
-                .now()
-                .year
-                .toString()
-        }
+    val currentYear = remember {
+        LocalDate.now().year.toString()
+    }
 
     var lastMonth by remember {
         mutableStateOf(1)
@@ -437,121 +323,62 @@ fun PickerlScreen(
         mutableStateOf(false)
     }
 
-    LaunchedEffect(
-        activeVehicle
-    ) {
+    LaunchedEffect(activeVehicle) {
+        val existing = store.loadPickerl()
+            .firstOrNull {
+                it.vehicle == activeVehicle
+            }
 
-        val existing =
-            store.loadPickerl()
-                .firstOrNull {
-                    it.vehicle ==
-                        activeVehicle
-                }
-
-        if (
-            existing == null
-        ) {
-
+        if (existing == null) {
             lastMonth = 1
             lastYear = currentYear
-
             nextMonth = 1
             nextYear = currentYear
-
             notes = ""
             reminder = true
             reminderMonths = 3
             photoPath = ""
-
             saved = false
             editing = true
-
         } else {
-
-            pickerlParseDate(
-                existing.lastDate
-            )?.let { date ->
-
-                lastMonth =
-                    date.monthValue
-
-                lastYear =
-                    date.year.toString()
+            pickerlParseDate(existing.lastDate)?.let { date ->
+                lastMonth = date.monthValue
+                lastYear = date.year.toString()
             }
 
-            pickerlParseDate(
-                existing.nextDate
-            )?.let { date ->
-
-                nextMonth =
-                    date.monthValue
-
-                nextYear =
-                    date.year.toString()
+            pickerlParseDate(existing.nextDate)?.let { date ->
+                nextMonth = date.monthValue
+                nextYear = date.year.toString()
             }
 
-            notes =
-                existing.notes
-
-            reminder =
-                existing.reminder
-
-            reminderMonths =
-                existing.reminderMonths
-                    .coerceIn(
-                        1,
-                        5
-                    )
-
-            photoPath =
-                existing.photoUri
-
+            notes = existing.notes
+            reminder = existing.reminder
+            reminderMonths = existing.reminderMonths.coerceIn(1, 5)
+            photoPath = existing.photoUri
             saved = true
             editing = false
         }
     }
 
-    LaunchedEffect(
-        photoPath
-    ) {
-
-        photoBitmap =
-            if (
-                photoPath.isBlank()
-            ) {
+    LaunchedEffect(photoPath) {
+        photoBitmap = if (photoPath.isBlank()) {
+            null
+        } else {
+            try {
+                BitmapFactory.decodeFile(photoPath)
+            } catch (_: Exception) {
                 null
-            } else {
-
-                try {
-
-                    BitmapFactory
-                        .decodeFile(
-                            photoPath
-                        )
-
-                } catch (_: Exception) {
-
-                    null
-                }
             }
+        }
     }
 
     val galleryLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.GetContent()
         ) { uri ->
-
-            if (
-                uri != null
-            ) {
-
-                copyPickerlImage(
-                    context,
-                    uri
-                )?.let { path ->
-
-                    photoPath =
-                        path
+            if (uri != null) {
+                copyPickerlImage(context, uri)?.let { path ->
+                    photoPath = path
                 }
             }
         }
@@ -560,83 +387,42 @@ fun PickerlScreen(
         rememberLauncherForActivityResult(
             ActivityResultContracts.TakePicturePreview()
         ) { bitmap ->
-
-            if (
-                bitmap != null
-            ) {
-
-                savePickerlCameraImage(
-                    context,
-                    bitmap
-                )?.let { path ->
-
-                    photoPath =
-                        path
+            if (bitmap != null) {
+                savePickerlCameraImage(context, bitmap)?.let { path ->
+                    photoPath = path
                 }
             }
         }
 
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-    ) {
-
+    Column(modifier = Modifier.fillMaxSize()) {
         VehicleSelector(
             vehicles = vehicles,
             activeVehicle = activeVehicle,
             onSelected = onActiveVehicle
         )
 
-        Spacer(
-            modifier =
-                Modifier.height(10.dp)
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        if (
-            vehicles.isEmpty()
-        ) {
-
+        if (vehicles.isEmpty()) {
             Card(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            Color(
-                                0xFF11141A
-                            )
-                    )
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF11141A)
+                )
             ) {
-
                 Text(
-                    modifier =
-                        Modifier.padding(
-                            16.dp
-                        ),
-                    text =
-                        "Bitte zuerst unter „Mein Auto“ ein Fahrzeug anlegen.",
-                    color =
-                        Color.White
+                    modifier = Modifier.padding(16.dp),
+                    text = "Bitte zuerst unter „Mein Auto“ ein Fahrzeug anlegen.",
+                    color = Color.White
                 )
             }
-
         } else {
-
             LazyColumn(
-                modifier =
-                    Modifier.fillMaxSize(),
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
-                    )
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-
                 item {
-
-                    if (
-                        editing
-                    ) {
-
+                    if (editing) {
                         PickerlEditCard(
                             lastMonth = lastMonth,
                             lastYear = lastYear,
@@ -644,12 +430,9 @@ fun PickerlScreen(
                             nextYear = nextYear,
                             notes = notes,
                             reminder = reminder,
-                            reminderMonths =
-                                reminderMonths,
-                            reminderMenuExpanded =
-                                reminderMenuExpanded,
-                            photoBitmap =
-                                photoBitmap,
+                            reminderMonths = reminderMonths,
+                            reminderMenuExpanded = reminderMenuExpanded,
+                            photoBitmap = photoBitmap,
                             onLastMonth = {
                                 lastMonth = it
                             },
@@ -669,100 +452,66 @@ fun PickerlScreen(
                                 reminder = it
                             },
                             onReminderMonths = {
-                                reminderMonths =
-                                    it
+                                reminderMonths = it
                             },
-                            onReminderMenu =
-                                {
-                                    reminderMenuExpanded =
-                                        it
-                                },
+                            onReminderMenu = {
+                                reminderMenuExpanded = it
+                            },
                             onGallery = {
-                                galleryLauncher.launch(
-                                    "image/*"
-                                )
+                                galleryLauncher.launch("image/*")
                             },
                             onCamera = {
-                                cameraLauncher.launch(
-                                    null
-                                )
+                                cameraLauncher.launch(null)
                             },
                             onRemovePhoto = {
                                 photoPath = ""
                                 photoBitmap = null
                             },
                             onSave = {
+                                val lastDate = pickerlStorageDate(
+                                    lastMonth,
+                                    lastYear
+                                )
 
-                                val lastDate =
-                                    pickerlStorageDate(
-                                        lastMonth,
-                                        lastYear
-                                    )
-
-                                val nextDate =
-                                    pickerlStorageDate(
-                                        nextMonth,
-                                        nextYear
-                                    )
+                                val nextDate = pickerlStorageDate(
+                                    nextMonth,
+                                    nextYear
+                                )
 
                                 if (
                                     lastDate.isBlank() ||
                                     nextDate.isBlank()
                                 ) {
-
                                     return@PickerlEditCard
                                 }
 
-                                val months =
-                                    reminderMonths
-                                        .coerceIn(
-                                            1,
-                                            5
-                                        )
+                                val months = reminderMonths.coerceIn(1, 5)
 
-                                val newEntry =
-                                    Pickerl(
-                                        vehicle =
-                                            activeVehicle,
-                                        lastDate =
-                                            lastDate,
-                                        nextDate =
-                                            nextDate,
-                                        notes =
-                                            notes.trim(),
-                                        reminder =
-                                            reminder,
-                                        photoUri =
-                                            photoPath,
-                                        reminderMonths =
-                                            months
-                                    )
-
-                                val newList =
-                                    store.loadPickerl()
-                                        .filterNot {
-                                            it.vehicle ==
-                                                activeVehicle
-                                        } +
-                                        newEntry
-
-                                store.savePickerl(
-                                    newList
+                                val newEntry = Pickerl(
+                                    vehicle = activeVehicle,
+                                    lastDate = lastDate,
+                                    nextDate = nextDate,
+                                    notes = notes.trim(),
+                                    reminder = reminder,
+                                    photoUri = photoPath,
+                                    reminderMonths = months
                                 )
 
-                                if (
-                                    reminder
-                                ) {
+                                val newList = store.loadPickerl()
+                                    .filterNot {
+                                        it.vehicle == activeVehicle
+                                    } + newEntry
 
+                                store.savePickerl(newList)
+
+                                if (reminder) {
                                     schedulePickerlReminder(
                                         context,
                                         activeVehicle,
                                         nextDate,
                                         months
                                     )
-
                                 } else {
-
                                     cancelPickerlReminder(
                                         context,
                                         activeVehicle
@@ -773,38 +522,23 @@ fun PickerlScreen(
                                 editing = false
                             },
                             onCancel = {
-
-                                if (
-                                    saved
-                                ) {
+                                if (saved) {
                                     editing = false
                                 }
                             },
-                            showCancel =
-                                saved
+                            showCancel = saved
                         )
-
                     } else {
-
                         PickerlSummaryCard(
-                            vehicle =
-                                activeVehicle,
-                            lastMonth =
-                                lastMonth,
-                            lastYear =
-                                lastYear,
-                            nextMonth =
-                                nextMonth,
-                            nextYear =
-                                nextYear,
-                            reminder =
-                                reminder,
-                            reminderMonths =
-                                reminderMonths,
-                            notes =
-                                notes,
-                            photoBitmap =
-                                photoBitmap,
+                            vehicle = activeVehicle,
+                            lastMonth = lastMonth,
+                            lastYear = lastYear,
+                            nextMonth = nextMonth,
+                            nextYear = nextYear,
+                            reminder = reminder,
+                            reminderMonths = reminderMonths,
+                            notes = notes,
+                            photoBitmap = photoBitmap,
                             onEdit = {
                                 editing = true
                             }
@@ -842,256 +576,147 @@ private fun PickerlEditCard(
     onCancel: () -> Unit,
     showCancel: Boolean
 ) {
-
     Card(
-        modifier =
-            Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(
-                        0xFF11141A
-                    )
-            )
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11141A)
+        )
     ) {
-
         Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
-                )
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
             Text(
-                text =
-                    "Pickerl / TÜV",
-                color =
-                    Color.White,
-                fontWeight =
-                    FontWeight.Bold,
-                fontSize =
-                    22.sp
+                text = "Pickerl / TÜV",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp
             )
 
             PickerlMonthYear(
-                title =
-                    "Letzter Termin",
-                month =
-                    lastMonth,
-                year =
-                    lastYear,
-                onMonthChanged =
-                    onLastMonth,
-                onYearChanged =
-                    onLastYear
+                title = "Letzter Termin",
+                month = lastMonth,
+                year = lastYear,
+                onMonthChanged = onLastMonth,
+                onYearChanged = onLastYear
             )
 
-            Spacer(
-                modifier =
-                    Modifier.height(6.dp)
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             PickerlMonthYear(
-                title =
-                    "Nächster Termin",
-                month =
-                    nextMonth,
-                year =
-                    nextYear,
-                onMonthChanged =
-                    onNextMonth,
-                onYearChanged =
-                    onNextYear
+                title = "Nächster Termin",
+                month = nextMonth,
+                year = nextYear,
+                onMonthChanged = onNextMonth,
+                onYearChanged = onNextYear
             )
 
             Text(
-                text =
-                    "Nächster Termin: ${
-                        pickerlMonthYear(
-                            nextMonth,
-                            nextYear
-                        )
-                    }",
-                color =
-                    Color.White,
-                fontWeight =
-                    FontWeight.Bold
+                text = "Nächster Termin: ${
+                    pickerlMonthYear(nextMonth, nextYear)
+                }",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(
-                modifier =
-                    Modifier.height(6.dp)
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text =
-                    "Pickerl-Foto",
-                color =
-                    Color.White,
-                fontWeight =
-                    FontWeight.Bold
+                text = "Pickerl-Foto",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
 
             Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-
                 OutlinedButton(
-                    modifier =
-                        Modifier.weight(1f),
-                    onClick =
-                        onGallery
+                    modifier = Modifier.weight(1f),
+                    onClick = onGallery
                 ) {
-
                     Icon(
-                        imageVector =
-                            Icons.Default.PhotoLibrary,
-                        contentDescription =
-                            "Galerie"
+                        imageVector = Icons.Default.PhotoLibrary,
+                        contentDescription = "Galerie"
                     )
 
-                    Spacer(
-                        modifier =
-                            Modifier.size(6.dp)
-                    )
-
-                    Text(
-                        "Galerie"
-                    )
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text("Galerie")
                 }
 
                 OutlinedButton(
-                    modifier =
-                        Modifier.weight(1f),
-                    onClick =
-                        onCamera
+                    modifier = Modifier.weight(1f),
+                    onClick = onCamera
                 ) {
-
                     Icon(
-                        imageVector =
-                            Icons.Default.PhotoCamera,
-                        contentDescription =
-                            "Kamera"
+                        imageVector = Icons.Default.PhotoCamera,
+                        contentDescription = "Kamera"
                     )
 
-                    Spacer(
-                        modifier =
-                            Modifier.size(6.dp)
-                    )
-
-                    Text(
-                        "Kamera"
-                    )
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text("Kamera")
                 }
             }
 
-            if (
-                photoBitmap != null
-            ) {
-
+            if (photoBitmap != null) {
                 Image(
-                    bitmap =
-                        photoBitmap.asImageBitmap(),
-                    contentDescription =
-                        "Pickerl Foto",
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(220.dp),
-                    contentScale =
-                        ContentScale.Crop
+                    bitmap = photoBitmap.asImageBitmap(),
+                    contentDescription = "Pickerl Foto",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                    contentScale = ContentScale.Crop
                 )
 
                 TextButton(
-                    modifier =
-                        Modifier.align(
-                            Alignment.End
-                        ),
-                    onClick =
-                        onRemovePhoto
+                    modifier = Modifier.align(Alignment.End),
+                    onClick = onRemovePhoto
                 ) {
-
-                    Text(
-                        "Foto entfernen"
-                    )
+                    Text("Foto entfernen")
                 }
             }
 
             OutlinedTextField(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                value =
-                    notes,
-                onValueChange =
-                    onNotes,
+                modifier = Modifier.fillMaxWidth(),
+                value = notes,
+                onValueChange = onNotes,
                 label = {
-                    Text(
-                        "Notizen"
-                    )
+                    Text("Notizen")
                 }
             )
 
             Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.SpaceBetween,
-                verticalAlignment =
-                    Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Text(
-                    text =
-                        "Erinnerung",
-                    color =
-                        Color.White,
-                    fontWeight =
-                        FontWeight.Bold
+                    text = "Erinnerung",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
 
                 Switch(
-                    checked =
-                        reminder,
-                    onCheckedChange =
-                        onReminder
+                    checked = reminder,
+                    onCheckedChange = onReminder
                 )
             }
 
-            if (
-                reminder
-            ) {
-
+            if (reminder) {
                 Text(
-                    text =
-                        "Erinnerung vor Ablauf",
-                    color =
-                        Color.White
+                    text = "Erinnerung vor Ablauf",
+                    color = Color.White
                 )
 
                 Box {
-
                     OutlinedButton(
                         onClick = {
-                            onReminderMenu(
-                                true
-                            )
+                            onReminderMenu(true)
                         }
                     ) {
-
                         Text(
                             "$reminderMonths " +
-                                if (
-                                    reminderMonths == 1
-                                ) {
+                                if (reminderMonths == 1) {
                                     "Monat vorher"
                                 } else {
                                     "Monate vorher"
@@ -1100,25 +725,17 @@ private fun PickerlEditCard(
                     }
 
                     DropdownMenu(
-                        expanded =
-                            reminderMenuExpanded,
+                        expanded = reminderMenuExpanded,
                         onDismissRequest = {
-                            onReminderMenu(
-                                false
-                            )
+                            onReminderMenu(false)
                         }
                     ) {
-
-                        (1..5).forEach {
-                            months ->
-
+                        (1..5).forEach { months ->
                             DropdownMenuItem(
                                 text = {
                                     Text(
                                         "$months " +
-                                            if (
-                                                months == 1
-                                            ) {
+                                            if (months == 1) {
                                                 "Monat vorher"
                                             } else {
                                                 "Monate vorher"
@@ -1126,14 +743,8 @@ private fun PickerlEditCard(
                                     )
                                 },
                                 onClick = {
-
-                                    onReminderMonths(
-                                        months
-                                    )
-
-                                    onReminderMenu(
-                                        false
-                                    )
+                                    onReminderMonths(months)
+                                    onReminderMenu(false)
                                 }
                             )
                         }
@@ -1141,37 +752,21 @@ private fun PickerlEditCard(
                 }
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(6.dp)
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             Button(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                onClick =
-                    onSave
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onSave
             ) {
-
-                Text(
-                    "Pickerl speichern"
-                )
+                Text("Pickerl speichern")
             }
 
-            if (
-                showCancel
-            ) {
-
+            if (showCancel) {
                 TextButton(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    onClick =
-                        onCancel
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onCancel
                 ) {
-
-                    Text(
-                        "Abbrechen"
-                    )
+                    Text("Abbrechen")
                 }
             }
         }
@@ -1191,172 +786,101 @@ private fun PickerlSummaryCard(
     photoBitmap: Bitmap?,
     onEdit: () -> Unit
 ) {
-
     Card(
-        modifier =
-            Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(
-                        0xFF11141A
-                    )
-            )
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11141A)
+        )
     ) {
-
         Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    8.dp
-                )
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
             Text(
-                text =
-                    "Gespeichertes Pickerl",
-                color =
-                    Color.White,
-                fontWeight =
-                    FontWeight.Bold,
-                    fontSize =
-                    22.sp
+                text = "Gespeichertes Pickerl",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp
             )
 
             Text(
-                text =
-                    "Fahrzeug: $vehicle",
-                color =
-                    Color.White,
-                fontSize =
-                    17.sp
+                text = "Fahrzeug: $vehicle",
+                color = Color.White,
+                fontSize = 17.sp
             )
 
             Text(
-                text =
-                    "Letzter Termin: ${
-                        pickerlMonthYear(
-                            lastMonth,
-                            lastYear
-                        )
-                    }",
-                color =
-                    Color.White
+                text = "Letzter Termin: ${
+                    pickerlMonthYear(lastMonth, lastYear)
+                }",
+                color = Color.White
             )
 
             Text(
-                text =
-                    "Nächster Termin: ${
-                        pickerlMonthYear(
-                            nextMonth,
-                            nextYear
-                        )
-                    }",
-                color =
-                    Color.White,
-                fontWeight =
-                    FontWeight.Bold,
-                fontSize =
-                    18.sp
+                text = "Nächster Termin: ${
+                    pickerlMonthYear(nextMonth, nextYear)
+                }",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
             )
 
             Text(
-                text =
-                    if (
-                        photoBitmap != null
-                    ) {
-                        "Pickerl-Foto: gespeichert"
-                    } else {
-                        "Pickerl-Foto: kein Foto"
-                    },
-                color =
-                    Color.White
+                text = if (photoBitmap != null) {
+                    "Pickerl-Foto: gespeichert"
+                } else {
+                    "Pickerl-Foto: kein Foto"
+                },
+                color = Color.White
             )
 
             Text(
-                text =
-                    if (
-                        reminder
-                    ) {
-                        "Erinnerung: $reminderMonths " +
-                            if (
-                                reminderMonths == 1
-                            ) {
-                                "Monat vorher"
-                            } else {
-                                "Monate vorher"
-                            }
-                    } else {
-                        "Erinnerung: ausgeschaltet"
-                    },
-                color =
-                    Color.White
+                text = if (reminder) {
+                    "Erinnerung: $reminderMonths " +
+                        if (reminderMonths == 1) {
+                            "Monat vorher"
+                        } else {
+                            "Monate vorher"
+                        }
+                } else {
+                    "Erinnerung: ausgeschaltet"
+                },
+                color = Color.White
             )
 
-            if (
-                notes.isNotBlank()
-            ) {
-
+            if (notes.isNotBlank()) {
                 Text(
-                    text =
-                        "Notizen: $notes",
-                    color =
-                        Color.White
+                    text = "Notizen: $notes",
+                    color = Color.White
                 )
             }
 
-            if (
-                photoBitmap != null
-            ) {
-
-                Spacer(
-                    modifier =
-                        Modifier.height(4.dp)
-                )
+            if (photoBitmap != null) {
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Image(
-                    bitmap =
-                        photoBitmap.asImageBitmap(),
-                    contentDescription =
-                        "Gespeichertes Pickerl-Foto",
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(220.dp),
-                    contentScale =
-                        ContentScale.Crop
+                    bitmap = photoBitmap.asImageBitmap(),
+                    contentDescription = "Gespeichertes Pickerl-Foto",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                    contentScale = ContentScale.Crop
                 )
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(6.dp)
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             Button(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                onClick =
-                    onEdit
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onEdit
             ) {
-
-                Text(
-                    "Ändern"
-                )
+                Text("Ändern")
             }
 
             Text(
-                text =
-                    "Die Daten sind lokal auf diesem Gerät gespeichert.",
-                color =
-                    Color(
-                        0xFF9AA0AA
-                    ),
-                fontSize =
-                    13.sp
+                text = "Die Daten sind lokal auf diesem Gerät gespeichert.",
+                color = Color(0xFF9AA0AA),
+                fontSize = 13.sp
             )
         }
     }
