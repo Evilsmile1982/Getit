@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -86,7 +85,7 @@ fun PickerlDocumentsScreen(
                         Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
                 } catch (_: Exception) {
-                    // Nicht alle Dateianbieter erlauben persistente Berechtigungen.
+                    // Manche Dateianbieter unterstützen keine dauerhafte Berechtigung.
                 }
 
                 val name = context.contentResolver.query(
@@ -213,12 +212,12 @@ fun PickerlDocumentsScreen(
         }
 
         Text(
-            "Gespeicherte Dokumente",
+            text = "Gespeicherte Dokumente",
             style = MaterialTheme.typography.titleMedium
         )
 
         Text(
-            "Häkchen setzen, wenn das Dokument in der PDF-Auswahl berücksichtigt werden soll."
+            text = "Häkchen setzen, wenn das Dokument in der PDF-Auswahl berücksichtigt werden soll."
         )
 
         LazyColumn(
@@ -226,7 +225,7 @@ fun PickerlDocumentsScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(
-                documents.sortedByDescending {
+                items = documents.sortedByDescending {
                     it.date
                 },
                 key = {
