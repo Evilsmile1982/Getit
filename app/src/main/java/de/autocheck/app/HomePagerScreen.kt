@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -442,7 +443,6 @@ private fun SecondHomePageContent(
             }
         )
 
-        // Neue Animation ausschließlich im verbleibenden freien Bereich.
         CarvitaFuturisticCar(
             modifier = Modifier
                 .fillMaxWidth()
@@ -490,7 +490,9 @@ private fun CarvitaFuturisticCar(
         val w = size.width
         val h = size.height
 
-        if (w <= 0f || h <= 0f) return@Canvas
+        if (w <= 0f || h <= 0f) {
+            return@Canvas
+        }
 
         val centerX = w / 2f
         val centerY = h * 0.55f
@@ -503,28 +505,28 @@ private fun CarvitaFuturisticCar(
         val top = centerY - carHeight * 0.38f
         val bottom = centerY + carHeight * 0.36f
 
-        // Dezente technische Grundlinien.
+        // Technische Grundlinie.
         drawLine(
             color = dimBlue.copy(alpha = 0.45f),
-            start = androidx.compose.ui.geometry.Offset(
+            start = Offset(
                 w * 0.10f,
                 bottom + carHeight * 0.30f
             ),
-            end = androidx.compose.ui.geometry.Offset(
+            end = Offset(
                 w * 0.90f,
                 bottom + carHeight * 0.30f
             ),
             strokeWidth = 1f
         )
 
-        // Bodenlicht unter dem Fahrzeug.
+        // Blaues Bodenlicht.
         drawLine(
             color = blue.copy(alpha = glowPulse * 0.55f),
-            start = androidx.compose.ui.geometry.Offset(
+            start = Offset(
                 left + carWidth * 0.12f,
                 bottom + carHeight * 0.16f
             ),
-            end = androidx.compose.ui.geometry.Offset(
+            end = Offset(
                 right - carWidth * 0.12f,
                 bottom + carHeight * 0.16f
             ),
@@ -570,15 +572,24 @@ private fun CarvitaFuturisticCar(
 
         // Windschutzscheibe.
         val windshield = Path().apply {
-            moveTo(left + carWidth * 0.30f, centerY - carHeight * 0.06f)
-            lineTo(centerX - carWidth * 0.12f, top + carHeight * 0.10f)
+            moveTo(
+                left + carWidth * 0.30f,
+                centerY - carHeight * 0.06f
+            )
+            lineTo(
+                centerX - carWidth * 0.12f,
+                top + carHeight * 0.10f
+            )
             quadraticTo(
                 centerX,
                 top + carHeight * 0.04f,
                 centerX + carWidth * 0.10f,
                 top + carHeight * 0.12f
             )
-            lineTo(right - carWidth * 0.24f, centerY - carHeight * 0.03f)
+            lineTo(
+                right - carWidth * 0.24f,
+                centerY - carHeight * 0.03f
+            )
             close()
         }
 
@@ -593,26 +604,28 @@ private fun CarvitaFuturisticCar(
             style = Stroke(width = 1.3f)
         )
 
-        // Technische Linien an der Fahrzeugfront.
+        // Linie an der Fahrzeugfront.
         drawLine(
             color = gold.copy(alpha = 0.8f),
-            start = androidx.compose.ui.geometry.Offset(
+            start = Offset(
                 left + carWidth * 0.16f,
                 centerY + carHeight * 0.12f
             ),
-            end = right - carWidth * 0.12f to
-                centerY + carHeight * 0.12f,
+            end = Offset(
+                right - carWidth * 0.12f,
+                centerY + carHeight * 0.12f
+            ),
             strokeWidth = 1.1f
         )
 
-        // Scheinwerfer links.
+        // Linker Scheinwerfer.
         drawLine(
             color = blue.copy(alpha = glowPulse),
-            start = androidx.compose.ui.geometry.Offset(
+            start = Offset(
                 left + carWidth * 0.07f,
                 centerY + carHeight * 0.08f
             ),
-            end = androidx.compose.ui.geometry.Offset(
+            end = Offset(
                 left + carWidth * 0.22f,
                 centerY + carHeight * 0.05f
             ),
@@ -620,14 +633,14 @@ private fun CarvitaFuturisticCar(
             cap = StrokeCap.Round
         )
 
-        // Scheinwerfer rechts.
+        // Rechter Scheinwerfer.
         drawLine(
             color = blue.copy(alpha = glowPulse),
-            start = androidx.compose.ui.geometry.Offset(
+            start = Offset(
                 right - carWidth * 0.22f,
                 centerY + carHeight * 0.05f
             ),
-            end = androidx.compose.ui.geometry.Offset(
+            end = Offset(
                 right - carWidth * 0.07f,
                 centerY + carHeight * 0.08f
             ),
@@ -646,80 +659,57 @@ private fun CarvitaFuturisticCar(
             drawCircle(
                 color = Color(0xFF080A0D),
                 radius = wheelRadius,
-                center = androidx.compose.ui.geometry.Offset(
-                    wheelX,
-                    wheelY
-                )
+                center = Offset(wheelX, wheelY)
             )
 
             drawCircle(
                 color = gold,
                 radius = wheelRadius,
-                center = androidx.compose.ui.geometry.Offset(
-                    wheelX,
-                    wheelY
-                ),
+                center = Offset(wheelX, wheelY),
                 style = Stroke(width = 1.5f)
             )
 
             drawCircle(
                 color = blue.copy(alpha = glowPulse),
                 radius = wheelRadius * 0.42f,
-                center = androidx.compose.ui.geometry.Offset(
-                    wheelX,
-                    wheelY
-                ),
+                center = Offset(wheelX, wheelY),
                 style = Stroke(width = 1.2f)
             )
 
             drawCircle(
                 color = gold.copy(alpha = 0.9f),
                 radius = wheelRadius * 0.12f,
-                center = androidx.compose.ui.geometry.Offset(
-                    wheelX,
-                    wheelY
-                )
+                center = Offset(wheelX, wheelY)
             )
         }
 
-        // Bewegter blauer Scan-Strahl im Animationsbereich.
+        // Bewegter blauer Scan-Strahl.
         val scanX = w * scanPosition
 
         drawLine(
             color = blue.copy(alpha = 0.08f),
-            start = androidx.compose.ui.geometry.Offset(
-                scanX,
-                h * 0.12f
-            ),
-            end = androidx.compose.ui.geometry.Offset(
-                scanX,
-                h * 0.92f
-            ),
+            start = Offset(scanX, h * 0.12f),
+            end = Offset(scanX, h * 0.92f),
             strokeWidth = 14f
         )
 
         drawLine(
             color = blue.copy(alpha = glowPulse),
-            start = androidx.compose.ui.geometry.Offset(
-                scanX,
-                h * 0.18f
-            ),
-            end = androidx.compose.ui.geometry.Offset(
-                scanX,
-                h * 0.86f
-            ),
+            start = Offset(scanX, h * 0.18f),
+            end = Offset(scanX, h * 0.86f),
             strokeWidth = 1.2f
         )
 
-        // Kleine goldene Statuspunkte.
+        // Goldene Statuspunkte.
         val dotY = h * 0.12f
+
         listOf(0.43f, 0.50f, 0.57f).forEachIndexed { index, xFactor ->
             drawCircle(
                 color = gold.copy(
                     alpha = if (index == 1) glowPulse else 0.45f
                 ),
                 radius = if (index == 1) 3f else 2f,
-                center = androidx.compose.ui.geometry.Offset(
+                center = Offset(
                     w * xFactor,
                     dotY
                 )
