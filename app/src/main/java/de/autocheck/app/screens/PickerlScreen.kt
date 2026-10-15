@@ -1,10 +1,11 @@
 package de.autocheck.app
 
-import de.autocheck.app.data.Pickerl
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -48,6 +49,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.autocheck.app.data.Pickerl
+import de.autocheck.app.data.PickerlDocument
 import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDate
@@ -266,6 +269,24 @@ fun PickerlScreen(
     onVisited: () -> Unit
 ) {
     val context = LocalContext.current
+
+    val documentStore = remember(context) {
+        PickerlDocumentStore(context)
+    }
+
+    var vehicleDocuments by remember(activeVehicle) {
+        mutableStateOf(
+            documentStore.load().filter {
+                it.vehicle == activeVehicle
+            }
+        )
+    }
+
+    LaunchedEffect(activeVehicle) {
+        vehicleDocuments = documentStore.load().filter {
+            it.vehicle == activeVehicle
+        }
+    }
 
     LaunchedEffect(Unit) {
         onVisited()
@@ -539,6 +560,8 @@ fun PickerlScreen(
                             reminderMonths = reminderMonths,
                             notes = notes,
                             photoBitmap = photoBitmap,
+                            documents = vehicleDocuments,
+                            context = context,
                             onEdit = {
                                 editing = true
                             }
@@ -784,6 +807,8 @@ private fun PickerlSummaryCard(
     reminderMonths: Int,
     notes: String,
     photoBitmap: Bitmap?,
+    documents: List<PickerlDocument>,
+    context: Context,
     onEdit: () -> Unit
 ) {
     Card(
@@ -868,20 +893,14 @@ private fun PickerlSummaryCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            if (documents.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onEdit
-            ) {
-                Text("Ändern")
-            }
+                Text(
+                    text = "Prüfberichte und Rechnungen",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
 
-            Text(
-                text = "Die Daten sind lokal auf diesem Gerät gespeichert.",
-                color = Color(0xFF9AA0AA),
-                fontSize = 13.sp
-            )
-        }
-    }
-}
+                documents.sortedBy
