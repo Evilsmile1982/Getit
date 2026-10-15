@@ -222,51 +222,54 @@ fun HomePagerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                if (currentPage == 0) {
-                    Card(
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            currentPage =
+                                if (currentPage == 0) 1 else 0
+                        },
+                    shape = RoundedCornerShape(50.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF29251A)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        CarvitaGold
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
+                ) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                currentPage = 1
-                            },
-                        shape = RoundedCornerShape(50.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF29251A)
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            CarvitaGold
-                        ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 2.dp
-                        )
+                            .height(38.dp)
+                            .padding(horizontal = 14.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(38.dp)
-                                .padding(horizontal = 14.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "WEITERE FUNKTIONEN",
-                                color = CarvitaGold,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Text(
+                            text = if (currentPage == 0) {
+                                "WEITERE FUNKTIONEN"
+                            } else {
+                                "HAUPTFUNKTIONEN"
+                            },
+                            color = CarvitaGold,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                            Spacer(
-                                modifier = Modifier.width(8.dp)
-                            )
+                        Spacer(
+                            modifier = Modifier.width(8.dp)
+                        )
 
-                            Text(
-                                text = "›",
-                                color = CarvitaGold,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text(
+                            text = if (currentPage == 0) "›" else "‹",
+                            color = CarvitaGold,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -345,11 +348,11 @@ private fun SecondHomePageContent(
             .padding(
                 start = 18.dp,
                 end = 18.dp,
-                top = 12.dp,
-                bottom = 36.dp
+                top = 8.dp,
+                bottom = 100.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Image(
             painter = painterResource(
@@ -358,7 +361,7 @@ private fun SecondHomePageContent(
             contentDescription = "CARVITA Logo",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(65.dp),
+                .height(55.dp),
             contentScale = ContentScale.Fit
         )
 
@@ -376,7 +379,7 @@ private fun SecondHomePageContent(
                 contentDescription = "CARVITA Garagenbild",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(170.dp),
+                    .height(140.dp),
                 contentScale = ContentScale.Crop
             )
         }
@@ -386,7 +389,8 @@ private fun SecondHomePageContent(
             color = CarvitaGold,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 2.dp)
         )
 
         SecondPageButton(
@@ -442,7 +446,7 @@ private fun SecondPageButton(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(76.dp)
+            .height(70.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
@@ -462,7 +466,7 @@ private fun SecondPageButton(
                 painter = painterResource(id = iconRes),
                 contentDescription = contentDescription,
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(9.dp)),
                 contentScale = ContentScale.Fit
             )
