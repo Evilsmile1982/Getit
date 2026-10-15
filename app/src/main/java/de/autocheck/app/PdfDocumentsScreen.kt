@@ -603,7 +603,7 @@ private fun createVehiclePdf(
             line("Leistung: ${vehicle.power.ifBlank { "–" }}")
             line("Kennzeichen: ${vehicle.plate.ifBlank { "–" }}")
             line("FIN: ${vehicle.vin.ifBlank { "–" }}")
-            line("Kaufpreis: ${vehicle.purchasePrice.ifBlank { "–" }}")
+         
             line("")
         }
 
