@@ -903,4 +903,179 @@ private fun PickerlSummaryCard(
                     fontSize = 18.sp
                 )
 
-                documents.sortedBy
+                documents.sortedByDescending { it.date }.forEach { document ->
+                    PickerlDocumentPreview(
+                        context = context,
+                        document = document
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onEdit
+            ) {
+                Text("Ändern")
+            }
+
+            Text(
+                text = "Die Daten sind lokal auf diesem Gerät gespeichert.",
+                color = Color(0xFF9AA0AA),
+                fontSize = 13.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun PickerlDocumentPreview(
+    context: Context,
+    document: PickerlDocument
+) {
+    val previewBitmap = remember(
+        document.uri,
+        document.mimeType,
+        document.name
+    ) {
+        loadPickerlDocumentPreview(context, document)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF20242B)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = document.type,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "${document.date} · ${document.name}",
+                color = Color(0xFFB8BEC8),
+                fontSize = 13.sp
+            )
+
+            if (previewBitmap != null) {
+                Image(
+                    bitmap = previewBitmap.asImageBitmap(),
+                    contentDescription = "Vorschau ${document.name}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp),
+                    contentScale = ContentScale.Fit
+                )
+
+                if (
+                    document.mimeType.equals(
+                        "application/pdf",
+                        ignoreCase = true
+                    ) ||
+                    document.name.endsWith(
+                        ".pdf",
+                        ignoreCase = true
+                    )
+                ) {
+                    Text(
+                        text = "Vorschau der ersten PDF-Seite",
+                        color = Color(0xFFB8BEC8),
+                        fontSize = 12.sp
+                    )
+                }
+            } else {
+                Text(
+                    text = "Vorschau nicht verfügbar. Bitte prüfe, ob die Originaldatei noch erreichbar ist.",
+                    color = Color(0xFFB8BEC8),
+                    fontSize = 13.sp
+                )
+            }
+        }
+    }
+}
+
+private fun loadPickerlDocumentPreview(
+    context: Context,
+    document: PickerlDocument
+): Bitmap? {
+    val uri = runCatching {
+        Uri.parse(document.uri)
+    }.getOrNull() ?: return null
+
+    return try {
+        val isPdf =
+            document.mimeType.equals(
+                "application/pdf",
+                ignoreCase = true
+            ) ||
+                document.name.endsWith(
+                    ".pdf",
+                    ignoreCase = true
+                )
+
+        if (isPdf) {
+            val descriptor: ParcelFileDescriptor =
+                context.contentResolver.openFileDescriptor(uri, "r")
+                    ?: return null
+
+            descriptor.use { fileDescriptor ->
+                PdfRenderer(fileDescriptor).use { renderer ->
+                    if (renderer.pageCount == 0) {
+                        return null
+                    }
+
+                    renderer.openPage(0).use { page ->
+                        val scale = minOf(
+                            1f,
+                            1000f / page.width
+                        )
+
+                        val width = (page.width * scale)
+                            .toInt()
+                            .coerceAtLeast(1)
+
+                        val height = (page.height * scale)
+                            .toInt()
+                            .coerceAtLeast(1)
+
+                        val bitmap = Bitmap.createBitmap(
+                            width,
+                            height,
+                            Bitmap.Config.ARGB_8888
+                        )
+
+                        bitmap.eraseColor(
+                            android.graphics.Color.WHITE
+                        )
+
+                        page.render(
+                            bitmap,
+                            null,
+                            null,
+                            PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
+                        )
+
+                        bitmap
+                    }
+                }
+            }
+        } else {
+            context.contentResolver.openInputStream(uri).use { input ->
+                if (input == null) {
+                    null
+                } else {
+                    BitmapFactory.decodeStream(input)
+                }
+            }
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
