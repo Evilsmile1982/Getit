@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import android.content.Context
@@ -9,6 +10,10 @@ import android.os.ParcelFileDescriptor
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,18 +42,23 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import de.autocheck.app.data.Pickerl
 import de.autocheck.app.data.PickerlDocument
 import java.io.File
@@ -970,8 +980,16 @@ private fun PickerlDocumentPreview(
                     contentDescription = "Vorschau ${document.name}",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(260.dp),
+                        .height(260.dp)
+                        .clickable {
+                            // Die Vollbildansicht wird unten eingeblendet.
+                        },
                     contentScale = ContentScale.Fit
+                )
+
+                ZoomableDocumentImage(
+                    bitmap = previewBitmap,
+                    contentDescription = "Vorschau ${document.name}"
                 )
 
                 if (
@@ -985,7 +1003,7 @@ private fun PickerlDocumentPreview(
                     )
                 ) {
                     Text(
-                        text = "Vorschau der ersten PDF-Seite",
+                        text = "Vorschau der ersten PDF-Seite – antippen zum Vergrößern",
                         color = Color(0xFFB8BEC8),
                         fontSize = 12.sp
                     )
@@ -996,6 +1014,135 @@ private fun PickerlDocumentPreview(
                     color = Color(0xFFB8BEC8),
                     fontSize = 13.sp
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZoomableDocumentImage(
+    bitmap: Bitmap,
+    contentDescription: String
+) {
+    var showZoom by remember { mutableStateOf(false) }
+
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = contentDescription,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(260.dp)
+            .clickable {
+                showZoom = true
+            },
+        contentScale = ContentScale.Fit
+    )
+
+    if (showZoom) {
+        var scale by remember { mutableFloatStateOf(1f) }
+        var offset by remember { mutableStateOf(Offset.Zero) }
+
+        val transformState = rememberTransformableState {
+                zoomChange,
+                panChange,
+                _ ->
+            scale = (scale * zoomChange).coerceIn(1f, 6f)
+
+            offset = if (scale <= 1f) {
+                Offset.Zero
+            } else {
+                offset + panChange
+            }
+        }
+
+        Dialog(
+            onDismissRequest = {
+                showZoom = false
+            },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .padding(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Dokument",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+
+                    TextButton(
+                        onClick = {
+                            showZoom = false
+                        }
+                    ) {
+                        Text(
+                            text = "Schließen",
+                            color = Color.White
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = contentDescription,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                translationX = offset.x
+                                translationY = offset.y
+                            }
+                            .transformable(state = transformState)
+                    )
+                }
+
+                Text(
+                    text = "Mit zwei Fingern zoomen und verschieben · " +
+                        String.format(
+                            Locale.GERMANY,
+                            "%.1f×",
+                            scale
+                        ),
+                    color = Color.LightGray,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(vertical = 10.dp)
+                )
+
+                TextButton(
+                    onClick = {
+                        scale = 1f
+                        offset = Offset.Zero
+                    },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text(
+                        text = "Zoom zurücksetzen",
+                        color = Color.White
+                    )
+                }
             }
         }
     }
@@ -1033,8 +1180,8 @@ private fun loadPickerlDocumentPreview(
 
                     renderer.openPage(0).use { page ->
                         val scale = minOf(
-                            1f,
-                            1000f / page.width
+                            2.5f,
+                            2000f / page.width
                         )
 
                         val width = (page.width * scale)
