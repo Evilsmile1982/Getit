@@ -1,7 +1,13 @@
 
 package de.autocheck.app
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +39,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -432,6 +441,290 @@ private fun SecondHomePageContent(
                 onAction("Kaufvertrag")
             }
         )
+
+        // Neue Animation ausschließlich im verbleibenden freien Bereich.
+        CarvitaFuturisticCar(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun CarvitaFuturisticCar(
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(
+        label = "carvita_car_animation"
+    )
+
+    val scanPosition by transition.animateFloat(
+        initialValue = 0.12f,
+        targetValue = 0.88f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "carvita_scan_position"
+    )
+
+    val glowPulse by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "carvita_glow_pulse"
+    )
+
+    val gold = CarvitaGold
+    val blue = Color(0xFF29D9FF)
+    val dimBlue = Color(0xFF14617A)
+    val darkMetal = Color(0xFF151B20)
+
+    Canvas(
+        modifier = modifier
+    ) {
+        val w = size.width
+        val h = size.height
+
+        if (w <= 0f || h <= 0f) return@Canvas
+
+        val centerX = w / 2f
+        val centerY = h * 0.55f
+
+        val carWidth = w * 0.70f
+        val carHeight = h * 0.48f
+
+        val left = centerX - carWidth / 2f
+        val right = centerX + carWidth / 2f
+        val top = centerY - carHeight * 0.38f
+        val bottom = centerY + carHeight * 0.36f
+
+        // Dezente technische Grundlinien.
+        drawLine(
+            color = dimBlue.copy(alpha = 0.45f),
+            start = androidx.compose.ui.geometry.Offset(
+                w * 0.10f,
+                bottom + carHeight * 0.30f
+            ),
+            end = androidx.compose.ui.geometry.Offset(
+                w * 0.90f,
+                bottom + carHeight * 0.30f
+            ),
+            strokeWidth = 1f
+        )
+
+        // Bodenlicht unter dem Fahrzeug.
+        drawLine(
+            color = blue.copy(alpha = glowPulse * 0.55f),
+            start = androidx.compose.ui.geometry.Offset(
+                left + carWidth * 0.12f,
+                bottom + carHeight * 0.16f
+            ),
+            end = androidx.compose.ui.geometry.Offset(
+                right - carWidth * 0.12f,
+                bottom + carHeight * 0.16f
+            ),
+            strokeWidth = 3f,
+            cap = StrokeCap.Round
+        )
+
+        // Fahrzeugkarosserie.
+        val body = Path().apply {
+            moveTo(left + carWidth * 0.04f, centerY)
+            lineTo(left + carWidth * 0.12f, centerY - carHeight * 0.08f)
+            lineTo(left + carWidth * 0.27f, top + carHeight * 0.18f)
+            quadraticTo(
+                centerX - carWidth * 0.13f,
+                top - carHeight * 0.03f,
+                centerX,
+                top
+            )
+            quadraticTo(
+                centerX + carWidth * 0.16f,
+                top + carHeight * 0.02f,
+                right - carWidth * 0.20f,
+                centerY - carHeight * 0.02f
+            )
+            lineTo(right - carWidth * 0.06f, centerY + carHeight * 0.06f)
+            lineTo(right, centerY + carHeight * 0.23f)
+            lineTo(right - carWidth * 0.04f, bottom)
+            lineTo(left + carWidth * 0.05f, bottom)
+            lineTo(left, centerY + carHeight * 0.20f)
+            close()
+        }
+
+        drawPath(
+            path = body,
+            color = darkMetal.copy(alpha = 0.92f)
+        )
+
+        drawPath(
+            path = body,
+            color = gold.copy(alpha = 0.95f),
+            style = Stroke(width = 1.8f)
+        )
+
+        // Windschutzscheibe.
+        val windshield = Path().apply {
+            moveTo(left + carWidth * 0.30f, centerY - carHeight * 0.06f)
+            lineTo(centerX - carWidth * 0.12f, top + carHeight * 0.10f)
+            quadraticTo(
+                centerX,
+                top + carHeight * 0.04f,
+                centerX + carWidth * 0.10f,
+                top + carHeight * 0.12f
+            )
+            lineTo(right - carWidth * 0.24f, centerY - carHeight * 0.03f)
+            close()
+        }
+
+        drawPath(
+            path = windshield,
+            color = dimBlue.copy(alpha = 0.55f)
+        )
+
+        drawPath(
+            path = windshield,
+            color = blue.copy(alpha = 0.85f),
+            style = Stroke(width = 1.3f)
+        )
+
+        // Technische Linien an der Fahrzeugfront.
+        drawLine(
+            color = gold.copy(alpha = 0.8f),
+            start = androidx.compose.ui.geometry.Offset(
+                left + carWidth * 0.16f,
+                centerY + carHeight * 0.12f
+            ),
+            end = right - carWidth * 0.12f to
+                centerY + carHeight * 0.12f,
+            strokeWidth = 1.1f
+        )
+
+        // Scheinwerfer links.
+        drawLine(
+            color = blue.copy(alpha = glowPulse),
+            start = androidx.compose.ui.geometry.Offset(
+                left + carWidth * 0.07f,
+                centerY + carHeight * 0.08f
+            ),
+            end = androidx.compose.ui.geometry.Offset(
+                left + carWidth * 0.22f,
+                centerY + carHeight * 0.05f
+            ),
+            strokeWidth = 3f,
+            cap = StrokeCap.Round
+        )
+
+        // Scheinwerfer rechts.
+        drawLine(
+            color = blue.copy(alpha = glowPulse),
+            start = androidx.compose.ui.geometry.Offset(
+                right - carWidth * 0.22f,
+                centerY + carHeight * 0.05f
+            ),
+            end = androidx.compose.ui.geometry.Offset(
+                right - carWidth * 0.07f,
+                centerY + carHeight * 0.08f
+            ),
+            strokeWidth = 3f,
+            cap = StrokeCap.Round
+        )
+
+        // Räder.
+        val wheelRadius = carHeight * 0.18f
+        val wheelY = bottom - carHeight * 0.01f
+
+        listOf(
+            left + carWidth * 0.25f,
+            right - carWidth * 0.25f
+        ).forEach { wheelX ->
+            drawCircle(
+                color = Color(0xFF080A0D),
+                radius = wheelRadius,
+                center = androidx.compose.ui.geometry.Offset(
+                    wheelX,
+                    wheelY
+                )
+            )
+
+            drawCircle(
+                color = gold,
+                radius = wheelRadius,
+                center = androidx.compose.ui.geometry.Offset(
+                    wheelX,
+                    wheelY
+                ),
+                style = Stroke(width = 1.5f)
+            )
+
+            drawCircle(
+                color = blue.copy(alpha = glowPulse),
+                radius = wheelRadius * 0.42f,
+                center = androidx.compose.ui.geometry.Offset(
+                    wheelX,
+                    wheelY
+                ),
+                style = Stroke(width = 1.2f)
+            )
+
+            drawCircle(
+                color = gold.copy(alpha = 0.9f),
+                radius = wheelRadius * 0.12f,
+                center = androidx.compose.ui.geometry.Offset(
+                    wheelX,
+                    wheelY
+                )
+            )
+        }
+
+        // Bewegter blauer Scan-Strahl im Animationsbereich.
+        val scanX = w * scanPosition
+
+        drawLine(
+            color = blue.copy(alpha = 0.08f),
+            start = androidx.compose.ui.geometry.Offset(
+                scanX,
+                h * 0.12f
+            ),
+            end = androidx.compose.ui.geometry.Offset(
+                scanX,
+                h * 0.92f
+            ),
+            strokeWidth = 14f
+        )
+
+        drawLine(
+            color = blue.copy(alpha = glowPulse),
+            start = androidx.compose.ui.geometry.Offset(
+                scanX,
+                h * 0.18f
+            ),
+            end = androidx.compose.ui.geometry.Offset(
+                scanX,
+                h * 0.86f
+            ),
+            strokeWidth = 1.2f
+        )
+
+        // Kleine goldene Statuspunkte.
+        val dotY = h * 0.12f
+        listOf(0.43f, 0.50f, 0.57f).forEachIndexed { index, xFactor ->
+            drawCircle(
+                color = gold.copy(
+                    alpha = if (index == 1) glowPulse else 0.45f
+                ),
+                radius = if (index == 1) 3f else 2f,
+                center = androidx.compose.ui.geometry.Offset(
+                    w * xFactor,
+                    dotY
+                )
+            )
+        }
     }
 }
 
