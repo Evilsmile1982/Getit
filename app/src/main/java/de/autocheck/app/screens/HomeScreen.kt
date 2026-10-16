@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import android.content.Context
@@ -125,16 +126,16 @@ fun HomeScreen(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 14.dp,
             end = 14.dp,
-            top = 22.dp,
-            bottom = 24.dp
+            top = 8.dp,
+            bottom = 160.dp
         ),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
+                    .height(64.dp)
             ) {
                 AnimatedVisibility(
                     visible = visible,
@@ -256,7 +257,7 @@ fun HomeScreen(
                     contentDescription = "CARVITA Fahrzeug",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(245.dp),
+                        .height(210.dp),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -267,14 +268,14 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                row.forEach { item ->
+                row.forEachIndexed { index, item ->
                     AnimatedVisibility(
                         visible = visible,
                         modifier = Modifier.weight(1f),
                         enter = slideInHorizontally(
                             animationSpec = tween(2000),
                             initialOffsetX = { fullWidth ->
-                                if (row.indexOf(item) == 0) {
+                                if (index == 0) {
                                     -fullWidth
                                 } else {
                                     fullWidth
@@ -302,10 +303,16 @@ fun HomeScreen(
 
         item {
             Text(
-                "CARVITA – die Geschichte deiner Fahrzeuge",
+                text = "CARVITA – die Geschichte deiner Fahrzeuge",
                 color = Muted,
                 fontSize = 12.sp,
-                modifier = Modifier.padding(top = 2.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 4.dp,
+                        bottom = 8.dp
+                    ),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
     }
