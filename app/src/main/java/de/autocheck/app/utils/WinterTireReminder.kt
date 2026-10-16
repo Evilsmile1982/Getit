@@ -13,31 +13,49 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 private const val CHANNEL_ID = "winter_tire_reminders"
+private const val PREFS_NAME = "autocheck_reminders"
+private const val ENABLED_KEY = "winter_tire_reminders_enabled"
 
 private const val PLAN_REMINDER = 8101
 private const val CHANGE_REMINDER = 8102
 private const val END_REMINDER = 8103
 
+private val reminderTypes = listOf(
+    PLAN_REMINDER,
+    CHANGE_REMINDER,
+    END_REMINDER
+)
+
 class WinterTireReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
+        val preferences = context.getSharedPreferences(
+            PREFS_NAME,
+            Context.MODE_PRIVATE
+        )
+
+        // Ausgeschaltete Erinnerungen dürfen keine Benachrichtigung auslösen.
+        if (!preferences.getBoolean(ENABLED_KEY, false)) {
+            return
+        }
+
         val type = intent?.getIntExtra("reminderType", PLAN_REMINDER)
             ?: PLAN_REMINDER
 
         val (title, message) = when (type) {
             PLAN_REMINDER -> Pair(
                 "Winterreifen planen",
-                "In vier Wochen beginnt der gesetzliche Winterreifenzeitraum. Plane jetzt den Reifenwechsel und kontrolliere deine Winterreifen."
+                "Plane jetzt den saisonalen Reifenwechsel und kontrolliere deine Winterreifen."
             )
 
             CHANGE_REMINDER -> Pair(
                 "Zeit für Winterreifen",
-                "Ab 1. November gilt bei winterlichen Fahrbahnverhältnissen die Winterreifenpflicht. Prüfe, ob deine Winterreifen montiert sind."
+                "Prüfe, ob deine Winterreifen montiert sind. In Österreich gilt die Winterreifenpflicht von 1. November bis 15. April bei winterlichen Fahrbahnverhältnissen."
             )
 
             else -> Pair(
-                "Winterreifenzeitraum endet heute",
-                "Ab 15. April endet der gesetzliche Zeitraum. Wechsle auf Sommerreifen nur, wenn Wetter und Fahrbahnverhältnisse es zulassen."
+                "Reifenwechsel im Frühjahr",
+                "Prüfe, ob ein Wechsel auf Sommerreifen sinnvoll ist. Berücksichtige dabei Wetter und Fahrbahnverhältnisse."
             )
         }
 
@@ -52,7 +70,8 @@ class WinterTireReminderReceiver : BroadcastReceiver() {
                     "Reifen-Erinnerungen",
                     NotificationManager.IMPORTANCE_DEFAULT
                 ).apply {
-                    description = "Jährliche Erinnerungen zum saisonalen Reifenwechsel"
+                    description =
+                        "Jährliche Erinnerungen zum saisonalen Reifenwechsel"
                 }
             )
         }
@@ -76,32 +95,80 @@ class WinterTireReminderReceiver : BroadcastReceiver() {
 
         manager.notify(type, notification)
 
-        // Nach der Erinnerung gleich den Termin für das nächste Jahr planen.
-        scheduleReminder(context, type, LocalDate.now().year + 1)
+        // Den nächsten jährlichen Termin nur planen, solange die Funktion aktiv ist.
+        if (preferences.getBoolean(ENABLED_KEY, false)) {
+            scheduleReminder(
+                context = context,
+                type = type,
+                year = LocalDate.now().year + 1
+            )
+        }
     }
 }
 
 fun scheduleWinterTireReminders(context: Context) {
-    val today = LocalDate.now()
+    context.getSharedPreferences(
+        PREFS_NAME,
+        Context.MODE_PRIVATE
+    ).edit()
+        .putBoolean(ENABLED_KEY, true)
+        .apply()
 
-    val reminderTypes = listOf(
-        PLAN_REMINDER,
-        CHANGE_REMINDER,
-        END_REMINDER
-    )
+    val today = LocalDate.now()
 
     reminderTypes.forEach { type ->
         val (month, day) = reminderDate(type)
-
         var year = today.year
-        val date = LocalDate.of(year, month, day)
 
-        if (!date.isAfter(today)) {
+        if (!LocalDate.of(year, month, day).isAfter(today)) {
             year++
         }
 
-        scheduleReminder(context, type, year)
+        scheduleReminder(
+            context = context,
+            type = type,
+            year = year
+        )
     }
+}
+
+fun cancelWinterTireReminders(context: Context) {
+    // Zuerst deaktivieren, damit ein Receiver keine neuen Termine plant.
+    context.getSharedPreferences(
+        PREFS_NAME,
+        Context.MODE_PRIVATE
+    ).edit()
+        .putBoolean(ENABLED_KEY, false)
+        .apply()
+
+    val alarmManager = context.getSystemService(
+        Context.ALARM_SERVICE
+    ) as AlarmManager
+
+    reminderTypes.forEach { type ->
+        val intent = Intent(
+            context,
+            WinterTireReminderReceiver::class.java
+        )
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            type,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
+    }
+}
+
+fun areWinterTireRemindersEnabled(context: Context): Boolean {
+    return context.getSharedPreferences(
+        PREFS_NAME,
+        Context.MODE_PRIVATE
+    ).getBoolean(ENABLED_KEY, false)
 }
 
 private fun reminderDate(type: Int): Pair<Int, Int> {
