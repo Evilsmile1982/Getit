@@ -32,11 +32,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.autocheck.app.utils.areWinterTireRemindersEnabled
+import de.autocheck.app.utils.cancelWinterTireReminders
+import de.autocheck.app.utils.scheduleWinterTireReminders
 
 private val tireMonths =
     (1..12).map { it.toString() }
@@ -57,6 +61,12 @@ fun TireScreen(
 ) {
     LaunchedEffect(Unit) {
         onVisited()
+    }
+
+    val context = LocalContext.current
+
+    var tireRemindersEnabled by remember(context) {
+        mutableStateOf(areWinterTireRemindersEnabled(context))
     }
 
     var tires by remember {
@@ -291,6 +301,58 @@ fun TireScreen(
                             allWeatherTire?.let { deleteTire(it) }
                         }
                     )
+                }
+
+                // Saisonale Reifen-Erinnerungen
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF11141A)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Saisonale Reifen-Erinnerungen",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = if (tireRemindersEnabled) {
+                                    "Aktiv: 1. Oktober, 15. Oktober und 15. April – jeweils um 09:00 Uhr."
+                                } else {
+                                    "Lass dich an den saisonalen Reifenwechsel erinnern."
+                                }
+                            )
+
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    if (tireRemindersEnabled) {
+                                        cancelWinterTireReminders(context)
+                                        tireRemindersEnabled = false
+                                    } else {
+                                        scheduleWinterTireReminders(context)
+                                        tireRemindersEnabled = true
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = if (tireRemindersEnabled) {
+                                        "Reifen-Erinnerungen ausschalten"
+                                    } else {
+                                        "Reifen-Erinnerungen einschalten"
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             } else {
                 item {
