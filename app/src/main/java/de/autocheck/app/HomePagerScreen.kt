@@ -181,7 +181,7 @@ fun HomePagerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 22.dp)
+                        .padding(top = 42.dp)
                 ) {
                     HomeScreen(
                         visible = visible,
