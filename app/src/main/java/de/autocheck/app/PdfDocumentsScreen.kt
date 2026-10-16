@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import android.content.Context
@@ -80,6 +81,14 @@ fun PdfDocumentsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+
+    var previewPdfBytes by remember {
+        mutableStateOf<ByteArray?>(null)
+    }
+
+    var previewDocumentName by remember {
+        mutableStateOf("")
+    }
 
     val documentStore = remember {
         PickerlDocumentStore(context)
@@ -169,19 +178,41 @@ fun PdfDocumentsScreen(
                 .replace(Regex("[^A-Za-z0-9_-]"), "_")
                 .ifBlank { "Fahrzeug" }
 
-            openVehiclePrintPreview(
-                context = context,
-                pdfBytes = pdfBytes,
-                documentName = "CARVITA_${safeName}_Bericht"
-            )
+            previewDocumentName = "CARVITA_${safeName}_Bericht"
+            previewPdfBytes = pdfBytes
 
             statusMessage =
-                "Die Druckvorschau wurde geöffnet. Dort kannst du den Bericht prüfen, als PDF speichern oder einen Drucker auswählen."
+                "PDF wurde erstellt und für die Vorschau geöffnet."
         } catch (error: Exception) {
             statusMessage =
                 "PDF konnte nicht erstellt werden: " +
                     (error.localizedMessage ?: "Unbekannter Fehler")
         }
+    }
+
+    /*
+     * Wenn ein PDF erzeugt wurde, wird zuerst die
+     * zoombare Vorschau angezeigt.
+     *
+     * Beim Schließen kehrt der Benutzer zur
+     * Dokumentauswahl zurück.
+     */
+    previewPdfBytes?.let { pdfBytes ->
+        PdfZoomPreview(
+            pdfBytes = pdfBytes,
+            documentName = previewDocumentName,
+            onClose = {
+                previewPdfBytes = null
+            },
+            onPrint = {
+                openVehiclePrintPreview(
+                    context = context,
+                    pdfBytes = pdfBytes,
+                    documentName = previewDocumentName
+                )
+            }
+        )
+        return
     }
 
     Column(
@@ -603,7 +634,6 @@ private fun createVehiclePdf(
             line("Leistung: ${vehicle.power.ifBlank { "–" }}")
             line("Kennzeichen: ${vehicle.plate.ifBlank { "–" }}")
             line("FIN: ${vehicle.vin.ifBlank { "–" }}")
-         
             line("")
         }
 
@@ -777,10 +807,6 @@ private fun createVehiclePdf(
                     line("")
                 }
 
-                /*
-                 * Die Dokumente werden anschließend tatsächlich
-                 * als Bildseiten an den PDF-Bericht angehängt.
-                 */
                 renderedPickerlPages.addAll(
                     PickerlPdfPages.renderSelectedDocuments(
                         context = context,
@@ -1034,10 +1060,6 @@ private fun createVehiclePdf(
 
         document.finishPage(page)
 
-        /*
-         * Jede gerenderte PDF-Seite bzw. jedes Foto kommt
-         * als eigene A4-Seite an das Ende des Fahrzeugberichts.
-         */
         renderedPickerlPages.forEach { (label, bitmap) ->
             pageNumber++
 
