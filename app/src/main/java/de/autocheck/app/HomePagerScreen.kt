@@ -244,7 +244,7 @@ fun HomePagerScreen(
                         start = 28.dp,
                         end = 28.dp,
                         top = 6.dp,
-                        bottom = 8.dp
+                        bottom = 44.dp
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -415,13 +415,12 @@ private fun SecondHomePageContent(
                     contentScale = ContentScale.Fit
                 )
 
-                // Echter Button über der schwarzen Lenkradmitte.
                 Button(
                     onClick = onPremiumClick,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 10.dp)
-                        .fillMaxWidth(0.64f)
+                        .fillMaxWidth(0.52f)
                         .height(39.dp),
                     shape = RoundedCornerShape(50.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -436,11 +435,26 @@ private fun SecondHomePageContent(
                         defaultElevation = 5.dp
                     )
                 ) {
-                    Text(
-                        text = "♛  PREMIUM",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "♛",
+                            color = CarvitaGold,
+                            fontSize = 17.sp
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(7.dp)
+                        )
+
+                        Text(
+                            text = "PREMIUM",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -654,8 +668,8 @@ private fun PremiumScreen(
 
         Button(
             onClick = {
-                // Der echte Mitgliedschafts-Kaufprozess wird ergänzt,
-                // sobald Preis und Abrechnungsmodell feststehen.
+                // Der Kaufprozess wird ergänzt, sobald Preis und
+                // Abrechnungsmodell festgelegt sind.
             },
             modifier = Modifier
                 .fillMaxWidth()
