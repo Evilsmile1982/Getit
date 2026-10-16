@@ -11,8 +11,6 @@ import android.print.PrintDocumentAdapter
 import android.print.PrintDocumentInfo
 import android.print.PageRange
 import android.os.CancellationSignal
-import android.print.WriteResultCallback
-import android.print.LayoutResultCallback
 import android.os.Bundle
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,9 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -76,14 +72,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-/**
- * Zoomfähige PDF-Vorschau.
- *
- * pdfBytes: Das fertig erzeugte PDF als ByteArray.
- * documentName: Dateiname ohne notwendige Dateiendung.
- * onClose: Wird beim Schließen der Vorschau aufgerufen.
- * onPrint: Optionaler Callback für die vorhandene Druckfunktion.
- */
 @Composable
 fun PdfZoomPreview(
     pdfBytes: ByteArray,
@@ -116,23 +104,30 @@ fun PdfZoomPreview(
                         context.contentResolver.openOutputStream(uri)?.use { output ->
                             output.write(pdfBytes)
                             output.flush()
-                        } ?: throw IOException("Die PDF-Datei konnte nicht gespeichert werden.")
+                        } ?: throw IOException(
+                            "Die PDF-Datei konnte nicht gespeichert werden."
+                        )
                     }
                 } catch (e: Exception) {
-                    errorMessage = "Speichern fehlgeschlagen: ${e.localizedMessage ?: "Unbekannter Fehler"}"
+                    errorMessage =
+                        "Speichern fehlgeschlagen: " +
+                        (e.localizedMessage ?: "Unbekannter Fehler")
                 }
             }
         }
     }
 
-    // Erstellt eine temporäre PDF-Datei für Android PdfRenderer.
     LaunchedEffect(pdfBytes) {
         loading = true
         errorMessage = null
 
         try {
             val file = withContext(Dispatchers.IO) {
-                File.createTempFile("pdf_preview_", ".pdf", context.cacheDir).also {
+                File.createTempFile(
+                    "pdf_preview_",
+                    ".pdf",
+                    context.cacheDir
+                ).also {
                     it.writeBytes(pdfBytes)
                 }
             }
@@ -145,6 +140,7 @@ fun PdfZoomPreview(
                     file,
                     ParcelFileDescriptor.MODE_READ_ONLY
                 )
+
                 PdfRenderer(descriptor).use { renderer ->
                     renderer.pageCount
                 }
@@ -153,13 +149,14 @@ fun PdfZoomPreview(
             pageCount = count
             currentPage = 0
         } catch (e: Exception) {
-            errorMessage = "PDF konnte nicht geöffnet werden: ${e.localizedMessage ?: "Unbekannter Fehler"}"
+            errorMessage =
+                "PDF konnte nicht geöffnet werden: " +
+                (e.localizedMessage ?: "Unbekannter Fehler")
         } finally {
             loading = false
         }
     }
 
-    // Rendert die aktuell ausgewählte PDF-Seite als Bitmap.
     LaunchedEffect(pdfFile, currentPage) {
         val file = pdfFile ?: return@LaunchedEffect
 
@@ -175,12 +172,14 @@ fun PdfZoomPreview(
 
                 PdfRenderer(descriptor).use { renderer ->
                     if (currentPage !in 0 until renderer.pageCount) {
-                        throw IOException("Diese PDF-Seite ist nicht verfügbar.")
+                        throw IOException(
+                            "Diese PDF-Seite ist nicht verfügbar."
+                        )
                     }
 
                     renderer.openPage(currentPage).use { page ->
-                        // Höhere Auflösung für besser lesbaren Text beim Zoomen.
                         val scale = 2
+
                         val bitmap = Bitmap.createBitmap(
                             (page.width * scale).coerceAtLeast(1),
                             (page.height * scale).coerceAtLeast(1),
@@ -208,7 +207,9 @@ fun PdfZoomPreview(
             offsetX = 0f
             offsetY = 0f
         } catch (e: Exception) {
-            errorMessage = "Seite konnte nicht angezeigt werden: ${e.localizedMessage ?: "Unbekannter Fehler"}"
+            errorMessage =
+                "Seite konnte nicht angezeigt werden: " +
+                (e.localizedMessage ?: "Unbekannter Fehler")
         } finally {
             loading = false
         }
@@ -221,7 +222,9 @@ fun PdfZoomPreview(
         }
     }
 
-    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+    val transformState = rememberTransformableState {
+            zoomChange, panChange, _ ->
+
         zoom = (zoom * zoomChange).coerceIn(1f, 5f)
 
         if (zoom > 1f) {
@@ -304,9 +307,7 @@ fun PdfZoomPreview(
                     ) {
                         OutlinedButton(
                             onClick = {
-                                if (currentPage > 0) {
-                                    currentPage--
-                                }
+                                if (currentPage > 0) currentPage--
                             },
                             enabled = currentPage > 0 && !loading
                         ) {
@@ -360,7 +361,8 @@ fun PdfZoomPreview(
                                 saveLauncher.launch(
                                     documentName
                                         .removeSuffix(".pdf")
-                                        .ifBlank { "Fahrzeugbericht" } + ".pdf"
+                                        .ifBlank { "Fahrzeugbericht" } +
+                                        ".pdf"
                                 )
                             },
                             enabled = !loading && pdfBytes.isNotEmpty()
@@ -445,7 +447,9 @@ fun PdfZoomPreview(
                             .fillMaxSize()
                             .padding(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(androidx.compose.ui.graphics.Color.White)
+                            .background(
+                                androidx.compose.ui.graphics.Color.White
+                            )
                             .graphicsLayer {
                                 scaleX = zoom
                                 scaleY = zoom
@@ -454,8 +458,7 @@ fun PdfZoomPreview(
                             }
                             .transformable(state = transformState)
                             .pointerInput(Unit) {
-                                // Der Bereich unterstützt Zoom und Verschieben
-                                // über die transformable-Geste.
+                                // Die transformable-Geste übernimmt Zoom und Verschieben.
                             }
                     )
                 }
@@ -468,15 +471,13 @@ fun PdfZoomPreview(
     }
 }
 
-/**
- * Öffnet die native Android-Druckoberfläche für die übergebenen PDF-Bytes.
- */
 private fun printPdfBytes(
     context: Context,
     pdfBytes: ByteArray,
     documentName: String
 ) {
-    val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+    val printManager =
+        context.getSystemService(Context.PRINT_SERVICE) as PrintManager
 
     printManager.print(
         documentName,
@@ -486,37 +487,36 @@ private fun printPdfBytes(
                 oldAttributes: PrintAttributes?,
                 newAttributes: PrintAttributes?,
                 cancellationSignal: CancellationSignal?,
-                callback: LayoutResultCallback?,
+                callback: PrintDocumentAdapter.LayoutResultCallback,
                 extras: Bundle?
             ) {
                 if (cancellationSignal?.isCanceled == true) {
-                    callback?.onLayoutCancelled()
+                    callback.onLayoutCancelled()
                     return
                 }
 
                 val info = PrintDocumentInfo.Builder(
                     documentName.removeSuffix(".pdf") + ".pdf"
                 )
-                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                    .setPageCount(PrintDocumentInfo.PAGE_COUNT_UNKNOWN)
+                    .setContentType(
+                        PrintDocumentInfo.CONTENT_TYPE_DOCUMENT
+                    )
+                    .setPageCount(
+                        PrintDocumentInfo.PAGE_COUNT_UNKNOWN
+                    )
                     .build()
 
-                callback?.onLayoutFinished(info, true)
+                callback.onLayoutFinished(info, true)
             }
 
             override fun onWrite(
-                pages: Array<out PageRange>?,
-                destination: android.os.ParcelFileDescriptor?,
-                cancellationSignal: CancellationSignal?,
-                callback: WriteResultCallback?
+                pages: Array<out PageRange>,
+                destination: ParcelFileDescriptor,
+                cancellationSignal: CancellationSignal,
+                callback: PrintDocumentAdapter.WriteResultCallback
             ) {
-                if (cancellationSignal?.isCanceled == true) {
-                    callback?.onWriteCancelled()
-                    return
-                }
-
-                if (destination == null) {
-                    callback?.onWriteFailed("Kein Druckziel verfügbar.")
+                if (cancellationSignal.isCanceled) {
+                    callback.onWriteCancelled()
                     return
                 }
 
@@ -526,11 +526,11 @@ private fun printPdfBytes(
                         output.flush()
                     }
 
-                    callback?.onWriteFinished(
+                    callback.onWriteFinished(
                         arrayOf(PageRange.ALL_PAGES)
                     )
                 } catch (e: Exception) {
-                    callback?.onWriteFailed(
+                    callback.onWriteFailed(
                         e.localizedMessage ?: "Drucken fehlgeschlagen."
                     )
                 }
