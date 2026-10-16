@@ -1,6 +1,10 @@
 
 package de.autocheck.app
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -238,13 +242,13 @@ fun HomePagerScreen(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(
-                        CarvitaBackground.copy(alpha = 0.96f)
+                        CarvitaBackground.copy(alpha = 0.98f)
                     )
                     .padding(
                         start = 28.dp,
                         end = 28.dp,
                         top = 6.dp,
-                        bottom = 44.dp
+                        bottom = 68.dp
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -378,22 +382,11 @@ private fun SecondHomePageContent(
                 start = 18.dp,
                 end = 18.dp,
                 top = 8.dp,
-                bottom = 100.dp
+                bottom = 150.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Image(
-            painter = painterResource(
-                id = R.drawable.bild_4
-            ),
-            contentDescription = "CARVITA Logo",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            contentScale = ContentScale.Fit
-        )
-
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -507,6 +500,31 @@ private fun SecondHomePageContent(
                 onAction("Kaufvertrag")
             }
         )
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        AnimatedVisibility(
+            visible = true,
+            enter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> -fullWidth },
+                animationSpec = tween(durationMillis = 2000)
+            ) + fadeIn(
+                animationSpec = tween(durationMillis = 2000)
+            )
+        ) {
+            Image(
+                painter = painterResource(
+                    id = R.drawable.bild_4
+                ),
+                contentDescription = "CARVITA – Die Geschichte deiner Fahrzeuge",
+                modifier = Modifier
+                    .fillMaxWidth(0.78f)
+                    .height(52.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
     }
 }
 
