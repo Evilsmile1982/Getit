@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -177,11 +178,17 @@ fun HomePagerScreen(
             }
 
             currentPage == 0 -> {
-                HomeScreen(
-                    visible = visible,
-                    visitedStore = visitedStore,
-                    onSelect = onSelect
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 22.dp)
+                ) {
+                    HomeScreen(
+                        visible = visible,
+                        visitedStore = visitedStore,
+                        onSelect = onSelect
+                    )
+                }
             }
 
             else -> {
@@ -228,11 +235,12 @@ fun HomePagerScreen(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(CarvitaBackground)
+                    .navigationBarsPadding()
                     .padding(
                         start = 28.dp,
                         end = 28.dp,
                         top = 8.dp,
-                        bottom = 12.dp
+                        bottom = 8.dp
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(7.dp)
