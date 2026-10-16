@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -28,7 +29,6 @@
 
         </activity>
 
-
         <!-- =====================================================
              PICKERL ERINNERUNGEN
              ===================================================== -->
@@ -36,12 +36,18 @@
             android:name=".PickerlReceiver"
             android:exported="false" />
 
-
         <!-- =====================================================
              SERVICE ERINNERUNGEN
              ===================================================== -->
         <receiver
             android:name=".utils.ServiceReminderReceiver"
+            android:exported="false" />
+
+        <!-- =====================================================
+             WINTERREIFEN ERINNERUNGEN
+             ===================================================== -->
+        <receiver
+            android:name=".utils.WinterTireReminderReceiver"
             android:exported="false" />
 
     </application>
