@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import android.app.AlarmManager
@@ -82,6 +83,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autocheck.app.ui.AutoCheckTheme
+import de.autocheck.app.utils.scheduleWinterTireReminders
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -99,6 +101,9 @@ class MainActivity :
         )
 
         createNotificationChannel()
+
+        // Jährliche Winterreifen-Erinnerungen einplanen.
+        scheduleWinterTireReminders(applicationContext)
 
         if (
             Build.VERSION.SDK_INT >= 33
