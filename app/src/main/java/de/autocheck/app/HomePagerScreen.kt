@@ -2,9 +2,8 @@
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,16 +20,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -90,7 +84,7 @@ fun HomePagerScreen(
         mutableStateOf(false)
     }
 
-    var showPremiumScreen by remember {
+    var showPremiumDialog by remember {
         mutableStateOf(false)
     }
 
@@ -103,7 +97,7 @@ fun HomePagerScreen(
                 showHistoryScreen,
                 showPdfScreen,
                 showPurchaseContractScreen,
-                showPremiumScreen
+                showPremiumDialog
             ) {
                 var dragDistance = 0f
 
@@ -118,7 +112,7 @@ fun HomePagerScreen(
                             !showHistoryScreen &&
                             !showPdfScreen &&
                             !showPurchaseContractScreen &&
-                            !showPremiumScreen
+                            !showPremiumDialog
                         ) {
                             if (dragDistance < -70f) {
                                 currentPage = 1
@@ -136,14 +130,6 @@ fun HomePagerScreen(
             }
     ) {
         when {
-            showPremiumScreen -> {
-                PremiumScreen(
-                    onBack = {
-                        showPremiumScreen = false
-                    }
-                )
-            }
-
             showFuelScreen -> {
                 FuelConsumptionScreen(
                     onBack = {
@@ -200,8 +186,9 @@ fun HomePagerScreen(
 
             else -> {
                 SecondHomePageContent(
+                    visible = visible,
                     onPremiumClick = {
-                        showPremiumScreen = true
+                        showPremiumDialog = true
                     },
                     onAction = { action ->
                         when (action) {
@@ -234,24 +221,21 @@ fun HomePagerScreen(
             !showFuelScreen &&
             !showHistoryScreen &&
             !showPdfScreen &&
-            !showPurchaseContractScreen &&
-            !showPremiumScreen
+            !showPurchaseContractScreen
         ) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(
-                        CarvitaBackground.copy(alpha = 0.98f)
-                    )
+                    .background(CarvitaBackground)
                     .padding(
                         start = 28.dp,
                         end = 28.dp,
-                        top = 6.dp,
-                        bottom = 68.dp
+                        top = 8.dp,
+                        bottom = 12.dp
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 Card(
                     modifier = Modifier
@@ -275,7 +259,7 @@ fun HomePagerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(34.dp)
+                            .height(38.dp)
                             .padding(horizontal = 14.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -367,26 +351,69 @@ fun HomePagerScreen(
             }
         )
     }
+
+    if (showPremiumDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPremiumDialog = false
+            },
+            title = {
+                Text(
+                    text = "CARVITA Premium",
+                    color = CarvitaGold
+                )
+            },
+            text = {
+                Text(
+                    "Werde CARVITA-Premiummitglied und entdecke " +
+                        "zusätzliche Funktionen. Die Mitgliedschaft " +
+                        "und Bezahlung müssen noch eingerichtet werden."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPremiumDialog = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPremiumDialog = false
+                    }
+                ) {
+                    Text("Schließen")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun SecondHomePageContent(
+    visible: Boolean,
     onPremiumClick: () -> Unit,
     onAction: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(
                 start = 18.dp,
                 end = 18.dp,
-                top = 8.dp,
-                bottom = 150.dp
+                top = 24.dp,
+                bottom = 110.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -401,50 +428,54 @@ private fun SecondHomePageContent(
                     painter = painterResource(
                         id = R.drawable.menuebild_seite2
                     ),
-                    contentDescription = "CARVITA Dashboard mit Lenkrad",
+                    contentDescription = "CARVITA Dashboard und Lenkrad",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(205.dp),
-                    contentScale = ContentScale.Fit
+                        .height(230.dp),
+                    contentScale = ContentScale.FillBounds
                 )
 
-                Button(
-                    onClick = onPremiumClick,
+                Card(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 10.dp)
-                        .fillMaxWidth(0.52f)
-                        .height(39.dp),
+                        .padding(bottom = 12.dp)
+                        .fillMaxWidth(0.58f)
+                        .height(42.dp)
+                        .clickable(onClick = onPremiumClick),
                     shape = RoundedCornerShape(50.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF17130C),
-                        contentColor = CarvitaGold
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF17120A)
                     ),
                     border = BorderStroke(
-                        1.dp,
+                        1.5.dp,
                         CarvitaGold
                     ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 5.dp
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 4.dp
                     )
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 8.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "♛",
                             color = CarvitaGold,
-                            fontSize = 17.sp
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
                         )
 
                         Spacer(
-                            modifier = Modifier.width(7.dp)
+                            modifier = Modifier.width(6.dp)
                         )
 
                         Text(
                             text = "PREMIUM",
-                            fontSize = 13.sp,
+                            color = CarvitaGold,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -455,10 +486,10 @@ private fun SecondHomePageContent(
         Text(
             text = "DEINE FAHRZEUGE. ALLES IM BLICK.",
             color = CarvitaGold,
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 2.dp)
+            modifier = Modifier.padding(vertical = 4.dp)
         )
 
         SecondPageButton(
@@ -502,26 +533,24 @@ private fun SecondHomePageContent(
         )
 
         Spacer(
-            modifier = Modifier.height(10.dp)
+            modifier = Modifier.height(8.dp)
         )
 
         AnimatedVisibility(
-            visible = true,
+            visible = visible,
             enter = slideInHorizontally(
-                initialOffsetX = { fullWidth -> -fullWidth },
-                animationSpec = tween(durationMillis = 2000)
-            ) + fadeIn(
-                animationSpec = tween(durationMillis = 2000)
+                animationSpec = tween(2000),
+                initialOffsetX = { fullWidth -> -fullWidth }
             )
         ) {
             Image(
                 painter = painterResource(
                     id = R.drawable.bild_4
                 ),
-                contentDescription = "CARVITA – Die Geschichte deiner Fahrzeuge",
+                contentDescription = "CARVITA Logo",
                 modifier = Modifier
-                    .fillMaxWidth(0.78f)
-                    .height(52.dp),
+                    .fillMaxWidth(0.52f)
+                    .height(58.dp),
                 contentScale = ContentScale.Fit
             )
         }
@@ -539,7 +568,7 @@ private fun SecondPageButton(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(70.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
@@ -559,7 +588,7 @@ private fun SecondPageButton(
                 painter = painterResource(id = iconRes),
                 contentDescription = contentDescription,
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(9.dp)),
                 contentScale = ContentScale.Fit
             )
@@ -575,14 +604,14 @@ private fun SecondPageButton(
                 Text(
                     text = title,
                     color = Color.White,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
                     text = subtitle,
                     color = Color(0xFFBBBBBB),
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
             }
 
@@ -593,158 +622,5 @@ private fun SecondPageButton(
                 fontWeight = FontWeight.Bold
             )
         }
-    }
-}
-
-@Composable
-private fun PremiumScreen(
-    onBack: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CarvitaBackground)
-            .verticalScroll(rememberScrollState())
-            .padding(
-                horizontal = 24.dp,
-                vertical = 28.dp
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        Text(
-            text = "CARVITA",
-            color = CarvitaGold,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.ExtraBold
-        )
-
-        Text(
-            text = "♛",
-            color = CarvitaGold,
-            fontSize = 58.sp
-        )
-
-        Text(
-            text = "CARVITA PREMIUM",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Text(
-            text = "Deine Fahrzeuggeschichte. Noch mehr Möglichkeiten.",
-            color = CarvitaGold,
-            fontSize = 15.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF1D1B16)
-            ),
-            border = BorderStroke(
-                1.dp,
-                CarvitaGold
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Deine Premium-Mitgliedschaft",
-                    color = CarvitaGold,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                PremiumBenefit(
-                    text = "Mehr Möglichkeiten für deine Fahrzeugverwaltung"
-                )
-
-                PremiumBenefit(
-                    text = "Deine Fahrzeugdaten übersichtlich im Blick"
-                )
-
-                PremiumBenefit(
-                    text = "Eine zentrale Anlaufstelle für deine Fahrzeugunterlagen"
-                )
-            }
-        }
-
-        Text(
-            text = "Die Premium-Vorteile und Konditionen werden hier " +
-                "vor dem Start des Mitgliedschaftsangebots festgelegt.",
-            color = Color(0xFFBBBBBB),
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Button(
-            onClick = {
-                // Der Kaufprozess wird ergänzt, sobald Preis und
-                // Abrechnungsmodell festgelegt sind.
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(50.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = CarvitaGold,
-                contentColor = Color.Black
-            ),
-            border = BorderStroke(
-                1.dp,
-                Color(0xFFF2D98D)
-            )
-        ) {
-            Text(
-                text = "PREMIUM MITGLIED WERDEN",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
-
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(50.dp),
-            border = BorderStroke(
-                1.dp,
-                CarvitaGold
-            )
-        ) {
-            Text(
-                text = "Zurück",
-                color = CarvitaGold
-            )
-        }
-    }
-}
-
-@Composable
-private fun PremiumBenefit(
-    text: String
-) {
-    Row(
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Text(
-            text = "✓",
-            color = CarvitaGold,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 14.sp
-        )
     }
 }
