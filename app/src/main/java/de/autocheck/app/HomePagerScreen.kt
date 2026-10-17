@@ -225,7 +225,7 @@ fun HomePagerScreen(
             }
         }
 
-        // Intro-Schalter auf Seite 1, auf Höhe von Logo und Profilbutton.
+        // Kreisrunder Intro-Button auf Seite 1.
         if (
             currentPage == 0 &&
             !showFuelScreen &&
@@ -241,38 +241,48 @@ fun HomePagerScreen(
                         start = 22.dp,
                         top = 88.dp
                     )
+                    .size(52.dp)
                     .clickable {
                         onIntroEnabledChange(!introEnabled)
                     },
-                shape = RoundedCornerShape(50.dp),
+                shape = CircleShape,
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF29251A)
+                    containerColor = if (introEnabled) {
+                        Color(0xFF29251A)
+                    } else {
+                        Color(0xFF202020)
+                    }
                 ),
                 border = BorderStroke(
-                    1.dp,
+                    1.5.dp,
                     CarvitaGold
                 ),
                 elevation = CardDefaults.cardElevation(
-                    defaultElevation = 2.dp
+                    defaultElevation = 3.dp
                 )
             ) {
-                Row(
-                    modifier = Modifier
-                        .height(32.dp)
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (introEnabled) {
-                            "▶ Intro AN"
-                        } else {
-                            "▶ Intro AUS"
-                        },
-                        color = CarvitaGold,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "▶",
+                            color = CarvitaGold,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = if (introEnabled) "AN" else "AUS",
+                            color = CarvitaGold,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
