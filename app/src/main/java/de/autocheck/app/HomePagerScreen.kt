@@ -225,7 +225,7 @@ fun HomePagerScreen(
             }
         }
 
-        // Kreisrunder Intro-Button auf Seite 1.
+        // Runder Intro-Button auf Höhe des Logos und Profilbuttons.
         if (
             currentPage == 0 &&
             !showFuelScreen &&
@@ -239,7 +239,7 @@ fun HomePagerScreen(
                     .align(Alignment.TopStart)
                     .padding(
                         start = 22.dp,
-                        top = 88.dp
+                        top = 14.dp
                     )
                     .size(52.dp)
                     .clickable {
