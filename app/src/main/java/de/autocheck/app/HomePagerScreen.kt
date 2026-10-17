@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -187,6 +188,8 @@ fun HomePagerScreen(
                     HomeScreen(
                         visible = visible,
                         visitedStore = visitedStore,
+                        introEnabled = introEnabled,
+                        onIntroEnabledChange = onIntroEnabledChange,
                         onSelect = onSelect
                     )
                 }
@@ -222,68 +225,6 @@ fun HomePagerScreen(
                         }
                     }
                 )
-            }
-        }
-
-        // Runder Intro-Button auf Höhe des Logos und Profilbuttons.
-        if (
-            currentPage == 0 &&
-            !showFuelScreen &&
-            !showHistoryScreen &&
-            !showPdfScreen &&
-            !showPurchaseContractScreen &&
-            !showPremiumDialog
-        ) {
-            Card(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(
-                        start = 22.dp,
-                        top = 14.dp
-                    )
-                    .size(52.dp)
-                    .clickable {
-                        onIntroEnabledChange(!introEnabled)
-                    },
-                shape = CircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = if (introEnabled) {
-                        Color(0xFF29251A)
-                    } else {
-                        Color(0xFF202020)
-                    }
-                ),
-                border = BorderStroke(
-                    1.5.dp,
-                    CarvitaGold
-                ),
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 3.dp
-                )
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "▶",
-                            color = CarvitaGold,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = if (introEnabled) "AN" else "AUS",
-                            color = CarvitaGold,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
         }
 
@@ -367,7 +308,11 @@ fun HomePagerScreen(
                         Box(
                             modifier = Modifier
                                 .size(
-                                    if (currentPage == page) 9.dp else 7.dp
+                                    if (currentPage == page) {
+                                        9.dp
+                                    } else {
+                                        7.dp
+                                    }
                                 )
                                 .clip(CircleShape)
                                 .background(
