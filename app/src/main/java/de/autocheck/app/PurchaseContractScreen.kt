@@ -1,15 +1,12 @@
 
 package de.autocheck.app
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfDocument
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
@@ -38,11 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.ByteArrayOutputStream
@@ -61,38 +57,19 @@ fun PurchaseContractScreen(
         mutableStateOf("Der leere CARVITA-Kaufvertrag ist bereit.")
     }
 
-    var pendingPdf by remember {
+    var previewPdfBytes by remember {
         mutableStateOf<ByteArray?>(null)
     }
 
-    val createDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri ->
-        val pdfBytes = pendingPdf
-
-        if (uri != null && pdfBytes != null) {
-            try {
-                val output = context.contentResolver.openOutputStream(uri)
-                    ?: throw IllegalStateException(
-                        "Die Datei konnte nicht geöffnet werden."
-                    )
-
-                output.use {
-                    it.write(pdfBytes)
-                    it.flush()
-                }
-
-                statusMessage = "Der Kaufvertrag wurde erfolgreich gespeichert."
-            } catch (error: Exception) {
-                statusMessage = "Fehler beim Speichern: ${
-                    error.localizedMessage ?: "Unbekannter Fehler"
-                }"
+    previewPdfBytes?.let { pdfBytes ->
+        PdfZoomPreview(
+            pdfBytes = pdfBytes,
+            documentName = "CARVITA_Fahrzeugkaufvertrag.pdf",
+            onClose = {
+                previewPdfBytes = null
             }
-        } else if (uri == null) {
-            statusMessage = "Speichern wurde abgebrochen."
-        }
-
-        pendingPdf = null
+        )
+        return
     }
 
     Column(
@@ -122,29 +99,31 @@ fun PurchaseContractScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item {
-                    Image(
-                        painter = painterResource(id = R.drawable.bild_4),
-                        contentDescription = "CARVITA-Logo",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(105.dp),
-                        contentScale = ContentScale.Fit
-                    )
+                    Column {
+                        Image(
+                            painter = painterResource(id = R.drawable.bild_4),
+                            contentDescription = "CARVITA-Logo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(105.dp),
+                            contentScale = ContentScale.Fit
+                        )
 
-                    Text(
-                        text = "Fahrzeugkaufvertrag",
-                        modifier = Modifier.padding(top = 8.dp),
-                        color = Color.White,
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                        Text(
+                            text = "Fahrzeugkaufvertrag",
+                            modifier = Modifier.padding(top = 8.dp),
+                            color = Color.White,
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                    Text(
-                        text = "Universelle, leere PDF-Vorlage für Fahrzeuge aller Art.",
-                        modifier = Modifier.padding(top = 8.dp),
-                        color = Color.LightGray,
-                        fontSize = 14.sp
-                    )
+                        Text(
+                            text = "Universelle, leere PDF-Vorlage für Fahrzeuge aller Art.",
+                            modifier = Modifier.padding(top = 8.dp),
+                            color = Color.LightGray,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
 
                 item {
@@ -179,17 +158,18 @@ fun PurchaseContractScreen(
                     Button(
                         onClick = {
                             try {
-                                pendingPdf = createBlankVehiclePurchaseContract(context)
-                                createDocumentLauncher.launch(
-                                    "CARVITA_Fahrzeugkaufvertrag.pdf"
-                                )
+                                previewPdfBytes =
+                                    createBlankVehiclePurchaseContract(context)
+
                                 statusMessage =
-                                    "Bitte wähle den Speicherort für die PDF-Datei."
+                                    "Prüfe den Vertrag in der Vorschau, bevor du ihn speicherst oder druckst."
                             } catch (error: Exception) {
-                                pendingPdf = null
-                                statusMessage = "PDF-Erstellung fehlgeschlagen: ${
-                                    error.localizedMessage ?: "Unbekannter Fehler"
-                                }"
+                                previewPdfBytes = null
+                                statusMessage =
+                                    "PDF-Erstellung fehlgeschlagen: ${
+                                        error.localizedMessage
+                                            ?: "Unbekannter Fehler"
+                                    }"
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -199,13 +179,14 @@ fun PurchaseContractScreen(
                         )
                     ) {
                         Text(
-                            text = "PDF herunterladen / speichern",
-                            fontWeight = FontWeight.Bold
+                            text = "Kaufvertrag vorher ansehen",
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
                         )
                     }
 
                     Text(
-                        text = "Nach dem Speichern kannst du die PDF-Datei öffnen, drucken oder teilen.",
+                        text = "In der Vorschau kannst du die Seiten prüfen, zoomen und anschließend speichern oder drucken.",
                         modifier = Modifier.padding(top = 8.dp),
                         color = Color.LightGray,
                         fontSize = 12.sp
@@ -290,7 +271,14 @@ private fun createBlankVehiclePurchaseContract(
             isAntiAlias = true
         }
 
+        val footerPaint = Paint().apply {
+            color = android.graphics.Color.rgb(90, 90, 90)
+            textSize = 8.5f
+            isAntiAlias = true
+        }
+
         var pageNumber = 1
+
         var page: PdfDocument.Page = document.startPage(
             PdfDocument.PageInfo.Builder(
                 pageWidth,
@@ -352,8 +340,40 @@ private fun createBlankVehiclePurchaseContract(
             y += 61f
         }
 
+        fun drawFooter() {
+            val footerY = pageHeight - 24f
+            val dividerY = footerY - 14f
+
+            canvas.drawLine(
+                margin,
+                dividerY,
+                pageWidth - margin,
+                dividerY,
+                linePaint
+            )
+
+            canvas.drawText(
+                "CARVITA – Fahrzeugkaufvertrag",
+                margin,
+                footerY,
+                footerPaint
+            )
+
+            val pageText = "Seite $pageNumber"
+            val pageTextWidth = footerPaint.measureText(pageText)
+
+            canvas.drawText(
+                pageText,
+                pageWidth - margin - pageTextWidth,
+                footerY,
+                footerPaint
+            )
+        }
+
         fun newPage() {
+            drawFooter()
             document.finishPage(page)
+
             pageNumber++
 
             page = document.startPage(
@@ -370,7 +390,7 @@ private fun createBlankVehiclePurchaseContract(
         }
 
         fun ensureSpace(height: Float) {
-            if (y + height > pageHeight - 48f) {
+            if (y + height > pageHeight - 58f) {
                 newPage()
             }
         }
@@ -430,6 +450,7 @@ private fun createBlankVehiclePurchaseContract(
             )
 
             val rightX = margin + halfWidth + gap
+
             canvas.drawText(rightLabel, rightX, y, textPaint)
             canvas.drawLine(
                 rightX,
@@ -521,7 +542,9 @@ private fun createBlankVehiclePurchaseContract(
             "CARVITA – neutrale Vertragsvorlage. Die Vorlage ersetzt keine rechtliche Beratung."
         )
 
+        drawFooter()
         document.finishPage(page)
+
         document.writeTo(output)
         return output.toByteArray()
     } finally {
