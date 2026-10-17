@@ -1,10 +1,5 @@
-
 package de.autocheck.app
 
-import android.content.Context
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -63,9 +58,11 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     visible: Boolean,
     visitedStore: VisitedStore,
+    introEnabled: Boolean,
+    onIntroEnabledChange: (Boolean) -> Unit,
     onSelect: (Screen) -> Unit
 ) {
-    val items = listOf(
+    val menuItems = listOf(
         MenuItemData(
             "Mein Auto",
             "Fahrzeug & Details",
@@ -135,8 +132,10 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
+                    .height(64.dp),
+                contentAlignment = Alignment.Center
             ) {
+                // CARVITA-Logo in der Mitte der Kopfzeile.
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInVertically(
@@ -153,6 +152,87 @@ fun HomeScreen(
                     )
                 }
 
+                // Runder Intro-Button links.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 2.dp)
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .background(
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    Color(0xFF5A5A5A),
+                                    Color(0xFFE8E8E8),
+                                    Color(0xFFFFFFFF),
+                                    Color(0xFF8A8A8A),
+                                    Color(0xFF4A4A4A)
+                                )
+                            )
+                        )
+                        .padding(3.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(
+                                if (introEnabled) {
+                                    Color(0xFFD4AF37)
+                                } else {
+                                    Color(0xFF292929)
+                                }
+                            )
+                            .clip(CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.foundation.clickable
+                        // Die Klickfläche liegt auf dem gesamten runden Button.
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .then(
+                                    Modifier
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    onIntroEnabledChange(!introEnabled)
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "▶",
+                                        color = if (introEnabled) {
+                                            Color.Black
+                                        } else {
+                                            Color(0xFFD4AF37)
+                                        },
+                                        fontSize = 17.sp
+                                    )
+
+                                    Text(
+                                        text = if (introEnabled) "AN" else "AUS",
+                                        color = if (introEnabled) {
+                                            Color.Black
+                                        } else {
+                                            Color(0xFFD4AF37)
+                                        },
+                                        fontSize = 9.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Profilbutton rechts – bleibt 54 dp groß.
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInHorizontally(
@@ -160,7 +240,7 @@ fun HomeScreen(
                         initialOffsetX = { fullWidth -> fullWidth }
                     ),
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(Alignment.CenterEnd)
                         .padding(end = 2.dp)
                 ) {
                     Box(
@@ -263,7 +343,7 @@ fun HomeScreen(
             }
         }
 
-        items(items.chunked(2)) { row ->
+        items(menuItems.chunked(2)) { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -412,18 +492,12 @@ private fun LoginDialog(
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss
-            ) {
+            TextButton(onClick = onDismiss) {
                 Text("Abbrechen")
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    onDismiss()
-                }
-            ) {
+            Button(onClick = onDismiss) {
                 Text("Weiter")
             }
         }
@@ -519,18 +593,12 @@ private fun RegisterDialog(
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss
-            ) {
+            TextButton(onClick = onDismiss) {
                 Text("Abbrechen")
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    onDismiss()
-                }
-            ) {
+            Button(onClick = onDismiss) {
                 Text("Weiter")
             }
         }
