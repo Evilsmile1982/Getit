@@ -225,6 +225,7 @@ fun HomePagerScreen(
             }
         }
 
+        // Intro-Schalter auf Seite 1, auf Höhe von Logo und Profilbutton.
         if (
             currentPage == 0 &&
             !showFuelScreen &&
@@ -237,8 +238,8 @@ fun HomePagerScreen(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(
-                        start = 12.dp,
-                        top = 4.dp
+                        start = 22.dp,
+                        top = 88.dp
                     )
                     .clickable {
                         onIntroEnabledChange(!introEnabled)
