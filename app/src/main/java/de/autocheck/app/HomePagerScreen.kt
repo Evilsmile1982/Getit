@@ -1,4 +1,3 @@
-
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -53,6 +52,8 @@ private val CarvitaBackground = Color(0xFF101010)
 fun HomePagerScreen(
     visible: Boolean,
     visitedStore: VisitedStore,
+    introEnabled: Boolean,
+    onIntroEnabledChange: (Boolean) -> Unit,
     onSelect: (Screen) -> Unit
 ) {
     val context = LocalContext.current
@@ -221,6 +222,57 @@ fun HomePagerScreen(
                         }
                     }
                 )
+            }
+        }
+
+        if (
+            currentPage == 0 &&
+            !showFuelScreen &&
+            !showHistoryScreen &&
+            !showPdfScreen &&
+            !showPurchaseContractScreen &&
+            !showPremiumDialog
+        ) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(
+                        start = 12.dp,
+                        top = 4.dp
+                    )
+                    .clickable {
+                        onIntroEnabledChange(!introEnabled)
+                    },
+                shape = RoundedCornerShape(50.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF29251A)
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    CarvitaGold
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 2.dp
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .height(32.dp)
+                        .padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (introEnabled) {
+                            "▶ Intro AN"
+                        } else {
+                            "▶ Intro AUS"
+                        },
+                        color = CarvitaGold,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
