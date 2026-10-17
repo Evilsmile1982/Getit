@@ -1,5 +1,6 @@
 package de.autocheck.app
 
+import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,9 +18,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
+private const val CARVITA_SETTINGS = "carvita_settings"
+private const val INTRO_ENABLED_KEY = "intro_enabled"
+
 @Composable
 fun AutoCheckApp() {
     val context = LocalContext.current
+
+    val preferences = remember(context) {
+        context.getSharedPreferences(
+            CARVITA_SETTINGS,
+            Context.MODE_PRIVATE
+        )
+    }
+
+    var introEnabled by remember(preferences) {
+        mutableStateOf(
+            preferences.getBoolean(
+                INTRO_ENABLED_KEY,
+                true
+            )
+        )
+    }
+
+    var showIntro by remember {
+        mutableStateOf(introEnabled)
+    }
 
     val store = remember {
         VehicleStore(context)
@@ -73,10 +97,27 @@ fun AutoCheckApp() {
         }
     }
 
-    if (screen == Screen.HOME) {
+    if (showIntro) {
+        IntroVideoScreen(
+            onFinished = {
+                showIntro = false
+            }
+        )
+    } else if (screen == Screen.HOME) {
         HomePagerScreen(
             visible = homeReady,
             visitedStore = visitedStore,
+            introEnabled = introEnabled,
+            onIntroEnabledChange = { enabled ->
+                introEnabled = enabled
+
+                preferences.edit()
+                    .putBoolean(
+                        INTRO_ENABLED_KEY,
+                        enabled
+                    )
+                    .apply()
+            },
             onSelect = {
                 showPickerlDocuments = false
                 screen = it
