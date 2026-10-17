@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -6,6 +7,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -135,7 +137,7 @@ fun HomeScreen(
                     .height(64.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // CARVITA-Logo in der Mitte der Kopfzeile.
+                // CARVITA-Logo mittig in der Kopfzeile.
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInVertically(
@@ -152,7 +154,7 @@ fun HomeScreen(
                     )
                 }
 
-                // Runder Intro-Button links.
+                // Intro-Button links, auf gleicher Höhe wie der Profilbutton.
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
@@ -164,7 +166,7 @@ fun HomeScreen(
                                 listOf(
                                     Color(0xFF5A5A5A),
                                     Color(0xFFE8E8E8),
-                                    Color(0xFFFFFFFF),
+                                    Color.White,
                                     Color(0xFF8A8A8A),
                                     Color(0xFF4A4A4A)
                                 )
@@ -183,56 +185,39 @@ fun HomeScreen(
                                     Color(0xFF292929)
                                 }
                             )
-                            .clip(CircleShape),
+                            .clickable {
+                                onIntroEnabledChange(!introEnabled)
+                            },
                         contentAlignment = Alignment.Center
                     ) {
-                        androidx.compose.foundation.clickable
-                        // Die Klickfläche liegt auf dem gesamten runden Button.
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .then(
-                                    Modifier
-                                ),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            IconButton(
-                                onClick = {
-                                    onIntroEnabledChange(!introEnabled)
+                            Text(
+                                text = "▶",
+                                color = if (introEnabled) {
+                                    Color.Black
+                                } else {
+                                    Color(0xFFD4AF37)
                                 },
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = "▶",
-                                        color = if (introEnabled) {
-                                            Color.Black
-                                        } else {
-                                            Color(0xFFD4AF37)
-                                        },
-                                        fontSize = 17.sp
-                                    )
+                                fontSize = 17.sp
+                            )
 
-                                    Text(
-                                        text = if (introEnabled) "AN" else "AUS",
-                                        color = if (introEnabled) {
-                                            Color.Black
-                                        } else {
-                                            Color(0xFFD4AF37)
-                                        },
-                                        fontSize = 9.sp
-                                    )
-                                }
-                            }
+                            Text(
+                                text = if (introEnabled) "AN" else "AUS",
+                                color = if (introEnabled) {
+                                    Color.Black
+                                } else {
+                                    Color(0xFFD4AF37)
+                                },
+                                fontSize = 9.sp
+                            )
                         }
                     }
                 }
 
-                // Profilbutton rechts – bleibt 54 dp groß.
+                // Profilbutton rechts, ebenfalls 54 dp groß.
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInHorizontally(
@@ -252,7 +237,7 @@ fun HomeScreen(
                                     listOf(
                                         Color(0xFF5A5A5A),
                                         Color(0xFFE8E8E8),
-                                        Color(0xFFFFFFFF),
+                                        Color.White,
                                         Color(0xFF8A8A8A),
                                         Color(0xFF4A4A4A)
                                     )
@@ -355,11 +340,7 @@ fun HomeScreen(
                         enter = slideInHorizontally(
                             animationSpec = tween(2000),
                             initialOffsetX = { fullWidth ->
-                                if (index == 0) {
-                                    -fullWidth
-                                } else {
-                                    fullWidth
-                                }
+                                if (index == 0) -fullWidth else fullWidth
                             }
                         )
                     ) {
@@ -375,7 +356,7 @@ fun HomeScreen(
 
                 if (row.size == 1) {
                     Spacer(
-                        Modifier.weight(1f)
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -443,7 +424,9 @@ private fun LoginDialog(
         text = {
             Column {
                 Text(
-                    "Melde dich später mit deinem CARVITA-Konto an, um deine persönlichen Fahrzeugdaten auf verschiedenen Geräten wieder abzurufen.",
+                    "Melde dich später mit deinem CARVITA-Konto an, " +
+                        "um deine persönlichen Fahrzeugdaten auf " +
+                        "verschiedenen Geräten wieder abzurufen.",
                     fontSize = 14.sp
                 )
 
@@ -485,7 +468,8 @@ private fun LoginDialog(
                 )
 
                 Text(
-                    "Die echte Anmeldung und E-Mail-Verifizierung werden im nächsten Ausbauschritt sicher angebunden.",
+                    "Die echte Anmeldung und E-Mail-Verifizierung " +
+                        "werden im nächsten Ausbauschritt sicher angebunden.",
                     fontSize = 12.sp,
                     color = Muted
                 )
@@ -528,7 +512,9 @@ private fun RegisterDialog(
         text = {
             Column {
                 Text(
-                    "Dein persönliches Profil wird später mit deinen Fahrzeugdaten verknüpft. Nach der echten Registrierung wird die E-Mail-Adresse verifiziert.",
+                    "Dein persönliches Profil wird später mit deinen " +
+                        "Fahrzeugdaten verknüpft. Nach der echten " +
+                        "Registrierung wird die E-Mail-Adresse verifiziert.",
                     fontSize = 14.sp
                 )
 
@@ -586,7 +572,9 @@ private fun RegisterDialog(
                 )
 
                 Text(
-                    "Die sichere Kontoerstellung, E-Mail-Verifizierung und Cloud-Synchronisierung werden im nächsten Ausbauschritt angeschlossen.",
+                    "Die sichere Kontoerstellung, E-Mail-Verifizierung " +
+                        "und Cloud-Synchronisierung werden im nächsten " +
+                        "Ausbauschritt angeschlossen.",
                     fontSize = 12.sp,
                     color = Muted
                 )
