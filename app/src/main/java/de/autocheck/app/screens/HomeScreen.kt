@@ -52,7 +52,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -154,7 +156,7 @@ fun HomeScreen(
                     )
                 }
 
-                // Intro-Button links, auf gleicher Höhe wie der Profilbutton.
+                // INTRO-Button: ursprüngliche Position, Form und Größe bleiben erhalten.
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
@@ -180,9 +182,9 @@ fun HomeScreen(
                             .clip(CircleShape)
                             .background(
                                 if (introEnabled) {
-                                    Color(0xFFD4AF37)
+                                    Color(0xFF218838)
                                 } else {
-                                    Color(0xFF292929)
+                                    Color(0xFFD93025)
                                 }
                             )
                             .clickable {
@@ -199,25 +201,28 @@ fun HomeScreen(
                                 color = if (introEnabled) {
                                     Color.Black
                                 } else {
-                                    Color(0xFFD4AF37)
+                                    Color.White
                                 },
                                 fontSize = 17.sp
                             )
 
                             Text(
-                                text = if (introEnabled) "AN" else "AUS",
+                                text = if (introEnabled) "INTRO AN" else "INTRO AUS",
                                 color = if (introEnabled) {
                                     Color.Black
                                 } else {
-                                    Color(0xFFD4AF37)
+                                    Color.White
                                 },
-                                fontSize = 9.sp
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1
                             )
                         }
                     }
                 }
 
-                // Profilbutton rechts, ebenfalls 54 dp groß.
+                // Profilbutton rechts: unverändert.
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInHorizontally(
@@ -373,7 +378,7 @@ fun HomeScreen(
                         top = 4.dp,
                         bottom = 8.dp
                     ),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
         }
     }
