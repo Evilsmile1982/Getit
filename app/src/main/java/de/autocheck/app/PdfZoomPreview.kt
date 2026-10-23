@@ -24,15 +24,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ZoomIn
@@ -77,7 +82,8 @@ fun PdfZoomPreview(
     pdfBytes: ByteArray,
     documentName: String,
     onClose: () -> Unit,
-    onPrint: (() -> Unit)? = null
+    onPrint: (() -> Unit)? = null,
+    onBackToMenu: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -101,17 +107,23 @@ fun PdfZoomPreview(
             scope.launch {
                 try {
                     withContext(Dispatchers.IO) {
-                        context.contentResolver.openOutputStream(uri)?.use { output ->
-                            output.write(pdfBytes)
-                            output.flush()
-                        } ?: throw IOException(
-                            "Die PDF-Datei konnte nicht gespeichert werden."
-                        )
+                        val output = context.contentResolver
+                            .openOutputStream(uri)
+                            ?: throw IOException(
+                                "Die PDF-Datei konnte nicht gespeichert werden."
+                            )
+
+                        output.use {
+                            it.write(pdfBytes)
+                            it.flush()
+                        }
                     }
+
+                    errorMessage = null
                 } catch (e: Exception) {
                     errorMessage =
                         "Speichern fehlgeschlagen: " +
-                        (e.localizedMessage ?: "Unbekannter Fehler")
+                            (e.localizedMessage ?: "Unbekannter Fehler")
                 }
             }
         }
@@ -151,7 +163,7 @@ fun PdfZoomPreview(
         } catch (e: Exception) {
             errorMessage =
                 "PDF konnte nicht geöffnet werden: " +
-                (e.localizedMessage ?: "Unbekannter Fehler")
+                    (e.localizedMessage ?: "Unbekannter Fehler")
         } finally {
             loading = false
         }
@@ -161,7 +173,6 @@ fun PdfZoomPreview(
         val file = pdfFile ?: return@LaunchedEffect
 
         loading = true
-        errorMessage = null
 
         try {
             val bitmap = withContext(Dispatchers.IO) {
@@ -206,10 +217,11 @@ fun PdfZoomPreview(
             zoom = 1f
             offsetX = 0f
             offsetY = 0f
+            errorMessage = null
         } catch (e: Exception) {
             errorMessage =
                 "Seite konnte nicht angezeigt werden: " +
-                (e.localizedMessage ?: "Unbekannter Fehler")
+                    (e.localizedMessage ?: "Unbekannter Fehler")
         } finally {
             loading = false
         }
@@ -239,16 +251,19 @@ fun PdfZoomPreview(
     Scaffold(
         topBar = {
             Surface(
-                tonalElevation = 3.dp,
+                tonalElevation = 2.dp,
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                        .height(52.dp)
+                        .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onClose) {
+                    IconButton(
+                        onClick = onClose
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Vorschau schließen"
@@ -258,11 +273,11 @@ fun PdfZoomPreview(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = 4.dp)
                     ) {
                         Text(
                             text = documentName,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             maxLines = 1
                         )
 
@@ -272,7 +287,7 @@ fun PdfZoomPreview(
                             } else {
                                 "PDF-Vorschau"
                             },
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.labelSmall
                         )
                     }
 
@@ -291,14 +306,15 @@ fun PdfZoomPreview(
         },
         bottomBar = {
             Surface(
-                tonalElevation = 4.dp,
+                tonalElevation = 3.dp,
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -315,11 +331,11 @@ fun PdfZoomPreview(
                                 imageVector = Icons.Default.ArrowBack,
                                 contentDescription = null
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text("Zurück")
                         }
 
-                        Spacer(Modifier.width(18.dp))
+                        Spacer(Modifier.width(12.dp))
 
                         Text(
                             text = if (pageCount > 0) {
@@ -330,7 +346,7 @@ fun PdfZoomPreview(
                             style = MaterialTheme.typography.bodyMedium
                         )
 
-                        Spacer(Modifier.width(18.dp))
+                        Spacer(Modifier.width(12.dp))
 
                         OutlinedButton(
                             onClick = {
@@ -343,7 +359,7 @@ fun PdfZoomPreview(
                                 !loading
                         ) {
                             Text("Weiter")
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.Default.ArrowForward,
                                 contentDescription = null
@@ -353,7 +369,7 @@ fun PdfZoomPreview(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedButton(
                             modifier = Modifier.weight(1f),
@@ -371,8 +387,8 @@ fun PdfZoomPreview(
                                 imageVector = Icons.Default.Save,
                                 contentDescription = null
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text("PDF speichern")
+                            Spacer(Modifier.width(4.dp))
+                            Text("Speichern")
                         }
 
                         Button(
@@ -394,9 +410,41 @@ fun PdfZoomPreview(
                                 imageVector = Icons.Default.Print,
                                 contentDescription = null
                             )
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text("Drucken")
                         }
+                    }
+
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            if (onBackToMenu != null) {
+                                onBackToMenu()
+                            } else {
+                                onClose()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (onBackToMenu != null) {
+                                "Zurück zum Menü"
+                            } else {
+                                "Zurück"
+                            }
+                        )
+                    }
+
+                    if (errorMessage != null && !loading) {
+                        Text(
+                            text = errorMessage.orEmpty(),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
@@ -413,14 +461,14 @@ fun PdfZoomPreview(
                 loading -> {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         CircularProgressIndicator()
                         Text("PDF wird geladen …")
                     }
                 }
 
-                errorMessage != null -> {
+                errorMessage != null && pageBitmap == null -> {
                     Column(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -445,7 +493,7 @@ fun PdfZoomPreview(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(8.dp)
+                            .padding(6.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(
                                 androidx.compose.ui.graphics.Color.White
@@ -458,7 +506,7 @@ fun PdfZoomPreview(
                             }
                             .transformable(state = transformState)
                             .pointerInput(Unit) {
-                                // Die transformable-Geste übernimmt Zoom und Verschieben.
+                                // Zoom und Verschieben übernimmt transformable.
                             }
                     )
                 }
