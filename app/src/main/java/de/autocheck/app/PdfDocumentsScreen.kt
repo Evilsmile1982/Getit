@@ -55,8 +55,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private const val PDF_MAINTENANCE_V3 =
-    "[WARTUNG_ENTRY_V3]"
+private const val PDF_MAINTENANCE_V3 = "[WARTUNG_ENTRY_V3]"
 
 private val PdfGold = Color(0xFFD4AF37)
 private val PdfBackground = Color(0xFF101010)
@@ -86,21 +85,15 @@ fun PdfDocumentsScreen(
         mutableStateOf<ByteArray?>(null)
     }
 
-    var previewDocumentName by remember {
-        mutableStateOf("")
-    }
+    var previewDocumentName by remember { mutableStateOf("") }
 
-    val documentStore = remember {
-        PickerlDocumentStore(context)
-    }
+    val documentStore = remember { PickerlDocumentStore(context) }
 
     var selectedVehicleId by remember(activeVehicleId) {
         mutableStateOf(activeVehicleId)
     }
 
-    var vehicleMenuExpanded by remember {
-        mutableStateOf(false)
-    }
+    var vehicleMenuExpanded by remember { mutableStateOf(false) }
 
     var statusMessage by remember {
         mutableStateOf(
@@ -112,8 +105,7 @@ fun PdfDocumentsScreen(
         mutableStateMapOf<String, Boolean>().apply {
             pdfSections.forEach { section ->
                 this[section] =
-                    section == "Fahrzeugdaten" ||
-                    section == "Wartungen"
+                    section == "Fahrzeugdaten" || section == "Wartungen"
             }
         }
     }
@@ -146,7 +138,6 @@ fun PdfDocumentsScreen(
         }
 
         documentStore.save(updated)
-
         pickerlDocuments = updated.filter {
             it.vehicle == selectedVehicle?.name
         }
@@ -161,8 +152,7 @@ fun PdfDocumentsScreen(
         }
 
         if (selections.values.none { it }) {
-            statusMessage =
-                "Bitte wähle mindestens einen PDF-Inhalt aus."
+            statusMessage = "Bitte wähle mindestens einen PDF-Inhalt aus."
             return
         }
 
@@ -180,9 +170,7 @@ fun PdfDocumentsScreen(
 
             previewDocumentName = "CARVITA_${safeName}_Bericht"
             previewPdfBytes = pdfBytes
-
-            statusMessage =
-                "PDF wurde erstellt und für die Vorschau geöffnet."
+            statusMessage = "PDF wurde erstellt und für die Vorschau geöffnet."
         } catch (error: Exception) {
             statusMessage =
                 "PDF konnte nicht erstellt werden: " +
@@ -190,20 +178,11 @@ fun PdfDocumentsScreen(
         }
     }
 
-    /*
-     * Wenn ein PDF erzeugt wurde, wird zuerst die
-     * zoombare Vorschau angezeigt.
-     *
-     * Beim Schließen kehrt der Benutzer zur
-     * Dokumentauswahl zurück.
-     */
     previewPdfBytes?.let { pdfBytes ->
         PdfZoomPreview(
             pdfBytes = pdfBytes,
             documentName = previewDocumentName,
-            onClose = {
-                previewPdfBytes = null
-            },
+            onClose = { previewPdfBytes = null },
             onPrint = {
                 openVehiclePrintPreview(
                     context = context,
@@ -251,9 +230,7 @@ fun PdfDocumentsScreen(
             }
         } else {
             OutlinedButton(
-                onClick = {
-                    vehicleMenuExpanded = true
-                },
+                onClick = { vehicleMenuExpanded = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -265,24 +242,19 @@ fun PdfDocumentsScreen(
 
             DropdownMenu(
                 expanded = vehicleMenuExpanded,
-                onDismissRequest = {
-                    vehicleMenuExpanded = false
-                }
+                onDismissRequest = { vehicleMenuExpanded = false }
             ) {
                 vehicles.forEach { vehicle ->
                     DropdownMenuItem(
                         text = {
-                            Text(
-                                "${vehicle.name} · ${vehicle.make} ${vehicle.model}"
-                            )
+                            Text("${vehicle.name} · ${vehicle.make} ${vehicle.model}")
                         },
                         onClick = {
                             selectedVehicleId = vehicle.id
                             vehicleMenuExpanded = false
-                            pickerlDocuments =
-                                documentStore.load().filter {
-                                    it.vehicle == vehicle.name
-                                }
+                            pickerlDocuments = documentStore.load().filter {
+                                it.vehicle == vehicle.name
+                            }
                         }
                     )
                 }
@@ -292,10 +264,7 @@ fun PdfDocumentsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                contentPadding = PaddingValues(
-                    top = 4.dp,
-                    bottom = 12.dp
-                ),
+                contentPadding = PaddingValues(top = 4.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
@@ -320,7 +289,6 @@ fun PdfDocumentsScreen(
                                         selections[section] = checked
                                     }
                                 )
-
                                 Text(
                                     text = section,
                                     color = Color.White,
@@ -354,9 +322,7 @@ fun PdfDocumentsScreen(
                                 )
                             } else {
                                 pickerlDocuments
-                                    .sortedByDescending {
-                                        pdfSortDate(it.date)
-                                    }
+                                    .sortedByDescending { pdfSortDate(it.date) }
                                     .forEach { document ->
                                         Row(
                                             modifier = Modifier
@@ -376,22 +342,18 @@ fun PdfDocumentsScreen(
 
                                             Column(
                                                 modifier = Modifier.weight(1f),
-                                                verticalArrangement =
-                                                    Arrangement.spacedBy(2.dp)
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
                                             ) {
                                                 Text(
                                                     document.type,
                                                     color = Color.White,
-                                                    fontWeight =
-                                                        FontWeight.SemiBold
+                                                    fontWeight = FontWeight.SemiBold
                                                 )
-
                                                 Text(
                                                     document.name,
                                                     color = Color.LightGray,
                                                     fontSize = 12.sp
                                                 )
-
                                                 Text(
                                                     document.date,
                                                     color = PdfGold,
@@ -413,27 +375,19 @@ fun PdfDocumentsScreen(
                                 color = PdfGold,
                                 fontWeight = FontWeight.Bold
                             )
-
                             Text(
                                 "${vehicle.name} – ${vehicle.make} ${vehicle.model}",
                                 color = Color.White
                             )
-
                             Text(
                                 "Fahrzeugart: ${vehicle.vehicleType}",
                                 color = Color.LightGray
                             )
-
-                            Text(
-                                "Baujahr: ${vehicle.year}",
-                                color = Color.LightGray
-                            )
-
+                            Text("Baujahr: ${vehicle.year}", color = Color.LightGray)
                             Text(
                                 "Kennzeichen: ${vehicle.plate.ifBlank { "–" }}",
                                 color = Color.LightGray
                             )
-
                             Text(
                                 "FIN: ${vehicle.vin.ifBlank { "–" }}",
                                 color = Color.LightGray
@@ -448,20 +402,13 @@ fun PdfDocumentsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = selectedVehicle != null
                     ) {
-                        Text(
-                            "Vorschau öffnen – PDF / Drucken",
-                            color = Color.Black
-                        )
+                        Text("Vorschau öffnen – PDF / Drucken", color = Color.Black)
                     }
                 }
 
                 item {
                     PdfPanelCard {
-                        Text(
-                            statusMessage,
-                            color = Color.White,
-                            fontSize = 13.sp
-                        )
+                        Text(statusMessage, color = Color.White, fontSize = 13.sp)
                     }
                 }
             }
@@ -477,14 +424,10 @@ fun PdfDocumentsScreen(
 }
 
 @Composable
-private fun PdfPanelCard(
-    content: @Composable () -> Unit
-) {
+private fun PdfPanelCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = PdfPanel
-        )
+        colors = CardDefaults.cardColors(containerColor = PdfPanel)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -508,7 +451,6 @@ private fun openVehiclePrintPreview(
     ) as PrintManager
 
     val adapter = object : PrintDocumentAdapter() {
-
         override fun onLayout(
             oldAttributes: PrintAttributes?,
             newAttributes: PrintAttributes?,
@@ -521,15 +463,9 @@ private fun openVehiclePrintPreview(
                 return
             }
 
-            val info = PrintDocumentInfo.Builder(
-                "$documentName.pdf"
-            )
-                .setContentType(
-                    PrintDocumentInfo.CONTENT_TYPE_DOCUMENT
-                )
-                .setPageCount(
-                    PrintDocumentInfo.PAGE_COUNT_UNKNOWN
-                )
+            val info = PrintDocumentInfo.Builder("$documentName.pdf")
+                .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                .setPageCount(PrintDocumentInfo.PAGE_COUNT_UNKNOWN)
                 .build()
 
             callback.onLayoutFinished(info, true)
@@ -555,14 +491,11 @@ private fun openVehiclePrintPreview(
                 if (cancellationSignal.isCanceled) {
                     callback.onWriteCancelled()
                 } else {
-                    callback.onWriteFinished(
-                        arrayOf(PageRange.ALL_PAGES)
-                    )
+                    callback.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
                 }
             } catch (error: Exception) {
                 callback.onWriteFailed(
-                    error.localizedMessage
-                        ?: "PDF konnte nicht ausgegeben werden."
+                    error.localizedMessage ?: "PDF konnte nicht ausgegeben werden."
                 )
             }
         }
@@ -593,25 +526,33 @@ private fun createVehiclePdf(
         val pageWidth = 595
         val pageHeight = 842
         val margin = 42f
+        val contentWidth = pageWidth - margin * 2
 
-        val bodyPaint = Paint().apply {
-            color = android.graphics.Color.rgb(35, 35, 35)
+        val gold = android.graphics.Color.rgb(120, 91, 14)
+        val dark = android.graphics.Color.rgb(35, 35, 35)
+        val muted = android.graphics.Color.rgb(105, 105, 105)
+        val lightGold = android.graphics.Color.rgb(248, 243, 226)
+
+        val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = dark
             textSize = 10f
-            isAntiAlias = true
         }
 
-        val titlePaint = Paint().apply {
-            color = android.graphics.Color.rgb(120, 91, 14)
-            textSize = 18f
+        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = gold
+            textSize = 20f
             isFakeBoldText = true
-            isAntiAlias = true
         }
 
-        val sectionPaint = Paint().apply {
-            color = android.graphics.Color.rgb(120, 91, 14)
+        val sectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = gold
             textSize = 12f
             isFakeBoldText = true
-            isAntiAlias = true
+        }
+
+        val smallPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = muted
+            textSize = 8f
         }
 
         val lines = mutableListOf<Pair<String, Int>>()
@@ -638,38 +579,22 @@ private fun createVehiclePdf(
         }
 
         if (selections["Reparaturen"] == true) {
-            val repairs = store.loadRepairs()
-                .filter { it.vehicle == vehicle.name }
-
+            val repairs = store.loadRepairs().filter { it.vehicle == vehicle.name }
             section("REPARATUREN (${repairs.size})")
 
-            if (repairs.isEmpty()) {
-                line("Keine Reparaturen gespeichert.")
-            }
+            if (repairs.isEmpty()) line("Keine Reparaturen gespeichert.")
 
             repairs.forEach {
                 line(
                     "${formatPdfDate(it.date)} · ${
                         it.description.ifBlank {
-                            it.repairDescription.ifBlank {
-                                "Reparatur"
-                            }
+                            it.repairDescription.ifBlank { "Reparatur" }
                         }
                     }"
                 )
-
-                if (it.workshop.isNotBlank()) {
-                    line("Werkstatt: ${it.workshop}")
-                }
-
-                if (it.mileage.isNotBlank()) {
-                    line("Kilometerstand: ${it.mileage} km")
-                }
-
-                if (it.cost.isNotBlank()) {
-                    line("Kosten: ${it.cost} €")
-                }
-
+                if (it.workshop.isNotBlank()) line("Werkstatt: ${it.workshop}")
+                if (it.mileage.isNotBlank()) line("Kilometerstand: ${it.mileage} km")
+                if (it.cost.isNotBlank()) line("Kosten: ${it.cost} €")
                 line("")
             }
         }
@@ -679,10 +604,7 @@ private fun createVehiclePdf(
                 .filter { it.vehicle == vehicle.name }
 
             section("WARTUNGEN (${maintenance.size})")
-
-            if (maintenance.isEmpty()) {
-                line("Keine Wartungen gespeichert.")
-            }
+            if (maintenance.isEmpty()) line("Keine Wartungen gespeichert.")
 
             maintenance.forEach {
                 val decoded = decodePdfMaintenance(
@@ -692,45 +614,23 @@ private fun createVehiclePdf(
                     fallbackCost = it.cost
                 )
 
-                line(
-                    "${formatPdfDate(decoded.date)} · ${decoded.name}"
-                )
-
-                if (it.workshop.isNotBlank()) {
-                    line("Werkstatt: ${it.workshop}")
-                }
-
+                line("${formatPdfDate(decoded.date)} · ${decoded.name}")
+                if (it.workshop.isNotBlank()) line("Werkstatt: ${it.workshop}")
                 if (decoded.mileage.isNotBlank()) {
                     line("Kilometerstand: ${decoded.mileage} km")
                 }
-
-                if (decoded.used.isNotBlank()) {
-                    line("Verwendet: ${decoded.used}")
-                }
-
+                if (decoded.used.isNotBlank()) line("Verwendet: ${decoded.used}")
                 if (decoded.partNumber.isNotBlank()) {
                     line("Teilenummer: ${decoded.partNumber}")
                 }
-
                 if (decoded.materialCost > 0.0) {
-                    line(
-                        "Materialkosten: ${
-                            pdfMoneyText(decoded.materialCost)
-                        }"
-                    )
+                    line("Materialkosten: ${pdfMoneyText(decoded.materialCost)}")
                 }
-
                 if (decoded.laborCost > 0.0) {
-                    line(
-                        "Arbeitskosten: ${
-                            pdfMoneyText(decoded.laborCost)
-                        }"
-                    )
+                    line("Arbeitskosten: ${pdfMoneyText(decoded.laborCost)}")
                 }
 
-                val total =
-                    decoded.materialCost + decoded.laborCost
-
+                val total = decoded.materialCost + decoded.laborCost
                 if (total > 0.0) {
                     line("Gesamtkosten: ${pdfMoneyText(total)}")
                 } else if (
@@ -741,41 +641,20 @@ private fun createVehiclePdf(
                     line("Kosten: ${it.cost} €")
                 }
 
-                if (decoded.notes.isNotBlank()) {
-                    line("Notiz: ${decoded.notes}")
-                }
-
+                if (decoded.notes.isNotBlank()) line("Notiz: ${decoded.notes}")
                 line("")
             }
         }
 
         if (selections["Pickerl / TÜV"] == true) {
-            val pickerl = store.loadPickerl()
-                .filter { it.vehicle == vehicle.name }
-
+            val pickerl = store.loadPickerl().filter { it.vehicle == vehicle.name }
             section("PICKERL / TÜV (${pickerl.size})")
-
-            if (pickerl.isEmpty()) {
-                line("Keine Pickerl-/TÜV-Einträge gespeichert.")
-            }
+            if (pickerl.isEmpty()) line("Keine Pickerl-/TÜV-Einträge gespeichert.")
 
             pickerl.forEach {
-                line(
-                    "Letzte Prüfung: ${
-                        formatPdfDate(it.lastDate).ifBlank { "–" }
-                    }"
-                )
-
-                line(
-                    "Nächster Termin: ${
-                        formatPdfDate(it.nextDate).ifBlank { "–" }
-                    }"
-                )
-
-                if (it.notes.isNotBlank()) {
-                    line("Hinweise: ${it.notes}")
-                }
-
+                line("Letzte Prüfung: ${formatPdfDate(it.lastDate).ifBlank { "–" }}")
+                line("Nächster Termin: ${formatPdfDate(it.nextDate).ifBlank { "–" }}")
+                if (it.notes.isNotBlank()) line("Hinweise: ${it.notes}")
                 line("")
             }
         }
@@ -788,21 +667,15 @@ private fun createVehiclePdf(
                         it.includeInPdf &&
                         it.uri.isNotBlank()
                 }
-                .sortedBy {
-                    pdfSortDate(it.date)
-                }
+                .sortedBy { pdfSortDate(it.date) }
 
-            section(
-                "PICKERL-DOKUMENTE (${selectedDocuments.size})"
-            )
+            section("PICKERL-DOKUMENTE (${selectedDocuments.size})")
 
             if (selectedDocuments.isEmpty()) {
                 line("Keine Pickerl-Dokumente für die PDF-Ausgabe ausgewählt.")
             } else {
                 selectedDocuments.forEach { item ->
-                    line(
-                        "${formatPdfDate(item.date)} · ${item.type}"
-                    )
+                    line("${formatPdfDate(item.date)} · ${item.type}")
                     line("Datei: ${item.name}")
                     line("")
                 }
@@ -814,14 +687,11 @@ private fun createVehiclePdf(
                     )
                 )
 
-                val requestedCount = selectedDocuments.size
-                val renderedCount = renderedPickerlPages.size
-
-                if (renderedCount == 0) {
+                if (renderedPickerlPages.isEmpty()) {
                     line(
                         "Hinweis: Die ausgewählten Dateien konnten nicht als Seiten gerendert werden. Bitte Dateizugriff prüfen."
                     )
-                } else if (renderedCount < requestedCount) {
+                } else if (renderedPickerlPages.size < selectedDocuments.size) {
                     line(
                         "Hinweis: Mindestens ein Dokument konnte nicht vollständig gerendert werden."
                     )
@@ -834,76 +704,40 @@ private fun createVehiclePdf(
                 .filter { it.vehicle == vehicle.name }
 
             section("SERVICEINTERVALLE (${services.size})")
-
-            if (services.isEmpty()) {
-                line("Keine Serviceintervalle gespeichert.")
-            }
+            if (services.isEmpty()) line("Keine Serviceintervalle gespeichert.")
 
             services.forEach {
                 line(
-                    "Durchgeführt: " +
-                        "${it.serviceMonth}/${it.serviceYear} · " +
+                    "Durchgeführt: ${it.serviceMonth}/${it.serviceYear} · " +
                         "${it.serviceKm.ifBlank { "–" }} km"
                 )
-
                 line(
                     "Nächster Service: " +
                         "${it.nextServiceMonth.ifBlank { "–" }}/" +
                         "${it.nextServiceYear.ifBlank { "–" }} · " +
                         "${it.nextServiceKm.ifBlank { "–" }} km"
                 )
-
                 if (it.documentation.isNotBlank()) {
                     line("Dokumentation: ${it.documentation}")
                 }
-
-                if (it.cost.isNotBlank()) {
-                    line("Kosten: ${it.cost} €")
-                }
-
+                if (it.cost.isNotBlank()) line("Kosten: ${it.cost} €")
                 line("")
             }
         }
 
         if (selections["Reifen"] == true) {
-            val tires = store.loadTires()
-                .filter { it.vehicle == vehicle.name }
-
+            val tires = store.loadTires().filter { it.vehicle == vehicle.name }
             section("REIFEN (${tires.size})")
-
-            if (tires.isEmpty()) {
-                line("Keine Reifeneinträge gespeichert.")
-            }
+            if (tires.isEmpty()) line("Keine Reifeneinträge gespeichert.")
 
             tires.forEach {
-                line(
-                    "${it.season} · ${it.brand} · ${it.dimension}"
-                )
-
-                if (it.rimType.isNotBlank()) {
-                    line("Felgen: ${it.rimType}")
-                }
-
-                if (it.dot.isNotBlank()) {
-                    line("DOT: ${it.dot}")
-                }
-
-                if (it.tread.isNotBlank()) {
-                    line("Profil: ${it.tread}")
-                }
-
-                if (it.condition.isNotBlank()) {
-                    line("Zustand: ${it.condition}")
-                }
-
-                if (it.storage.isNotBlank()) {
-                    line("Lagerung: ${it.storage}")
-                }
-
-                if (it.price.isNotBlank()) {
-                    line("Preis: ${it.price} €")
-                }
-
+                line("${it.season} · ${it.brand} · ${it.dimension}")
+                if (it.rimType.isNotBlank()) line("Felgen: ${it.rimType}")
+                if (it.dot.isNotBlank()) line("DOT: ${it.dot}")
+                if (it.tread.isNotBlank()) line("Profil: ${it.tread}")
+                if (it.condition.isNotBlank()) line("Zustand: ${it.condition}")
+                if (it.storage.isNotBlank()) line("Lagerung: ${it.storage}")
+                if (it.price.isNotBlank()) line("Preis: ${it.price} €")
                 line("")
             }
         }
@@ -913,38 +747,19 @@ private fun createVehiclePdf(
                 "carvita_fuel_data",
                 Context.MODE_PRIVATE
             )
-
-            val json = preferences.getString(
-                "fuel_${vehicle.id}",
-                "[]"
-            ) ?: "[]"
-
+            val json = preferences.getString("fuel_${vehicle.id}", "[]") ?: "[]"
             val fuelEntries = JSONArray(json)
 
             section("TANKHISTORIE (${fuelEntries.length()})")
-
-            if (fuelEntries.length() == 0) {
-                line("Keine Tankvorgänge gespeichert.")
-            }
+            if (fuelEntries.length() == 0) line("Keine Tankvorgänge gespeichert.")
 
             for (index in 0 until fuelEntries.length()) {
-                val entry =
-                    fuelEntries.optJSONObject(index) ?: continue
-
-                val rawDate = entry.optString("date")
-                val date = formatFuelDateForPdf(rawDate)
-
-                line("Datum: $date")
-                line(
-                    "Kilometerstand: ${entry.optInt("odometer")} km"
-                )
+                val entry = fuelEntries.optJSONObject(index) ?: continue
+                line("Datum: ${formatFuelDateForPdf(entry.optString("date"))}")
+                line("Kilometerstand: ${entry.optInt("odometer")} km")
                 line(
                     "Getankt: ${
-                        String.format(
-                            Locale.GERMANY,
-                            "%.2f l",
-                            entry.optDouble("liters")
-                        )
+                        String.format(Locale.GERMANY, "%.2f l", entry.optDouble("liters"))
                     }"
                 )
                 line(
@@ -960,55 +775,130 @@ private fun createVehiclePdf(
             }
         }
 
-        if (lines.isEmpty()) {
-            lines.add("Keine Inhalte ausgewählt." to 0)
-        }
+        if (lines.isEmpty()) lines.add("Keine Inhalte ausgewählt." to 0)
 
-        val date = SimpleDateFormat(
+        val createdAt = SimpleDateFormat(
             "dd.MM.yyyy HH:mm",
             Locale.GERMANY
         ).format(Date())
 
-        var pageNumber = 1
+        var pageNumber = 0
+        var page: PdfDocument.Page? = null
+        var canvas: android.graphics.Canvas? = null
+        var y = 0f
 
-        var page = document.startPage(
-            PdfDocument.PageInfo.Builder(
-                pageWidth,
-                pageHeight,
-                pageNumber
-            ).create()
-        )
+        val footerY = pageHeight - 24f
+        val contentBottom = footerY - 20f
 
-        var canvas = page.canvas
-        var y = 48f
+        fun drawHeader(firstPage: Boolean) {
+            val currentCanvas = canvas ?: return
 
-        fun drawHeader(includeDate: Boolean) {
-            canvas.drawText(
-                "CARVITA · Fahrzeugbericht",
+            val banner = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = lightGold
+                style = Paint.Style.FILL
+            }
+
+            currentCanvas.drawRect(
+                0f,
+                0f,
+                pageWidth.toFloat(),
+                82f,
+                banner
+            )
+
+            currentCanvas.drawText(
+                "CARVITA",
                 margin,
-                y,
+                34f,
                 titlePaint
             )
 
-            y += 22f
-
-            if (includeDate) {
-                canvas.drawText(
-                    "Erstellt am: $date",
-                    margin,
-                    y,
-                    bodyPaint
-                )
-                y += 26f
-            } else {
-                y += 4f
+            val subtitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = dark
+                textSize = 10f
             }
+
+            currentCanvas.drawText(
+                "FAHRZEUGBERICHT",
+                margin,
+                53f,
+                subtitlePaint
+            )
+
+            val rightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = muted
+                textSize = 8f
+                textAlign = Paint.Align.RIGHT
+            }
+
+            currentCanvas.drawText(
+                if (firstPage) "Erstellt am: $createdAt" else vehicle.name,
+                pageWidth - margin,
+                34f,
+                rightPaint
+            )
+
+            currentCanvas.drawLine(
+                margin,
+                82f,
+                pageWidth - margin,
+                82f,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = gold
+                    strokeWidth = 1.2f
+                }
+            )
+
+            y = if (firstPage) 108f else 104f
         }
 
-        fun startPage() {
-            document.finishPage(page)
-            pageNumber++
+        fun drawFooter() {
+            val currentCanvas = canvas ?: return
 
+            val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = gold
+                strokeWidth = 0.8f
+            }
+
+            currentCanvas.drawLine(
+                margin,
+                footerY - 12f,
+                pageWidth - margin,
+                footerY - 12f,
+                linePaint
+            )
+
+            val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = muted
+                textSize = 8f
+            }
+
+            currentCanvas.drawText(
+                "CARVITA – Die App für all deine Fahrzeuge",
+                margin,
+                footerY,
+                footerPaint
+            )
+
+            footerPaint.textAlign = Paint.Align.RIGHT
+            currentCanvas.drawText(
+                "Seite $pageNumber",
+                pageWidth - margin,
+                footerY,
+                footerPaint
+            )
+        }
+
+        fun finishCurrentPage() {
+            val currentPage = page ?: return
+            drawFooter()
+            document.finishPage(currentPage)
+            page = null
+            canvas = null
+        }
+
+        fun startNewPage(firstPage: Boolean = false) {
+            pageNumber++
             page = document.startPage(
                 PdfDocument.PageInfo.Builder(
                     pageWidth,
@@ -1016,49 +906,112 @@ private fun createVehiclePdf(
                     pageNumber
                 ).create()
             )
-
-            canvas = page.canvas
-            y = 48f
-            drawHeader(includeDate = false)
+            canvas = page!!.canvas
+            drawHeader(firstPage)
         }
 
-        drawHeader(includeDate = true)
-
-        lines.forEach { (text, type) ->
-            if (y > pageHeight - 45f) {
-                startPage()
+        fun ensureSpace(requiredHeight: Float) {
+            if (y + requiredHeight > contentBottom) {
+                finishCurrentPage()
+                startNewPage()
             }
+        }
 
-            if (text.isBlank()) {
-                y += 8f
-            } else {
-                val paint =
-                    if (type == 1) sectionPaint else bodyPaint
+        fun wrapText(text: String, paint: Paint): List<String> {
+            if (text.isEmpty()) return listOf("")
 
-                if (type == 1) {
-                    y += 5f
-                }
+            val result = mutableListOf<String>()
+            val paragraphs = text.split("\n")
 
-                val maxChars = if (type == 1) 78 else 95
+            paragraphs.forEach { paragraph ->
+                if (paragraph.isEmpty()) {
+                    result.add("")
+                } else {
+                    var current = ""
 
-                text.chunked(maxChars).forEach { part ->
-                    if (y > pageHeight - 45f) {
-                        startPage()
+                    paragraph.split(Regex("\\s+")).forEach { word ->
+                        val candidate = if (current.isEmpty()) {
+                            word
+                        } else {
+                            "$current $word"
+                        }
+
+                        if (paint.measureText(candidate) <= contentWidth) {
+                            current = candidate
+                        } else {
+                            if (current.isNotEmpty()) result.add(current)
+
+                            if (paint.measureText(word) <= contentWidth) {
+                                current = word
+                            } else {
+                                var part = ""
+                                word.forEach { character ->
+                                    val next = part + character
+                                    if (
+                                        part.isNotEmpty() &&
+                                        paint.measureText(next) > contentWidth
+                                    ) {
+                                        result.add(part)
+                                        part = character.toString()
+                                    } else {
+                                        part = next
+                                    }
+                                }
+                                current = part
+                            }
+                        }
                     }
 
-                    canvas.drawText(
-                        part,
-                        margin,
-                        y,
-                        paint
-                    )
+                    if (current.isNotEmpty()) result.add(current)
+                }
+            }
 
-                    y += if (type == 1) 17f else 14f
+            return result.ifEmpty { listOf("") }
+        }
+
+        startNewPage(firstPage = true)
+
+        lines.forEach { (text, type) ->
+            if (type == 1) {
+                ensureSpace(30f)
+                y += 5f
+
+                val currentCanvas = canvas ?: return@forEach
+                val headingRect = RectF(
+                    margin - 4f,
+                    y - 12f,
+                    pageWidth - margin + 4f,
+                    y + 7f
+                )
+
+                val headingBackground = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = lightGold
+                    style = Paint.Style.FILL
+                }
+
+                currentCanvas.drawRoundRect(
+                    headingRect,
+                    3f,
+                    3f,
+                    headingBackground
+                )
+
+                currentCanvas.drawText(text, margin, y, sectionPaint)
+                y += 21f
+            } else if (text.isBlank()) {
+                y += 7f
+            } else {
+                val wrapped = wrapText(text, bodyPaint)
+
+                wrapped.forEach { part ->
+                    ensureSpace(15f)
+                    canvas?.drawText(part, margin, y, bodyPaint)
+                    y += 14f
                 }
             }
         }
 
-        document.finishPage(page)
+        finishCurrentPage()
 
         renderedPickerlPages.forEach { (label, bitmap) ->
             pageNumber++
@@ -1073,29 +1026,53 @@ private fun createVehiclePdf(
 
             val attachmentCanvas = attachmentPage.canvas
 
+            attachmentCanvas.drawRect(
+                0f,
+                0f,
+                pageWidth.toFloat(),
+                70f,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = lightGold
+                    style = Paint.Style.FILL
+                }
+            )
+
             attachmentCanvas.drawText(
-                "CARVITA · Pickerl-Dokumentation",
+                "CARVITA",
                 margin,
-                38f,
+                30f,
                 titlePaint
             )
 
-            val labelPaint = Paint(bodyPaint).apply {
+            val attachmentTitlePaint = Paint(bodyPaint).apply {
                 textSize = 9f
+                color = dark
+            }
+
+            attachmentCanvas.drawText(
+                "PICKERL-DOKUMENTATION",
+                margin,
+                49f,
+                attachmentTitlePaint
+            )
+
+            val labelPaint = Paint(bodyPaint).apply {
+                textSize = 8f
+                color = muted
             }
 
             attachmentCanvas.drawText(
                 label.take(90),
                 margin,
-                56f,
+                85f,
                 labelPaint
             )
 
             val available = RectF(
                 margin,
-                72f,
+                100f,
                 pageWidth - margin,
-                pageHeight - 30f
+                pageHeight - 55f
             )
 
             val scale = minOf(
@@ -1105,30 +1082,47 @@ private fun createVehiclePdf(
 
             val drawWidth = bitmap.width * scale
             val drawHeight = bitmap.height * scale
-
-            val left = available.left +
-                (available.width() - drawWidth) / 2f
-
-            val top = available.top +
-                (available.height() - drawHeight) / 2f
-
-            val destination = RectF(
-                left,
-                top,
-                left + drawWidth,
-                top + drawHeight
-            )
-
-            val imagePaint = Paint().apply {
-                isAntiAlias = true
-                isFilterBitmap = true
-            }
+            val left = available.left + (available.width() - drawWidth) / 2f
+            val top = available.top + (available.height() - drawHeight) / 2f
 
             attachmentCanvas.drawBitmap(
                 bitmap,
                 null,
-                destination,
-                imagePaint
+                RectF(left, top, left + drawWidth, top + drawHeight),
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    isFilterBitmap = true
+                }
+            )
+
+            attachmentCanvas.drawLine(
+                margin,
+                footerY - 12f,
+                pageWidth - margin,
+                footerY - 12f,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = gold
+                    strokeWidth = 0.8f
+                }
+            )
+
+            val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = muted
+                textSize = 8f
+            }
+
+            attachmentCanvas.drawText(
+                "CARVITA – Die App für all deine Fahrzeuge",
+                margin,
+                footerY,
+                footerPaint
+            )
+
+            footerPaint.textAlign = Paint.Align.RIGHT
+            attachmentCanvas.drawText(
+                "Seite $pageNumber",
+                pageWidth - margin,
+                footerY,
+                footerPaint
             )
 
             document.finishPage(attachmentPage)
@@ -1136,15 +1130,12 @@ private fun createVehiclePdf(
 
         val output = ByteArrayOutputStream()
         document.writeTo(output)
-
         return output.toByteArray()
     } finally {
         document.close()
 
         renderedPickerlPages.forEach { (_, bitmap) ->
-            if (!bitmap.isRecycled) {
-                bitmap.recycle()
-            }
+            if (!bitmap.isRecycled) bitmap.recycle()
         }
     }
 }
@@ -1182,38 +1173,26 @@ private fun decodePdfMaintenance(
     }
 
     return try {
-        val json = JSONObject(
-            notes.removePrefix(PDF_MAINTENANCE_V3)
-        )
-
+        val json = JSONObject(notes.removePrefix(PDF_MAINTENANCE_V3))
         val month = json.optString("month", "").trim()
         val year = json.optString("year", "").trim()
 
-        val date = if (
-            month.isNotBlank() && year.isNotBlank()
-        ) {
-            "${year}-${month.padStart(2, '0')}"
+        val date = if (month.isNotBlank() && year.isNotBlank()) {
+            "$year-${month.padStart(2, '0')}"
         } else {
             fallbackDate
         }
 
         PdfMaintenanceData(
             name = json.optString("name", "Wartung")
-                .trim()
-                .ifBlank { "Wartung" },
+                .trim().ifBlank { "Wartung" },
             date = date,
-            mileage = json.optString(
-                "mileage",
-                fallbackMileage
-            ).trim().ifBlank { fallbackMileage },
+            mileage = json.optString("mileage", fallbackMileage)
+                .trim().ifBlank { fallbackMileage },
             used = json.optString("used", "").trim(),
             partNumber = json.optString("partNumber", "").trim(),
-            materialCost = pdfMoney(
-                json.optString("materialCost", "")
-            ),
-            laborCost = pdfMoney(
-                json.optString("laborCost", "")
-            ),
+            materialCost = pdfMoney(json.optString("materialCost", "")),
+            laborCost = pdfMoney(json.optString("laborCost", "")),
             notes = json.optString("notes", "").trim()
         )
     } catch (_: Exception) {
@@ -1241,9 +1220,7 @@ private fun pdfMoney(value: String): Double {
 
     return try {
         if (cleaned.contains(",") && cleaned.contains(".")) {
-            cleaned.replace(".", "")
-                .replace(",", ".")
-                .toDouble()
+            cleaned.replace(".", "").replace(",", ".").toDouble()
         } else {
             cleaned.replace(",", ".").toDouble()
         }
@@ -1253,11 +1230,7 @@ private fun pdfMoney(value: String): Double {
 }
 
 private fun pdfMoneyText(value: Double): String {
-    return String.format(
-        Locale.GERMANY,
-        "%.2f €",
-        value
-    )
+    return String.format(Locale.GERMANY, "%.2f €", value)
 }
 
 private fun formatFuelDateForPdf(value: String): String {
@@ -1268,7 +1241,6 @@ private fun formatFuelDateForPdf(value: String): String {
 
     formats.forEach { format ->
         format.isLenient = false
-
         try {
             val parsed = format.parse(value)
             if (parsed != null) {
