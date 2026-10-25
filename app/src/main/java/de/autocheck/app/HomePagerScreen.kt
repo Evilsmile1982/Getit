@@ -1,4 +1,3 @@
-
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -631,127 +630,125 @@ private fun ThirdHomePageContent(
     visible: Boolean,
     onAction: (String) -> Unit
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Image(
-            painter = painterResource(
-                id = R.drawable.menuebild_seite3
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                start = 18.dp,
+                end = 18.dp,
+                top = 24.dp,
+                bottom = 110.dp
             ),
-            contentDescription = "CARVITA Fahrzeugwelt",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Spacer(
+            modifier = Modifier.height(8.dp)
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.48f))
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = 18.dp,
-                    end = 18.dp,
-                    top = 36.dp,
-                    bottom = 108.dp
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.Black
+            )
         ) {
-            Text(
-                text = "DEINE NÄCHSTEN FUNKTIONEN",
-                color = CarvitaGold,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(
-                    top = 8.dp,
-                    bottom = 24.dp
-                )
-            )
-
-            Row(
+            Image(
+                painter = painterResource(
+                    id = R.drawable.menuebild_seite3
+                ),
+                contentDescription = "CARVITA Menü Seite 3",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ThirdPageButton(
-                    modifier = Modifier.weight(1f),
-                    iconRes = R.drawable.geplantevorhaben_icoon,
-                    title = "Geplante Vorhaben",
-                    contentDescription = "Geplante Vorhaben",
-                    onClick = {
-                        onAction("Geplante Vorhaben")
-                    }
-                )
+                    .height(230.dp),
+                contentScale = ContentScale.FillBounds
+            )
+        }
 
-                ThirdPageButton(
-                    modifier = Modifier.weight(1f),
-                    iconRes = R.drawable.tuningextras_icoon,
-                    title = "Tuning und Extras",
-                    contentDescription = "Tuning und Extras",
-                    onClick = {
-                        onAction("Tuning und Extras")
-                    }
-                )
-            }
+        Text(
+            text = "WEITERE FAHRZEUGFUNKTIONEN",
+            color = CarvitaGold,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
 
-            Spacer(
-                modifier = Modifier.height(14.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.geplantevorhaben_icoon,
+                title = "Geplante Vorhaben",
+                contentDescription = "Geplante Vorhaben",
+                onClick = {
+                    onAction("Geplante Vorhaben")
+                }
             )
 
-            Row(
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.tuningextras_icoon,
+                title = "Tuning und Extras",
+                contentDescription = "Tuning und Extras",
+                onClick = {
+                    onAction("Tuning und Extras")
+                }
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.elektro_icoon,
+                title = "Elektro und Verbrauch",
+                contentDescription = "Elektro und Verbrauch",
+                onClick = {
+                    onAction("Elektro und Verbrauch")
+                }
+            )
+
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.kalender_icoon,
+                title = "Kalender",
+                contentDescription = "Kalender",
+                onClick = {
+                    onAction("Kalender")
+                }
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
+        AnimatedVisibility(
+            visible = visible,
+            enter = slideInHorizontally(
+                animationSpec = tween(2000),
+                initialOffsetX = { fullWidth -> -fullWidth }
+            )
+        ) {
+            Image(
+                painter = painterResource(
+                    id = R.drawable.bild_4
+                ),
+                contentDescription = "CARVITA Logo",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ThirdPageButton(
-                    modifier = Modifier.weight(1f),
-                    iconRes = R.drawable.elektro_icoon,
-                    title = "Elektro und Verbrauch",
-                    contentDescription = "Elektro und Verbrauch",
-                    onClick = {
-                        onAction("Elektro und Verbrauch")
-                    }
-                )
-
-                ThirdPageButton(
-                    modifier = Modifier.weight(1f),
-                    iconRes = R.drawable.kalender_icoon,
-                    title = "Kalender",
-                    contentDescription = "Kalender",
-                    onClick = {
-                        onAction("Kalender")
-                    }
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(16.dp)
+                    .fillMaxWidth(0.52f)
+                    .height(58.dp),
+                contentScale = ContentScale.Fit
             )
-
-            AnimatedVisibility(
-                visible = visible,
-                enter = slideInHorizontally(
-                    animationSpec = tween(2000),
-                    initialOffsetX = { fullWidth -> -fullWidth }
-                )
-            ) {
-                Image(
-                    painter = painterResource(
-                        id = R.drawable.bild_4
-                    ),
-                    contentDescription = "CARVITA Logo",
-                    modifier = Modifier
-                        .fillMaxWidth(0.52f)
-                        .height(58.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
         }
     }
 }
