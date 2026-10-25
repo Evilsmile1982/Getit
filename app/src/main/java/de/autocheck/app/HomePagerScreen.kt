@@ -96,11 +96,13 @@ fun HomePagerScreen(
             .fillMaxSize()
             .background(CarvitaBackground)
             .pointerInput(
+                currentPage,
                 showFuelScreen,
                 showHistoryScreen,
                 showPdfScreen,
                 showPurchaseContractScreen,
-                showPremiumDialog
+                showPremiumDialog,
+                selectedAction
             ) {
                 var dragDistance = 0f
 
@@ -110,17 +112,21 @@ fun HomePagerScreen(
                         dragDistance += dragAmount
                     },
                     onDragEnd = {
-                        if (
-                            !showFuelScreen &&
-                            !showHistoryScreen &&
-                            !showPdfScreen &&
-                            !showPurchaseContractScreen &&
-                            !showPremiumDialog
-                        ) {
+                        val overlayOpen =
+                            showFuelScreen ||
+                            showHistoryScreen ||
+                            showPdfScreen ||
+                            showPurchaseContractScreen ||
+                            showPremiumDialog ||
+                            selectedAction != null
+
+                        if (!overlayOpen) {
                             if (dragDistance < -70f) {
-                                currentPage = 1
+                                currentPage =
+                                    (currentPage + 1).coerceAtMost(2)
                             } else if (dragDistance > 70f) {
-                                currentPage = 0
+                                currentPage =
+                                    (currentPage - 1).coerceAtLeast(0)
                             }
                         }
 
@@ -195,7 +201,7 @@ fun HomePagerScreen(
                 }
             }
 
-            else -> {
+            currentPage == 1 -> {
                 SecondHomePageContent(
                     visible = visible,
                     onPremiumClick = {
@@ -226,6 +232,15 @@ fun HomePagerScreen(
                     }
                 )
             }
+
+            else -> {
+                ThirdHomePageContent(
+                    visible = visible,
+                    onAction = { action ->
+                        selectedAction = action
+                    }
+                )
+            }
         }
 
         if (
@@ -241,61 +256,40 @@ fun HomePagerScreen(
                     .background(CarvitaBackground)
                     .navigationBarsPadding()
                     .padding(
-                        start = 28.dp,
-                        end = 28.dp,
+                        start = 20.dp,
+                        end = 20.dp,
                         top = 8.dp,
                         bottom = 8.dp
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            currentPage =
-                                if (currentPage == 0) 1 else 0
-                        },
-                    shape = RoundedCornerShape(50.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF29251A)
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        CarvitaGold
-                    ),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = 2.dp
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(38.dp)
-                            .padding(horizontal = 14.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (currentPage == 0) {
-                                "WEITERE FUNKTIONEN"
-                            } else {
-                                "HAUPTFUNKTIONEN"
-                            },
-                            color = CarvitaGold,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                    if (currentPage > 0) {
+                        PageNavigationButton(
+                            title = "ZURÜCK",
+                            arrow = "‹",
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                currentPage =
+                                    (currentPage - 1).coerceAtLeast(0)
+                            }
                         )
+                    }
 
-                        Spacer(
-                            modifier = Modifier.width(8.dp)
-                        )
-
-                        Text(
-                            text = if (currentPage == 0) "›" else "‹",
-                            color = CarvitaGold,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
+                    if (currentPage < 2) {
+                        PageNavigationButton(
+                            title = "WEITERE FUNKTIONEN",
+                            arrow = "›",
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                currentPage =
+                                    (currentPage + 1).coerceAtMost(2)
+                            }
                         )
                     }
                 }
@@ -304,7 +298,7 @@ fun HomePagerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    repeat(2) { page ->
+                    repeat(3) { page ->
                         Box(
                             modifier = Modifier
                                 .size(
@@ -329,11 +323,7 @@ fun HomePagerScreen(
                     }
 
                     Text(
-                        text = if (currentPage == 0) {
-                            "Seite 1 von 2"
-                        } else {
-                            "Seite 2 von 2"
-                        },
+                        text = "Seite ${currentPage + 1} von 3",
                         color = Color(0xFFBBBBBB),
                         fontSize = 10.sp
                     )
@@ -405,6 +395,69 @@ fun HomePagerScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun PageNavigationButton(
+    title: String,
+    arrow: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(38.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(50.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF29251A)
+        ),
+        border = BorderStroke(
+            1.dp,
+            CarvitaGold
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (arrow == "‹") {
+                Text(
+                    text = arrow,
+                    color = CarvitaGold,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(Modifier.width(5.dp))
+            }
+
+            Text(
+                text = title,
+                color = CarvitaGold,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            if (arrow == "›") {
+                Spacer(Modifier.width(5.dp))
+
+                Text(
+                    text = arrow,
+                    color = CarvitaGold,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
 
@@ -568,6 +621,202 @@ private fun SecondHomePageContent(
                     .fillMaxWidth(0.52f)
                     .height(58.dp),
                 contentScale = ContentScale.Fit
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThirdHomePageContent(
+    visible: Boolean,
+    onAction: (String) -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Image(
+            painter = painterResource(
+                id = R.drawable.menuebild_seite3
+            ),
+            contentDescription = "CARVITA Fahrzeugwelt",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.48f))
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = 18.dp,
+                    end = 18.dp,
+                    top = 36.dp,
+                    bottom = 108.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "DEINE NÄCHSTEN FUNKTIONEN",
+                color = CarvitaGold,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(
+                    top = 8.dp,
+                    bottom = 24.dp
+                )
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ThirdPageButton(
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.geplantevorhaben_icoon,
+                    title = "Geplante Vorhaben",
+                    contentDescription = "Geplante Vorhaben",
+                    onClick = {
+                        onAction("Geplante Vorhaben")
+                    }
+                )
+
+                ThirdPageButton(
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.tuningextras_icoon,
+                    title = "Tuning und Extras",
+                    contentDescription = "Tuning und Extras",
+                    onClick = {
+                        onAction("Tuning und Extras")
+                    }
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ThirdPageButton(
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.elektro_icoon,
+                    title = "Elektro und Verbrauch",
+                    contentDescription = "Elektro und Verbrauch",
+                    onClick = {
+                        onAction("Elektro und Verbrauch")
+                    }
+                )
+
+                ThirdPageButton(
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.kalender_icoon,
+                    title = "Kalender",
+                    contentDescription = "Kalender",
+                    onClick = {
+                        onAction("Kalender")
+                    }
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            AnimatedVisibility(
+                visible = visible,
+                enter = slideInHorizontally(
+                    animationSpec = tween(2000),
+                    initialOffsetX = { fullWidth -> -fullWidth }
+                )
+            ) {
+                Image(
+                    painter = painterResource(
+                        id = R.drawable.bild_4
+                    ),
+                    contentDescription = "CARVITA Logo",
+                    modifier = Modifier
+                        .fillMaxWidth(0.52f)
+                        .height(58.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThirdPageButton(
+    modifier: Modifier = Modifier,
+    iconRes: Int,
+    title: String,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xE6222222)
+        ),
+        border = BorderStroke(
+            1.dp,
+            CarvitaGold.copy(alpha = 0.8f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 5.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = contentDescription,
+                modifier = Modifier
+                    .size(76.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(
+                modifier = Modifier.height(5.dp)
+            )
+
+            Text(
+                text = "Öffnen ›",
+                color = CarvitaGold,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
