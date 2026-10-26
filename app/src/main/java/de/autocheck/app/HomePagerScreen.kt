@@ -1,4 +1,3 @@
-
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -331,14 +330,23 @@ fun HomePagerScreen(
         }
     }
 
-    // Öffnet die ausgewählte neue Funktion als eigene Detailseite.
+    // Kalender öffnet die eigene Kalenderseite.
+    // Alle anderen Funktionen verwenden weiterhin die allgemeine Detailseite.
     selectedAction?.let { action ->
-        VehicleFeatureScreen(
-            featureName = action,
-            onBack = {
-                selectedAction = null
-            }
-        )
+        if (action == "Kalender") {
+            VehicleCalendarScreen(
+                onBack = {
+                    selectedAction = null
+                }
+            )
+        } else {
+            VehicleFeatureScreen(
+                featureName = action,
+                onBack = {
+                    selectedAction = null
+                }
+            )
+        }
     }
 
     if (showPremiumDialog) {
@@ -533,7 +541,7 @@ private fun SecondHomePageContent(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.kaufvertrag_icoon,
                 title = "CARVITA Kaufvertrag",
-                contentDescription = "Kaufvertrag-Icon",
+                contentDescription = "Kaufvertrag",
                 onClick = {
                     onAction("Kaufvertrag")
                 }
