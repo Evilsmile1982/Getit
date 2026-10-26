@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -114,7 +115,7 @@ private fun TuningExtrasContent(
                         }
                     }
 
-                    entries.add(
+                    add(
                         TuningEntry(
                             id = item.optLong("id", i.toLong()),
                             category = item.optString("category"),
@@ -238,7 +239,7 @@ private fun TuningExtrasContent(
                             CarvitaCard
                         }
                     ),
-                    border = androidx.compose.foundation.BorderStroke(
+                    border = BorderStroke(
                         1.dp,
                         if (selectedCategory == category) {
                             CarvitaGold
@@ -364,8 +365,8 @@ private fun TuningExtrasContent(
                             Text(
                                 text = "Dokument ${index + 1}: " +
                                     Uri.parse(document).lastPathSegment
-                                        ?.substringAfterLast('/')?.take(45)
-                                    .orEmpty(),
+                                        ?.substringAfterLast('/')
+                                        ?.take(45).orEmpty(),
                                 color = Color.White,
                                 modifier = Modifier.weight(1f)
                             )
@@ -507,14 +508,14 @@ private fun TuningExtrasContent(
                                 TextButton(
                                     onClick = {
                                         try {
+                                            val uri = Uri.parse(uriString)
                                             val intent = Intent(
                                                 Intent.ACTION_VIEW
                                             ).apply {
                                                 setDataAndType(
-                                                    Uri.parse(uriString),
+                                                    uri,
                                                     context.contentResolver
-                                                        .getType(Uri.parse(uriString))
-                                                        ?: "*/*"
+                                                        .getType(uri) ?: "*/*"
                                                 )
                                                 addFlags(
                                                     Intent.FLAG_GRANT_READ_URI_PERMISSION
