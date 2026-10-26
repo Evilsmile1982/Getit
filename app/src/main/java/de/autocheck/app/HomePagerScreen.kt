@@ -792,8 +792,7 @@ private fun ThirdPageButton(
                 painter = painterResource(id = iconRes),
                 contentDescription = contentDescription,
                 modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .size(76.dp),
                 contentScale = ContentScale.Fit
             )
 
