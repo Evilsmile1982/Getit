@@ -69,7 +69,8 @@ private val pdfSections = listOf(
     "Pickerl-Dokumente",
     "Serviceintervalle",
     "Reifen",
-    "Tankhistorie"
+    "Tankhistorie",
+    "Tuning und Extras"
 )
 
 @Composable
