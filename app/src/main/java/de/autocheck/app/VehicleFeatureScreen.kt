@@ -1,7 +1,11 @@
-
 package de.autocheck.app
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +35,15 @@ import org.json.JSONObject
 
 private const val FEATURE_PREFS = "carvita_feature_entries"
 
+private val TUNING_CATEGORIES = listOf(
+    "Motor- und Leistungstuning",
+    "Fahrwerk und Bremsen",
+    "Karosserie und Optik (Styling)",
+    "Innenraum und Sound",
+    "Reifen/Felgen",
+    "Zulassung & Eintragungen"
+)
+
 private data class CarvitaFeatureEntry(
     val title: String,
     val details: String,
@@ -38,8 +51,525 @@ private data class CarvitaFeatureEntry(
     val amount: String
 )
 
+private data class TuningEntry(
+    val id: Long,
+    val category: String,
+    val title: String,
+    val details: String,
+    val date: String,
+    val amount: String,
+    val documents: List<String>
+)
+
+private val CarvitaGold = Color(0xFFD4AF37)
+private val CarvitaCard = Color(0xFF202020)
+
 @Composable
 fun VehicleFeatureScreen(
+    featureName: String,
+    onBack: () -> Unit
+) {
+    if (featureName == "Tuning und Extras") {
+        TuningExtrasContent(onBack = onBack)
+    } else {
+        GenericVehicleFeatureContent(
+            featureName = featureName,
+            onBack = onBack
+        )
+    }
+}
+
+@Composable
+private fun TuningExtrasContent(
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val preferences = remember(context) {
+        context.getSharedPreferences(
+            FEATURE_PREFS,
+            Context.MODE_PRIVATE
+        )
+    }
+
+    val entries = remember(preferences) {
+        mutableStateListOf<TuningEntry>().apply {
+            val json = preferences.getString(
+                "tuning_extras_entries",
+                "[]"
+            ) ?: "[]"
+
+            try {
+                val array = JSONArray(json)
+
+                for (i in 0 until array.length()) {
+                    val item = array.optJSONObject(i) ?: continue
+                    val docsJson = item.optJSONArray("documents")
+                    val documents = mutableListOf<String>()
+
+                    if (docsJson != null) {
+                        for (j in 0 until docsJson.length()) {
+                            val uri = docsJson.optString(j)
+                            if (uri.isNotBlank()) documents.add(uri)
+                        }
+                    }
+
+                    entries.add(
+                        TuningEntry(
+                            id = item.optLong("id", i.toLong()),
+                            category = item.optString("category"),
+                            title = item.optString("title"),
+                            details = item.optString("details"),
+                            date = item.optString("date"),
+                            amount = item.optString("amount"),
+                            documents = documents
+                        )
+                    )
+                }
+            } catch (_: Exception) {
+                // Bei beschädigten Daten mit leerer Liste starten.
+            }
+        }
+    }
+
+    var selectedCategory by remember {
+        mutableStateOf(TUNING_CATEGORIES.first())
+    }
+    var title by remember { mutableStateOf("") }
+    var details by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf("") }
+    var draftDocuments by remember {
+        mutableStateOf<List<String>>(emptyList())
+    }
+    var editingId by remember { mutableStateOf<Long?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+
+    fun persistEntries() {
+        val array = JSONArray()
+
+        entries.forEach { entry ->
+            array.put(
+                JSONObject().apply {
+                    put("id", entry.id)
+                    put("category", entry.category)
+                    put("title", entry.title)
+                    put("details", entry.details)
+                    put("date", entry.date)
+                    put("amount", entry.amount)
+                    put(
+                        "documents",
+                        JSONArray().apply {
+                            entry.documents.forEach { put(it) }
+                        }
+                    )
+                }
+            )
+        }
+
+        preferences.edit()
+            .putString("tuning_extras_entries", array.toString())
+            .apply()
+    }
+
+    val documentPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Manche Dateianbieter erlauben keine dauerhafte Freigabe.
+            }
+
+            if (!draftDocuments.contains(uri.toString())) {
+                draftDocuments = draftDocuments + uri.toString()
+            }
+            message = "Dokument ausgewählt. Speichere den Eintrag."
+        }
+    }
+
+    fun clearForm() {
+        title = ""
+        details = ""
+        date = ""
+        amount = ""
+        draftDocuments = emptyList()
+        editingId = null
+        message = null
+    }
+
+    DetailScaffold(
+        title = "Tuning und Extras",
+        onBack = onBack
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Deine Umbauten, Extras und Kosten im Überblick.",
+                color = Color.White
+            )
+
+            Text(
+                text = "1. Kategorie auswählen",
+                color = CarvitaGold
+            )
+
+            TUNING_CATEGORIES.forEachIndexed { index, category ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            selectedCategory = category
+                            clearForm()
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedCategory == category) {
+                            Color(0xFF39301A)
+                        } else {
+                            CarvitaCard
+                        }
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (selectedCategory == category) {
+                            CarvitaGold
+                        } else {
+                            Color.DarkGray
+                        }
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp)
+                    ) {
+                        Text(
+                            text = "${index + 1}. $category",
+                            color = if (selectedCategory == category) {
+                                CarvitaGold
+                            } else {
+                                Color.White
+                            }
+                        )
+                        Text(
+                            text = if (selectedCategory == category) {
+                                "Ausgewählt"
+                            } else {
+                                "Antippen zum Auswählen"
+                            },
+                            color = Color.LightGray
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = if (editingId == null) {
+                    "2. Neuen Eintrag hinzufügen"
+                } else {
+                    "2. Eintrag bearbeiten"
+                },
+                color = CarvitaGold
+            )
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = {
+                    title = it
+                    message = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Was wurde gemacht?") },
+                placeholder = {
+                    Text("z. B. Sportauspuff eingebaut")
+                },
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = details,
+                onValueChange = { details = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Details der Arbeiten") },
+                placeholder = {
+                    Text("Hersteller, Modell, Werkstatt, Teilenummer …")
+                },
+                minLines = 3
+            )
+
+            OutlinedTextField(
+                value = date,
+                onValueChange = { date = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Datum (optional)") },
+                placeholder = { Text("z. B. 26.10.2026") },
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { amount = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Gesamtkosten in € (optional)") },
+                placeholder = { Text("z. B. 850,00") },
+                singleLine = true
+            )
+
+            if (selectedCategory == "Zulassung & Eintragungen") {
+                Text(
+                    text = "Dokumente und Nachweise",
+                    color = CarvitaGold
+                )
+                Text(
+                    text = "Wähle beispielsweise Gutachten, Rechnungen " +
+                        "oder Eintragungsunterlagen aus.",
+                    color = Color.LightGray
+                )
+
+                Button(
+                    onClick = {
+                        documentPicker.launch(
+                            arrayOf(
+                                "application/pdf",
+                                "image/*",
+                                "text/plain"
+                            )
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Datei vom Handy auswählen")
+                }
+
+                draftDocuments.forEachIndexed { index, document ->
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = CarvitaCard
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Dokument ${index + 1}: " +
+                                    Uri.parse(document).lastPathSegment
+                                        ?.substringAfterLast('/')?.take(45)
+                                    .orEmpty(),
+                                color = Color.White,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(
+                                onClick = {
+                                    draftDocuments =
+                                        draftDocuments - document
+                                }
+                            ) {
+                                Text("Entfernen")
+                            }
+                        }
+                    }
+                }
+            }
+
+            message?.let {
+                Text(text = it, color = CarvitaGold)
+            }
+
+            Button(
+                onClick = {
+                    if (title.isBlank()) {
+                        message = "Bitte gib an, was gemacht wurde."
+                    } else {
+                        val id = editingId ?: System.currentTimeMillis()
+                        val updated = TuningEntry(
+                            id = id,
+                            category = selectedCategory,
+                            title = title.trim(),
+                            details = details.trim(),
+                            date = date.trim(),
+                            amount = amount.trim(),
+                            documents = if (
+                                selectedCategory == "Zulassung & Eintragungen"
+                            ) {
+                                draftDocuments
+                            } else {
+                                emptyList()
+                            }
+                        )
+
+                        val existingIndex = entries.indexOfFirst {
+                            it.id == id
+                        }
+
+                        if (existingIndex >= 0) {
+                            entries[existingIndex] = updated
+                        } else {
+                            entries.add(0, updated)
+                        }
+
+                        persistEntries()
+                        clearForm()
+                        message = "Eintrag gespeichert."
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (editingId == null) {
+                        "Eintrag speichern"
+                    } else {
+                        "Änderungen speichern"
+                    }
+                )
+            }
+
+            if (editingId != null) {
+                TextButton(
+                    onClick = { clearForm() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Bearbeiten abbrechen")
+                }
+            }
+
+            Text(
+                text = "Gespeicherte Einträge (${entries.size})",
+                color = CarvitaGold
+            )
+
+            if (entries.isEmpty()) {
+                Text(
+                    text = "Noch keine Tuning- oder Extra-Einträge vorhanden.",
+                    color = Color.LightGray
+                )
+            }
+
+            entries.forEach { entry ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = CarvitaCard
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Text(
+                            text = entry.category,
+                            color = CarvitaGold
+                        )
+                        Text(
+                            text = entry.title,
+                            color = Color.White
+                        )
+
+                        if (entry.details.isNotBlank()) {
+                            Text(
+                                text = entry.details,
+                                color = Color.LightGray
+                            )
+                        }
+
+                        if (entry.date.isNotBlank()) {
+                            Text(
+                                text = "Datum: ${entry.date}",
+                                color = Color.LightGray
+                            )
+                        }
+
+                        if (entry.amount.isNotBlank()) {
+                            Text(
+                                text = "Kosten: ${entry.amount} €",
+                                color = Color.White
+                            )
+                        }
+
+                        if (entry.documents.isNotEmpty()) {
+                            Text(
+                                text = "Angehängte Dokumente: " +
+                                    entry.documents.size,
+                                color = CarvitaGold
+                            )
+
+                            entry.documents.forEachIndexed { index, uriString ->
+                                TextButton(
+                                    onClick = {
+                                        try {
+                                            val intent = Intent(
+                                                Intent.ACTION_VIEW
+                                            ).apply {
+                                                setDataAndType(
+                                                    Uri.parse(uriString),
+                                                    context.contentResolver
+                                                        .getType(Uri.parse(uriString))
+                                                        ?: "*/*"
+                                                )
+                                                addFlags(
+                                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                )
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {
+                                            message =
+                                                "Datei konnte nicht geöffnet werden."
+                                        }
+                                    }
+                                ) {
+                                    Text("Dokument ${index + 1} öffnen")
+                                }
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    selectedCategory = entry.category
+                                    title = entry.title
+                                    details = entry.details
+                                    date = entry.date
+                                    amount = entry.amount
+                                    draftDocuments = entry.documents
+                                    editingId = entry.id
+                                    message = null
+                                }
+                            ) {
+                                Text("Bearbeiten")
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    entries.removeAll { it.id == entry.id }
+                                    persistEntries()
+                                    if (editingId == entry.id) clearForm()
+                                }
+                            ) {
+                                Text("Löschen")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenericVehicleFeatureContent(
     featureName: String,
     onBack: () -> Unit
 ) {
@@ -67,10 +597,8 @@ fun VehicleFeatureScreen(
 
             try {
                 val array = JSONArray(json)
-
                 for (index in 0 until array.length()) {
                     val item = array.optJSONObject(index) ?: continue
-
                     add(
                         CarvitaFeatureEntry(
                             title = item.optString("title"),
@@ -86,29 +614,16 @@ fun VehicleFeatureScreen(
         }
     }
 
-    var title by remember(featureName) {
-        mutableStateOf("")
-    }
-
-    var details by remember(featureName) {
-        mutableStateOf("")
-    }
-
-    var date by remember(featureName) {
-        mutableStateOf("")
-    }
-
-    var amount by remember(featureName) {
-        mutableStateOf("")
-    }
-
+    var title by remember(featureName) { mutableStateOf("") }
+    var details by remember(featureName) { mutableStateOf("") }
+    var date by remember(featureName) { mutableStateOf("") }
+    var amount by remember(featureName) { mutableStateOf("") }
     var validationMessage by remember(featureName) {
         mutableStateOf<String?>(null)
     }
 
     fun persistEntries() {
         val array = JSONArray()
-
         entries.forEach { entry ->
             array.put(
                 JSONObject().apply {
@@ -119,10 +634,7 @@ fun VehicleFeatureScreen(
                 }
             )
         }
-
-        preferences.edit()
-            .putString(storageKey, array.toString())
-            .apply()
+        preferences.edit().putString(storageKey, array.toString()).apply()
     }
 
     DetailScaffold(
@@ -140,18 +652,11 @@ fun VehicleFeatureScreen(
                 text = when (featureName) {
                     "Geplante Vorhaben" ->
                         "Plane kommende Arbeiten und Verbesserungen an deinem Fahrzeug."
-
-                    "Tuning und Extras" ->
-                        "Halte Umbauten, Zubehör und zusätzliche Ausstattung fest."
-
                     "Elektro und Verbrauch" ->
                         "Notiere elektrische Arbeiten, Verbrauchswerte und zugehörige Kosten."
-
                     "Kalender" ->
                         "Speichere wichtige Fahrzeugtermine und Erinnerungen."
-
-                    else ->
-                        "Verwalte deine Fahrzeug-Einträge."
+                    else -> "Verwalte deine Fahrzeug-Einträge."
                 },
                 color = Color.White
             )
@@ -168,7 +673,6 @@ fun VehicleFeatureScreen(
                         when (featureName) {
                             "Kalender" -> "Termin"
                             "Elektro und Verbrauch" -> "Messung oder Eintrag"
-                            "Tuning und Extras" -> "Umbau oder Extra"
                             else -> "Vorhaben"
                         }
                     )
@@ -206,23 +710,18 @@ fun VehicleFeatureScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = {
                     Text(
-                        when (featureName) {
-                            "Elektro und Verbrauch" ->
-                                "Verbrauch / Wert / Kosten (optional)"
-
-                            else ->
-                                "Kosten in € (optional)"
+                        if (featureName == "Elektro und Verbrauch") {
+                            "Verbrauch / Wert / Kosten (optional)"
+                        } else {
+                            "Kosten in € (optional)"
                         }
                     )
                 },
                 singleLine = true
             )
 
-            validationMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = Color(0xFFFF8A80)
-                )
+            validationMessage?.let {
+                Text(text = it, color = Color(0xFFFF8A80))
             }
 
             Button(
@@ -239,9 +738,7 @@ fun VehicleFeatureScreen(
                                 amount = amount.trim()
                             )
                         )
-
                         persistEntries()
-
                         title = ""
                         details = ""
                         date = ""
@@ -255,8 +752,8 @@ fun VehicleFeatureScreen(
             }
 
             Text(
-                text = "Gespeicherte Einträge (\${entries.size})",
-                color = Color(0xFFD4AF37)
+                text = "Gespeicherte Einträge (${entries.size})",
+                color = CarvitaGold
             )
 
             if (entries.isEmpty()) {
@@ -269,7 +766,7 @@ fun VehicleFeatureScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF202020)
+                            containerColor = CarvitaCard
                         )
                     ) {
                         Column(
@@ -278,28 +775,22 @@ fun VehicleFeatureScreen(
                                 .padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = entry.title,
-                                color = Color.White
-                            )
+                            Text(entry.title, color = Color.White)
 
                             if (entry.details.isNotBlank()) {
-                                Text(
-                                    text = entry.details,
-                                    color = Color.LightGray
-                                )
+                                Text(entry.details, color = Color.LightGray)
                             }
 
                             if (entry.date.isNotBlank()) {
                                 Text(
-                                    text = "Datum: \${entry.date}",
-                                    color = Color(0xFFD4AF37)
+                                    "Datum: ${entry.date}",
+                                    color = CarvitaGold
                                 )
                             }
 
                             if (entry.amount.isNotBlank()) {
                                 Text(
-                                    text = "Wert: \${entry.amount}",
+                                    "Wert: ${entry.amount}",
                                     color = Color.LightGray
                                 )
                             }
