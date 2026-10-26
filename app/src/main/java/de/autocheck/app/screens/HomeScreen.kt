@@ -1,7 +1,11 @@
-
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
@@ -11,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,8 +53,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -58,13 +66,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val PremiumGold = Color(0xFFD4AF37)
+
 @Composable
 fun HomeScreen(
     visible: Boolean,
     visitedStore: VisitedStore,
     introEnabled: Boolean,
     onIntroEnabledChange: (Boolean) -> Unit,
-    onSelect: (Screen) -> Unit
+    onSelect: (Screen) -> Unit,
+    onPremiumClick: () -> Unit
 ) {
     val menuItems = listOf(
         MenuItemData(
@@ -124,7 +135,7 @@ fun HomeScreen(
             .fillMaxSize()
             .background(Background),
         horizontalAlignment = Alignment.CenterHorizontally,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+        contentPadding = PaddingValues(
             start = 14.dp,
             end = 14.dp,
             top = 8.dp,
@@ -139,7 +150,6 @@ fun HomeScreen(
                     .height(64.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // CARVITA-Logo mittig in der Kopfzeile.
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInVertically(
@@ -156,7 +166,6 @@ fun HomeScreen(
                     )
                 }
 
-                // INTRO-Button: ursprüngliche Position, Form und Größe bleiben erhalten.
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
@@ -222,7 +231,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Profilbutton rechts: unverändert.
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInHorizontally(
@@ -254,7 +262,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(CircleShape)
-                                .background(Color(0xFFD4AF37))
+                                .background(PremiumGold)
                         ) {
                             IconButton(
                                 onClick = {
@@ -278,9 +286,7 @@ fun HomeScreen(
                             }
                         ) {
                             DropdownMenuItem(
-                                text = {
-                                    Text("Anmelden")
-                                },
+                                text = { Text("Anmelden") },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Filled.Person,
@@ -294,9 +300,7 @@ fun HomeScreen(
                             )
 
                             DropdownMenuItem(
-                                text = {
-                                    Text("Profil erstellen")
-                                },
+                                text = { Text("Profil erstellen") },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Filled.Person,
@@ -367,19 +371,25 @@ fun HomeScreen(
             }
         }
 
+        // Neuer Premium-Button ersetzt den bisherigen Slogan.
         item {
-            Text(
-                text = "CARVITA – die Geschichte deiner Fahrzeuge",
-                color = Muted,
-                fontSize = 12.sp,
+            AnimatedVisibility(
+                visible = visible,
+                enter = slideInVertically(
+                    animationSpec = tween(900),
+                    initialOffsetY = { height -> height / 2 }
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
                         top = 4.dp,
-                        bottom = 8.dp
-                    ),
-                textAlign = TextAlign.Center
-            )
+                        bottom = 10.dp
+                    )
+            ) {
+                PremiumHomeButton(
+                    onClick = onPremiumClick
+                )
+            }
         }
     }
 
@@ -401,6 +411,116 @@ fun HomeScreen(
         }
 
         null -> Unit
+    }
+}
+
+@Composable
+private fun PremiumHomeButton(
+    onClick: () -> Unit
+) {
+    val transition = rememberInfiniteTransition(
+        label = "premium_border_transition"
+    )
+
+    val rotation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 3200,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "premium_border_rotation"
+    )
+
+    val shape = RoundedCornerShape(22.dp)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(0.78f)
+            .height(64.dp)
+            .drawBehind {
+                val borderBrush = Brush.sweepGradient(
+                    colors = listOf(
+                        Color(0xFF6E5310),
+                        Color(0xFFD4AF37),
+                        Color(0xFFFFF1A8),
+                        Color.White,
+                        Color(0xFFD4AF37),
+                        Color(0xFF6E5310)
+                    )
+                )
+
+                rotate(rotation) {
+                    drawRoundRect(
+                        brush = borderBrush,
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                            22.dp.toPx()
+                        ),
+                        style = Stroke(
+                            width = 3.dp.toPx()
+                        )
+                    )
+                }
+            }
+            .clickable(onClick = onClick),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1B170D)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 5.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "♛",
+                color = PremiumGold,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.size(10.dp)
+            )
+
+            Column(
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "CARVITA PREMIUM",
+                    color = PremiumGold,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+
+                Text(
+                    text = "Exklusive Funktionen entdecken",
+                    color = Color(0xFFE0D2A0),
+                    fontSize = 10.sp
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.size(8.dp)
+            )
+
+            Text(
+                text = "✦",
+                color = Color(0xFFFFF1A8),
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
@@ -435,42 +555,28 @@ private fun LoginDialog(
                     fontSize = 14.sp
                 )
 
-                Spacer(
-                    modifier = Modifier.height(16.dp)
-                )
+                Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = {
-                        email = it
-                    },
-                    label = {
-                        Text("E-Mail-Adresse")
-                    },
+                    onValueChange = { email = it },
+                    label = { Text("E-Mail-Adresse") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(
-                    modifier = Modifier.height(10.dp)
-                )
+                Spacer(Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = {
-                        password = it
-                    },
-                    label = {
-                        Text("Passwort")
-                    },
+                    onValueChange = { password = it },
+                    label = { Text("Passwort") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(
-                    modifier = Modifier.height(12.dp)
-                )
+                Spacer(Modifier.height(12.dp))
 
                 Text(
                     "Die echte Anmeldung und E-Mail-Verifizierung " +
@@ -523,58 +629,38 @@ private fun RegisterDialog(
                     fontSize = 14.sp
                 )
 
-                Spacer(
-                    modifier = Modifier.height(16.dp)
-                )
+                Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = name,
-                    onValueChange = {
-                        name = it
-                    },
-                    label = {
-                        Text("Name")
-                    },
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(
-                    modifier = Modifier.height(10.dp)
-                )
+                Spacer(Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = {
-                        email = it
-                    },
-                    label = {
-                        Text("E-Mail-Adresse")
-                    },
+                    onValueChange = { email = it },
+                    label = { Text("E-Mail-Adresse") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(
-                    modifier = Modifier.height(10.dp)
-                )
+                Spacer(Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = {
-                        password = it
-                    },
-                    label = {
-                        Text("Passwort")
-                    },
+                    onValueChange = { password = it },
+                    label = { Text("Passwort") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(
-                    modifier = Modifier.height(12.dp)
-                )
+                Spacer(Modifier.height(12.dp))
 
                 Text(
                     "Die sichere Kontoerstellung, E-Mail-Verifizierung " +
