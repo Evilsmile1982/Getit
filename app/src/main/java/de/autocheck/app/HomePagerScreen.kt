@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -565,8 +566,8 @@ private fun SecondHomePageContent(
                 painter = painterResource(id = R.drawable.bild_4),
                 contentDescription = "CARVITA Logo",
                 modifier = Modifier
-                    .fillMaxWidth(0.62f)
-                    .height(46.dp),
+                    .fillMaxWidth()
+                    .height(84.dp),
                 contentScale = ContentScale.Fit
             )
         }
@@ -685,8 +686,8 @@ private fun ThirdHomePageContent(
                 painter = painterResource(id = R.drawable.bild_4),
                 contentDescription = "CARVITA Logo",
                 modifier = Modifier
-                    .fillMaxWidth(0.62f)
-                    .height(46.dp),
+                    .fillMaxWidth()
+                    .height(84.dp),
                 contentScale = ContentScale.Fit
             )
         }
