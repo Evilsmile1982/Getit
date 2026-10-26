@@ -195,12 +195,15 @@ fun HomePagerScreen(
                         visitedStore = visitedStore,
                         introEnabled = introEnabled,
                         onIntroEnabledChange = onIntroEnabledChange,
-                        onSelect = onSelect
+                        onSelect = onSelect,
+                        onPremiumClick = {
+                            showPremiumDialog = true
+                        }
                     )
                 }
             }
 
-            // SEITE 2: Menübild 3 mit vier Platzhalter-Buttons
+            // SEITE 2: Vier zusätzliche Platzhalter-Funktionen
             currentPage == 1 -> {
                 ThirdHomePageContent(
                     visible = visible,
@@ -210,13 +213,10 @@ fun HomePagerScreen(
                 )
             }
 
-            // SEITE 3: Fahrzeugfunktionen im 2x2-Raster
+            // SEITE 3: Vier Fahrzeugfunktionen im 2x2-Raster
             else -> {
                 SecondHomePageContent(
                     visible = visible,
-                    onPremiumClick = {
-                        showPremiumDialog = true
-                    },
                     onAction = { action ->
                         when (action) {
                             "Tank und Kilometer – Verbrauch" -> {
@@ -410,10 +410,7 @@ private fun PageNavigationButton(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF29251A)
         ),
-        border = BorderStroke(
-            1.dp,
-            CarvitaGold
-        ),
+        border = BorderStroke(1.dp, CarvitaGold),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp
         )
@@ -432,7 +429,6 @@ private fun PageNavigationButton(
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold
                 )
-
                 Spacer(Modifier.width(5.dp))
             }
 
@@ -446,7 +442,6 @@ private fun PageNavigationButton(
 
             if (arrow == "›") {
                 Spacer(Modifier.width(5.dp))
-
                 Text(
                     text = arrow,
                     color = CarvitaGold,
@@ -461,7 +456,6 @@ private fun PageNavigationButton(
 @Composable
 private fun SecondHomePageContent(
     visible: Boolean,
-    onPremiumClick: () -> Unit,
     onAction: (String) -> Unit
 ) {
     Column(
@@ -476,9 +470,7 @@ private fun SecondHomePageContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Spacer(
-            modifier = Modifier.height(2.dp)
-        )
+        Spacer(Modifier.height(2.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -487,66 +479,16 @@ private fun SecondHomePageContent(
                 containerColor = Color.Black
             )
         ) {
-            Box(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Image(
-                    painter = painterResource(
-                        id = R.drawable.menuebild_seite2
-                    ),
-                    contentDescription = "CARVITA Dashboard und Lenkrad",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentScale = ContentScale.FillBounds
-                )
-
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 10.dp)
-                        .fillMaxWidth(0.58f)
-                        .height(38.dp)
-                        .clickable(onClick = onPremiumClick),
-                    shape = RoundedCornerShape(50.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF17120A)
-                    ),
-                    border = BorderStroke(
-                        1.5.dp,
-                        CarvitaGold
-                    ),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = 4.dp
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "♛",
-                            color = CarvitaGold,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(
-                            modifier = Modifier.width(6.dp)
-                        )
-
-                        Text(
-                            text = "PREMIUM",
-                            color = CarvitaGold,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
+            Image(
+                painter = painterResource(
+                    id = R.drawable.menuebild_seite2
+                ),
+                contentDescription = "CARVITA Dashboard und Lenkrad",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentScale = ContentScale.FillBounds
+            )
         }
 
         Text(
@@ -620,9 +562,7 @@ private fun SecondHomePageContent(
             )
         ) {
             Image(
-                painter = painterResource(
-                    id = R.drawable.bild_4
-                ),
+                painter = painterResource(id = R.drawable.bild_4),
                 contentDescription = "CARVITA Logo",
                 modifier = Modifier
                     .fillMaxWidth(0.62f)
@@ -650,9 +590,7 @@ private fun ThirdHomePageContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Spacer(
-            modifier = Modifier.height(2.dp)
-        )
+        Spacer(Modifier.height(2.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -744,9 +682,7 @@ private fun ThirdHomePageContent(
             )
         ) {
             Image(
-                painter = painterResource(
-                    id = R.drawable.bild_4
-                ),
+                painter = painterResource(id = R.drawable.bild_4),
                 contentDescription = "CARVITA Logo",
                 modifier = Modifier
                     .fillMaxWidth(0.62f)
@@ -791,14 +727,11 @@ private fun ThirdPageButton(
             Image(
                 painter = painterResource(id = iconRes),
                 contentDescription = contentDescription,
-                modifier = Modifier
-                    .size(76.dp),
+                modifier = Modifier.size(76.dp),
                 contentScale = ContentScale.Fit
             )
 
-            Spacer(
-                modifier = Modifier.height(7.dp)
-            )
+            Spacer(Modifier.height(7.dp))
 
             Text(
                 text = title,
@@ -808,82 +741,12 @@ private fun ThirdPageButton(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(
-                modifier = Modifier.height(3.dp)
-            )
+            Spacer(Modifier.height(3.dp))
 
             Text(
                 text = "Öffnen ›",
                 color = CarvitaGold,
                 fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-private fun SecondPageButton(
-    iconRes: Int,
-    title: String,
-    subtitle: String,
-    contentDescription: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(70.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(15.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF222222)
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 3.dp
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(id = iconRes),
-                contentDescription = contentDescription,
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(9.dp)),
-                contentScale = ContentScale.Fit
-            )
-
-            Spacer(
-                modifier = Modifier.width(12.dp)
-            )
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = subtitle,
-                    color = Color(0xFFBBBBBB),
-                    fontSize = 11.sp
-                )
-            }
-
-            Text(
-                text = "›",
-                color = CarvitaGold,
-                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
         }
