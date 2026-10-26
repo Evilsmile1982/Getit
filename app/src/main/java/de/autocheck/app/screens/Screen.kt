@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 enum class Screen {
@@ -8,5 +9,9 @@ enum class Screen {
     WARTUNGEN,
     GESAMTBLICK,
     SERVICE,
-    REIFEN
+    REIFEN,
+    GEPLANTE_VORHABEN,
+    TUNING_UND_EXTRAS,
+    ELEKTRO_UND_VERBRAUCH,
+    KALENDER
 }
