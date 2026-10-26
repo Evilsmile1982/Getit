@@ -200,7 +200,7 @@ fun HomePagerScreen(
                 }
             }
 
-            // SEITE 2: Menübild 3 mit vier neuen Platzhalter-Buttons
+            // Seite 2: Menübild 3 mit vier Platzhalter-Buttons
             currentPage == 1 -> {
                 ThirdHomePageContent(
                     visible = visible,
@@ -210,7 +210,7 @@ fun HomePagerScreen(
                 )
             }
 
-            // SEITE 3: Menübild 2 mit Premium und Fahrzeugfunktionen
+            // Seite 3: Menübild 2 mit Premium und Fahrzeugfunktionen
             else -> {
                 SecondHomePageContent(
                     visible = visible,
@@ -303,11 +303,7 @@ fun HomePagerScreen(
                         Box(
                             modifier = Modifier
                                 .size(
-                                    if (currentPage == page) {
-                                        9.dp
-                                    } else {
-                                        7.dp
-                                    }
+                                    if (currentPage == page) 9.dp else 7.dp
                                 )
                                 .clip(CircleShape)
                                 .background(
@@ -638,14 +634,14 @@ private fun ThirdHomePageContent(
             .padding(
                 start = 18.dp,
                 end = 18.dp,
-                top = 24.dp,
-                bottom = 110.dp
+                top = 16.dp,
+                bottom = 150.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Spacer(
-            modifier = Modifier.height(8.dp)
+            modifier = Modifier.height(2.dp)
         )
 
         Card(
@@ -662,7 +658,7 @@ private fun ThirdHomePageContent(
                 contentDescription = "CARVITA Menü Seite 3",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp),
+                    .height(200.dp),
                 contentScale = ContentScale.FillBounds
             )
         }
@@ -673,7 +669,7 @@ private fun ThirdHomePageContent(
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 4.dp)
+            modifier = Modifier.padding(vertical = 2.dp)
         )
 
         Row(
@@ -730,10 +726,6 @@ private fun ThirdHomePageContent(
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(8.dp)
-        )
-
         AnimatedVisibility(
             visible = visible,
             enter = slideInHorizontally(
@@ -747,8 +739,8 @@ private fun ThirdHomePageContent(
                 ),
                 contentDescription = "CARVITA Logo",
                 modifier = Modifier
-                    .fillMaxWidth(0.52f)
-                    .height(58.dp),
+                    .fillMaxWidth(0.62f)
+                    .height(46.dp),
                 contentScale = ContentScale.Fit
             )
         }
@@ -782,7 +774,7 @@ private fun ThirdPageButton(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp),
+                .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -790,31 +782,31 @@ private fun ThirdPageButton(
                 painter = painterResource(id = iconRes),
                 contentDescription = contentDescription,
                 modifier = Modifier
-                    .size(76.dp)
+                    .size(60.dp)
                     .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Fit
             )
 
             Spacer(
-                modifier = Modifier.height(12.dp)
+                modifier = Modifier.height(7.dp)
             )
 
             Text(
                 text = title,
                 color = Color.White,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
 
             Spacer(
-                modifier = Modifier.height(5.dp)
+                modifier = Modifier.height(3.dp)
             )
 
             Text(
                 text = "Öffnen ›",
                 color = CarvitaGold,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
         }
