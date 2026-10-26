@@ -204,7 +204,7 @@ fun HomePagerScreen(
                 }
             }
 
-            // SEITE 2: Vier zusätzliche Platzhalter-Funktionen
+            // SEITE 2: Vier zusätzliche Fahrzeugfunktionen
             currentPage == 1 -> {
                 ThirdHomePageContent(
                     visible = visible,
@@ -214,7 +214,7 @@ fun HomePagerScreen(
                 )
             }
 
-            // SEITE 3: Vier Fahrzeugfunktionen im 2x2-Raster
+            // SEITE 3: Bestehende Fahrzeugfunktionen
             else -> {
                 SecondHomePageContent(
                     visible = visible,
@@ -249,7 +249,8 @@ fun HomePagerScreen(
             !showFuelScreen &&
             !showHistoryScreen &&
             !showPdfScreen &&
-            !showPurchaseContractScreen
+            !showPurchaseContractScreen &&
+            selectedAction == null
         ) {
             Column(
                 modifier = Modifier
@@ -330,28 +331,12 @@ fun HomePagerScreen(
         }
     }
 
+    // Öffnet die ausgewählte neue Funktion als eigene Detailseite.
     selectedAction?.let { action ->
-        AlertDialog(
-            onDismissRequest = {
+        VehicleFeatureScreen(
+            featureName = action,
+            onBack = {
                 selectedAction = null
-            },
-            title = {
-                Text(action)
-            },
-            text = {
-                Text(
-                    "Dieser Bereich wird im nächsten Schritt " +
-                        "mit seiner eigentlichen Funktion ausgestattet."
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        selectedAction = null
-                    }
-                ) {
-                    Text("OK")
-                }
             }
         )
     }
