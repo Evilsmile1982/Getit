@@ -1,0 +1,180 @@
+package de.autocheck.app
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
+import android.net.Uri
+import android.os.ParcelFileDescriptor
+
+/**
+ * Bereitet angehängte Tuning-, Genehmigungs- und
+ * Zulassungsdokumente als Seiten für die gemeinsame
+ * CARVITA-PDF vor.
+ *
+ * Unterstützt PDF-Dateien und Bilder.
+ */
+object TuningPdfPages {
+
+    private const val MAX_PAGE_WIDTH = 1200
+    private const val MAX_PAGE_HEIGHT = 1600
+
+    /**
+     * documents enthält Paare aus:
+     * 1. URI der gespeicherten Datei
+     * 2. Beschreibung für die PDF-Seite
+     */
+    fun renderDocuments(
+        context: Context,
+        documents: List<Pair<String, String>>
+    ): List<Pair<String, Bitmap>> {
+
+        val result = mutableListOf<Pair<String, Bitmap>>()
+
+        documents.forEach { (uriString, description) ->
+            val uri = runCatching {
+                Uri.parse(uriString)
+            }.getOrNull() ?: return@forEach
+
+            try {
+                val mimeType = context.contentResolver.getType(uri)
+                    .orEmpty()
+
+                val isPdf =
+                    mimeType.equals(
+                        "application/pdf",
+                        ignoreCase = true
+                    ) ||
+                    uri.lastPathSegment
+                        .orEmpty()
+                        .endsWith(".pdf", ignoreCase = true)
+
+                if (isPdf) {
+                    result.addAll(
+                        renderPdf(
+                            context = context,
+                            uri = uri,
+                            description = description
+                        )
+                    )
+                } else {
+                    renderImage(context, uri)?.let { bitmap ->
+                        result.add(description to bitmap)
+                    }
+                }
+            } catch (_: Exception) {
+                // Nicht erreichbare Dateien überspringen,
+                // damit die übrigen Dokumente verarbeitet werden.
+            }
+        }
+
+        return result
+    }
+
+    private fun renderPdf(
+        context: Context,
+        uri: Uri,
+        description: String
+    ): List<Pair<String, Bitmap>> {
+
+        val result = mutableListOf<Pair<String, Bitmap>>()
+
+        val descriptor: ParcelFileDescriptor =
+            context.contentResolver.openFileDescriptor(uri, "r")
+                ?: return emptyList()
+
+        descriptor.use { fileDescriptor ->
+            PdfRenderer(fileDescriptor).use { renderer ->
+
+                for (index in 0 until renderer.pageCount) {
+                    renderer.openPage(index).use { page ->
+
+                        val scale = minOf(
+                            MAX_PAGE_WIDTH.toFloat() / page.width,
+                            MAX_PAGE_HEIGHT.toFloat() / page.height
+                        )
+
+                        val width = (page.width * scale)
+                            .toInt()
+                            .coerceAtLeast(1)
+
+                        val height = (page.height * scale)
+                            .toInt()
+                            .coerceAtLeast(1)
+
+                        val bitmap = Bitmap.createBitmap(
+                            width,
+                            height,
+                            Bitmap.Config.ARGB_8888
+                        )
+
+                        bitmap.eraseColor(
+                            android.graphics.Color.WHITE
+                        )
+
+                        page.render(
+                            bitmap,
+                            null,
+                            null,
+                            PdfRenderer.Page.RENDER_MODE_FOR_PRINT
+                        )
+
+                        result.add(
+                            "$description – Seite ${index + 1} von ${renderer.pageCount}" to
+                                bitmap
+                        )
+                    }
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun renderImage(
+        context: Context,
+        uri: Uri
+    ): Bitmap? {
+
+        val source = context.contentResolver
+            .openInputStream(uri)
+            .use { input ->
+                if (input == null) {
+                    null
+                } else {
+                    BitmapFactory.decodeStream(input)
+                }
+            } ?: return null
+
+        val scale = minOf(
+            1f,
+            MAX_PAGE_WIDTH.toFloat() / source.width,
+            MAX_PAGE_HEIGHT.toFloat() / source.height
+        )
+
+        if (scale >= 1f) {
+            return source
+        }
+
+        val width = (source.width * scale)
+            .toInt()
+            .coerceAtLeast(1)
+
+        val height = (source.height * scale)
+            .toInt()
+            .coerceAtLeast(1)
+
+        val scaled = Bitmap.createScaledBitmap(
+            source,
+            width,
+            height,
+            true
+        )
+
+        if (scaled !== source) {
+            source.recycle()
+        }
+
+        return scaled
+    }
+}
