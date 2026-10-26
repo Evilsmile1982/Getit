@@ -131,16 +131,17 @@ fun VehicleScreen(
     }
 
     val vehicleTypes =
-        listOf(
-            "PKW",
-            "WOHNMOBIL",
-            "MOTORRAD",
-            "QUAD",
-            "MOPED",
-            "NUTZFAHRZEUG",
-            "LKW",
-            "BAUMASCHINE"
-        )
+    listOf(
+        "PKW",
+        "WOHNMOBIL",
+        "MOTORRAD",
+        "QUAD",
+        "MOPED",
+        "NUTZFAHRZEUG",
+        "LKW",
+        "BAUMASCHINE",
+        "ANHÄNGER"
+    )
 
     val context =
         LocalContext.current
