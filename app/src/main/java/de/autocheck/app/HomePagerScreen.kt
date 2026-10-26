@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -330,22 +331,33 @@ fun HomePagerScreen(
         }
     }
 
-    // Kalender öffnet die eigene Kalenderseite.
-    // Alle anderen Funktionen verwenden weiterhin die allgemeine Detailseite.
+    // Elektro und Verbrauch sowie Kalender öffnen eigene Seiten.
     selectedAction?.let { action ->
-        if (action == "Kalender") {
-            VehicleCalendarScreen(
-                onBack = {
-                    selectedAction = null
-                }
-            )
-        } else {
-            VehicleFeatureScreen(
-                featureName = action,
-                onBack = {
-                    selectedAction = null
-                }
-            )
+        when (action) {
+            "Kalender" -> {
+                VehicleCalendarScreen(
+                    onBack = {
+                        selectedAction = null
+                    }
+                )
+            }
+
+            "Elektro und Verbrauch" -> {
+                ElectricConsumptionScreen(
+                    onBack = {
+                        selectedAction = null
+                    }
+                )
+            }
+
+            else -> {
+                VehicleFeatureScreen(
+                    featureName = action,
+                    onBack = {
+                        selectedAction = null
+                    }
+                )
+            }
         }
     }
 
