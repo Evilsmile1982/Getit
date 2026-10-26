@@ -200,7 +200,18 @@ fun HomePagerScreen(
                 }
             }
 
+            // SEITE 2: Menübild 3 mit vier neuen Platzhalter-Buttons
             currentPage == 1 -> {
+                ThirdHomePageContent(
+                    visible = visible,
+                    onAction = { action ->
+                        selectedAction = action
+                    }
+                )
+            }
+
+            // SEITE 3: Menübild 2 mit Premium und Fahrzeugfunktionen
+            else -> {
                 SecondHomePageContent(
                     visible = visible,
                     onPremiumClick = {
@@ -228,15 +239,6 @@ fun HomePagerScreen(
                                 selectedAction = action
                             }
                         }
-                    }
-                )
-            }
-
-            else -> {
-                ThirdHomePageContent(
-                    visible = visible,
-                    onAction = { action ->
-                        selectedAction = action
                     }
                 )
             }
