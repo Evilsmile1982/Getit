@@ -200,7 +200,7 @@ fun HomePagerScreen(
                 }
             }
 
-            // Seite 2: Menübild 3 mit vier Platzhalter-Buttons
+            // SEITE 2: Menübild 3 mit vier Platzhalter-Buttons
             currentPage == 1 -> {
                 ThirdHomePageContent(
                     visible = visible,
@@ -210,7 +210,7 @@ fun HomePagerScreen(
                 )
             }
 
-            // Seite 3: Menübild 2 mit Premium und Fahrzeugfunktionen
+            // SEITE 3: Fahrzeugfunktionen im 2x2-Raster
             else -> {
                 SecondHomePageContent(
                     visible = visible,
@@ -470,14 +470,14 @@ private fun SecondHomePageContent(
             .padding(
                 start = 18.dp,
                 end = 18.dp,
-                top = 24.dp,
-                bottom = 110.dp
+                top = 16.dp,
+                bottom = 150.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Spacer(
-            modifier = Modifier.height(8.dp)
+            modifier = Modifier.height(2.dp)
         )
 
         Card(
@@ -497,16 +497,16 @@ private fun SecondHomePageContent(
                     contentDescription = "CARVITA Dashboard und Lenkrad",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(230.dp),
+                        .height(200.dp),
                     contentScale = ContentScale.FillBounds
                 )
 
                 Card(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 10.dp)
                         .fillMaxWidth(0.58f)
-                        .height(42.dp)
+                        .height(38.dp)
                         .clickable(onClick = onPremiumClick),
                     shape = RoundedCornerShape(50.dp),
                     colors = CardDefaults.cardColors(
@@ -530,7 +530,7 @@ private fun SecondHomePageContent(
                         Text(
                             text = "♛",
                             color = CarvitaGold,
-                            fontSize = 18.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                         )
 
@@ -541,7 +541,7 @@ private fun SecondHomePageContent(
                         Text(
                             text = "PREMIUM",
                             color = CarvitaGold,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -552,55 +552,65 @@ private fun SecondHomePageContent(
         Text(
             text = "DEINE FAHRZEUGE. ALLES IM BLICK.",
             color = CarvitaGold,
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 4.dp)
+            modifier = Modifier.padding(vertical = 2.dp)
         )
 
-        SecondPageButton(
-            iconRes = R.drawable.tank_icoon,
-            title = "Tank und Kilometer – Verbrauch",
-            subtitle = "Tankvorgänge, Kilometer und Verbrauch",
-            contentDescription = "Tank-Icon",
-            onClick = {
-                onAction("Tank und Kilometer – Verbrauch")
-            }
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.tank_icoon,
+                title = "Tanken & Verbrauch",
+                contentDescription = "Tank-Icon",
+                onClick = {
+                    onAction("Tank und Kilometer – Verbrauch")
+                }
+            )
 
-        SecondPageButton(
-            iconRes = R.drawable.fahrzeughistorie_icoon,
-            title = "Fahrzeughistorie",
-            subtitle = "Alle gespeicherten Fahrzeugereignisse",
-            contentDescription = "Fahrzeughistorie-Icon",
-            onClick = {
-                onAction("Fahrzeughistorie")
-            }
-        )
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.fahrzeughistorie_icoon,
+                title = "Fahrzeughistorie",
+                contentDescription = "Fahrzeughistorie-Icon",
+                onClick = {
+                    onAction("Fahrzeughistorie")
+                }
+            )
+        }
 
-        SecondPageButton(
-            iconRes = R.drawable.pdf_icoon,
-            title = "PDF & Dokumente",
-            subtitle = "Berichte auswählen, speichern und drucken",
-            contentDescription = "PDF-Icon",
-            onClick = {
-                onAction("PDF & Dokumente")
-            }
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.pdf_icoon,
+                title = "PDF & Dokumente",
+                contentDescription = "PDF-Icon",
+                onClick = {
+                    onAction("PDF & Dokumente")
+                }
+            )
 
-        SecondPageButton(
-            iconRes = R.drawable.kaufvertrag_icoon,
-            title = "CARVITA Kaufvertrag",
-            subtitle = "Leere Fahrzeugkaufvertrag-Vorlage als PDF",
-            contentDescription = "Kaufvertrag-Icon",
-            onClick = {
-                onAction("Kaufvertrag")
-            }
-        )
-
-        Spacer(
-            modifier = Modifier.height(8.dp)
-        )
+            ThirdPageButton(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.kaufvertrag_icoon,
+                title = "CARVITA Kaufvertrag",
+                contentDescription = "Kaufvertrag-Icon",
+                onClick = {
+                    onAction("Kaufvertrag")
+                }
+            )
+        }
 
         AnimatedVisibility(
             visible = visible,
@@ -615,8 +625,8 @@ private fun SecondHomePageContent(
                 ),
                 contentDescription = "CARVITA Logo",
                 modifier = Modifier
-                    .fillMaxWidth(0.52f)
-                    .height(58.dp),
+                    .fillMaxWidth(0.62f)
+                    .height(46.dp),
                 contentScale = ContentScale.Fit
             )
         }
