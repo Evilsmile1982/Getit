@@ -138,6 +138,10 @@ fun AutoCheckApp() {
             Screen.SERVICE -> "Service und Intervalle"
             Screen.REIFEN -> "Reifen"
             Screen.HOME -> "CARVITA"
+            Screen.GEPLANTE_VORHABEN -> "Geplante Vorhaben"
+            Screen.TUNING_UND_EXTRAS -> "Tuning und Extras"
+            Screen.ELEKTRO_UND_VERBRAUCH -> "Elektro und Verbrauch"
+            Screen.KALENDER -> "Kalender"
         }
 
         DetailScaffold(
@@ -373,6 +377,11 @@ fun AutoCheckApp() {
                     )
 
                 Screen.HOME -> Unit
+
+                Screen.GEPLANTE_VORHABEN -> Unit
+                Screen.TUNING_UND_EXTRAS -> Unit
+                Screen.ELEKTRO_UND_VERBRAUCH -> Unit
+                Screen.KALENDER -> Unit
             }
         }
     }
