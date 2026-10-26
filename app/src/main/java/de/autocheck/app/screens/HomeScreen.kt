@@ -1,16 +1,14 @@
+
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,11 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -371,7 +366,7 @@ fun HomeScreen(
             }
         }
 
-        // Neuer Premium-Button ersetzt den bisherigen Slogan.
+        // Statischer Premium-Button im Gold-Schwarz-Design.
         item {
             AnimatedVisibility(
                 visible = visible,
@@ -418,107 +413,104 @@ fun HomeScreen(
 private fun PremiumHomeButton(
     onClick: () -> Unit
 ) {
-    val transition = rememberInfiniteTransition(
-        label = "premium_border_transition"
-    )
+    val shape = RoundedCornerShape(18.dp)
 
-    val rotation by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 3200,
-                easing = LinearEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "premium_border_rotation"
+    val goldBorder = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF6E4B0D),
+            Color(0xFFFFE9A0),
+            Color(0xFFD4AF37),
+            Color(0xFFFFF2B0),
+            Color(0xFF8A6418)
+        )
     )
-
-    val shape = RoundedCornerShape(22.dp)
 
     Card(
+        onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth(0.78f)
-            .height(64.dp)
-            .drawBehind {
-                val borderBrush = Brush.sweepGradient(
-                    colors = listOf(
-                        Color(0xFF6E5310),
-                        Color(0xFFD4AF37),
-                        Color(0xFFFFF1A8),
-                        Color.White,
-                        Color(0xFFD4AF37),
-                        Color(0xFF6E5310)
-                    )
-                )
-
-                rotate(rotation) {
-                    drawRoundRect(
-                        brush = borderBrush,
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(
-                            22.dp.toPx()
-                        ),
-                        style = Stroke(
-                            width = 3.dp.toPx()
-                        )
-                    )
-                }
-            }
-            .clickable(onClick = onClick),
-        shape = shape,
+            .fillMaxWidth()
+            .height(76.dp)
+            .border(
+                border = BorderStroke(
+                    width = 2.dp,
+                    brush = goldBorder
+                ),
+                shape = shape
+            )
+            .padding(3.dp),
+        shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1B170D)
+            containerColor = Color(0xFF090909)
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 5.dp
+            defaultElevation = 6.dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.Center,
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF17130B),
+                            Color(0xFF050505),
+                            Color(0xFF17130B)
+                        )
+                    )
+                )
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "♛",
-                color = PremiumGold,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(
-                modifier = Modifier.size(10.dp)
-            )
-
-            Column(
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.Center
+            // Krone links
+            Box(
+                modifier = Modifier.size(54.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "CARVITA PREMIUM",
-                    color = PremiumGold,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-
-                Text(
-                    text = "Exklusive Funktionen entdecken",
-                    color = Color(0xFFE0D2A0),
-                    fontSize = 10.sp
+                    text = "♛",
+                    color = Color(0xFFFFE28A),
+                    fontSize = 43.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
             }
 
-            Spacer(
-                modifier = Modifier.size(8.dp)
-            )
+            // Premium-Schriftzug und Untertitel
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "PREMIUM",
+                    color = Color(0xFFFFD76A),
+                    fontSize = 23.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
 
+                Spacer(Modifier.height(2.dp))
+
+                Text(
+                    text = "JETZT EXKLUSIVE FUNKTIONEN ENTDECKEN",
+                    color = Color(0xFFE7D4A0),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+            }
+
+            // Pfeil rechts
             Text(
-                text = "✦",
-                color = Color(0xFFFFF1A8),
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold
+                text = "❯",
+                color = Color(0xFFFFD76A),
+                fontSize = 27.sp,
+                fontWeight = FontWeight.Black
             )
         }
     }
