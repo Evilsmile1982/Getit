@@ -134,7 +134,7 @@ fun HomeScreen(
             start = 14.dp,
             end = 14.dp,
             top = 8.dp,
-            bottom = 160.dp
+            bottom = 176.dp
         ),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -366,7 +366,6 @@ fun HomeScreen(
             }
         }
 
-        // Statischer Premium-Button im Gold-Schwarz-Design.
         item {
             AnimatedVisibility(
                 visible = visible,
@@ -377,8 +376,8 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        top = 4.dp,
-                        bottom = 10.dp
+                        top = 2.dp,
+                        bottom = 4.dp
                     )
             ) {
                 PremiumHomeButton(
@@ -413,15 +412,15 @@ fun HomeScreen(
 private fun PremiumHomeButton(
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(15.dp)
 
     val goldBorder = Brush.linearGradient(
         colors = listOf(
-            Color(0xFF6E4B0D),
+            Color(0xFF805B16),
             Color(0xFFFFE9A0),
             Color(0xFFD4AF37),
             Color(0xFFFFF2B0),
-            Color(0xFF8A6418)
+            Color(0xFF805B16)
         )
     )
 
@@ -429,7 +428,7 @@ private fun PremiumHomeButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(76.dp)
+            .height(54.dp)
             .border(
                 border = BorderStroke(
                     width = 2.dp,
@@ -437,13 +436,13 @@ private fun PremiumHomeButton(
                 ),
                 shape = shape
             )
-            .padding(3.dp),
-        shape = RoundedCornerShape(15.dp),
+            .padding(2.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF090909)
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
+            defaultElevation = 4.dp
         )
     ) {
         Row(
@@ -458,25 +457,23 @@ private fun PremiumHomeButton(
                         )
                     )
                 )
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Krone links
             Box(
-                modifier = Modifier.size(54.dp),
+                modifier = Modifier.size(38.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "♛",
                     color = Color(0xFFFFE28A),
-                    fontSize = 43.sp,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             }
 
-            // Premium-Schriftzug und Untertitel
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -485,31 +482,28 @@ private fun PremiumHomeButton(
                 Text(
                     text = "PREMIUM",
                     color = Color(0xFFFFD76A),
-                    fontSize = 23.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
+                    letterSpacing = 1.5.sp,
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
 
-                Spacer(Modifier.height(2.dp))
-
                 Text(
                     text = "JETZT EXKLUSIVE FUNKTIONEN ENTDECKEN",
                     color = Color(0xFFE7D4A0),
-                    fontSize = 8.sp,
+                    fontSize = 7.sp,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp,
+                    letterSpacing = 0.2.sp,
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
             }
 
-            // Pfeil rechts
             Text(
                 text = "❯",
                 color = Color(0xFFFFD76A),
-                fontSize = 27.sp,
+                fontSize = 23.sp,
                 fontWeight = FontWeight.Black
             )
         }
