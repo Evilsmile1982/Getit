@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -464,10 +465,11 @@ private fun SecondHomePageContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(
                 start = 18.dp,
                 end = 18.dp,
-                top = 16.dp,
+                top = 8.dp,
                 bottom = 150.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -486,7 +488,7 @@ private fun SecondHomePageContent(
                 painter = painterResource(
                     id = R.drawable.menuebild_seite2
                 ),
-                contentDescription = "CARVITA Dashboard und Lenkrad",
+                contentDescription = "CARLOCA Dashboard und Lenkrad",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
@@ -566,7 +568,7 @@ private fun SecondHomePageContent(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.bild_4),
-                contentDescription = "CARVITA Logo",
+                contentDescription = "CARLOCA Logo",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(84.dp),
@@ -584,10 +586,11 @@ private fun ThirdHomePageContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(
                 start = 18.dp,
                 end = 18.dp,
-                top = 16.dp,
+                top = 8.dp,
                 bottom = 150.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -606,7 +609,7 @@ private fun ThirdHomePageContent(
                 painter = painterResource(
                     id = R.drawable.menuebild_seite3
                 ),
-                contentDescription = "CARVITA Menü Seite 3",
+                contentDescription = "CARLOCA Menü Seite 3",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
@@ -686,7 +689,7 @@ private fun ThirdHomePageContent(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.bild_4),
-                contentDescription = "CARVITA Logo",
+                contentDescription = "CARLOCA Logo",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(84.dp),
