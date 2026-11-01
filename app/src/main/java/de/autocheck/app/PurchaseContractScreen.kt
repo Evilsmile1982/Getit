@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -180,7 +181,7 @@ fun PurchaseContractScreen(
     val context = LocalContext.current
 
     var statusMessage by remember {
-        mutableStateOf("Der CARVITA-Kaufvertrag ist bereit.")
+        mutableStateOf("Der CarLoca-Kaufvertrag ist bereit.")
     }
 
     var isFillingForm by remember {
@@ -198,7 +199,7 @@ fun PurchaseContractScreen(
     previewPdfBytes?.let { pdfBytes ->
         PdfZoomPreview(
             pdfBytes = pdfBytes,
-            documentName = "CARVITA_Fahrzeugkaufvertrag.pdf",
+            documentName = "CarLoca_Fahrzeugkaufvertrag.pdf",
             onClose = {
                 previewPdfBytes = null
             },
@@ -213,15 +214,16 @@ fun PurchaseContractScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
             .windowInsetsPadding(WindowInsets.navigationBars)
             .background(ContractBackground)
             .padding(
                 start = 16.dp,
                 end = 16.dp,
-                top = 12.dp,
+                top = 16.dp,
                 bottom = 8.dp
             ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Column(
             modifier = Modifier
@@ -231,43 +233,53 @@ fun PurchaseContractScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = 4.dp,
-                    bottom = 12.dp
+                    top = 12.dp,
+                    bottom = 18.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item {
-                    Image(
-                        painter = painterResource(id = R.drawable.bild_4),
-                        contentDescription = "CARVITA-Logo",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(72.dp),
-                        contentScale = ContentScale.Fit
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.bild_4),
+                            contentDescription = "CarLoca-Logo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(84.dp),
+                            contentScale = ContentScale.Fit
+                        )
 
-                    Text(
-                        text = if (isFillingForm) {
-                            "Kaufvertrag ausfüllen"
-                        } else {
-                            "Fahrzeugkaufvertrag"
-                        },
-                        modifier = Modifier.padding(top = 4.dp),
-                        color = Color.White,
-                        fontSize = 23.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                        Text(
+                            text = if (isFillingForm) {
+                                "Kaufvertrag ausfüllen"
+                            } else {
+                                "Fahrzeugkaufvertrag"
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp),
+                            color = Color.White,
+                            fontSize = 23.sp,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                    Text(
-                        text = if (isFillingForm) {
-                            "Trage die Angaben ein. Leere Felder bleiben im Vertrag frei."
-                        } else {
-                            "Erstelle eine leere Vorlage oder fülle den Vertrag direkt in der App aus."
-                        },
-                        modifier = Modifier.padding(top = 4.dp),
-                        color = Color.LightGray,
-                        fontSize = 13.sp
-                    )
+                        Text(
+                            text = if (isFillingForm) {
+                                "Trage die Angaben ein. Leere Felder bleiben im Vertrag frei."
+                            } else {
+                                "Erstelle eine leere Vorlage oder fülle den Vertrag direkt in der App aus."
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            color = Color.LightGray,
+                            fontSize = 13.sp,
+                            lineHeight = 20.sp
+                        )
+                    }
                 }
 
                 if (!isFillingForm) {
@@ -279,14 +291,14 @@ fun PurchaseContractScreen(
                             )
                         ) {
                             Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
                                     text = "Inhalt des Vertrags",
                                     color = ContractGold,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
+                                    fontSize = 17.sp
                                 )
 
                                 Text("• Verkäufer- und Käuferdaten", color = Color.White)
@@ -304,7 +316,9 @@ fun PurchaseContractScreen(
                                 isFillingForm = true
                                 statusMessage = "Du kannst jetzt die Vertragsdaten eingeben."
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = ContractGold,
                                 contentColor = Color.Black
@@ -335,7 +349,9 @@ fun PurchaseContractScreen(
                                         }"
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
                         ) {
                             Text("Leere Vorlage ansehen")
                         }
@@ -345,7 +361,7 @@ fun PurchaseContractScreen(
                         item(key = sectionTitle) {
                             Text(
                                 text = sectionTitle,
-                                modifier = Modifier.padding(top = 6.dp),
+                                modifier = Modifier.padding(top = 10.dp),
                                 color = ContractGold,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -402,7 +418,7 @@ fun PurchaseContractScreen(
                         ) {
                             Text(
                                 text = "Hinweis: Unterschriften können nach dem Drucken handschriftlich eingetragen werden. Die eingegebenen Angaben werden in die PDF übernommen.",
-                                modifier = Modifier.padding(12.dp),
+                                modifier = Modifier.padding(14.dp),
                                 color = Color.White,
                                 fontSize = 12.sp
                             )
@@ -428,7 +444,9 @@ fun PurchaseContractScreen(
                                         }"
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = ContractGold,
                                 contentColor = Color.Black
@@ -460,7 +478,7 @@ fun PurchaseContractScreen(
                     ) {
                         Text(
                             text = statusMessage,
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier.padding(14.dp),
                             color = Color.White,
                             fontSize = 12.sp
                         )
@@ -471,7 +489,9 @@ fun PurchaseContractScreen(
 
         OutlinedButton(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
         ) {
             Text("Zurück zur zweiten Startseite")
         }
@@ -531,7 +551,7 @@ private fun createVehiclePurchaseContract(
         context.resources,
         R.drawable.bild_4
     ) ?: throw IllegalStateException(
-        "Das CARVITA-Logo bild_4.png konnte nicht geladen werden."
+        "Das CarLoca-Logo bild_4.png konnte nicht geladen werden."
     )
 
     try {
@@ -582,14 +602,14 @@ private fun createVehiclePurchaseContract(
         )
 
         var canvas: Canvas = page.canvas
-        var y = 38f
+        var y = 52f
 
         fun drawHeader() {
             val logoRect = Rect(0, 0, logo.width, logo.height)
 
             val scale = minOf(
-                125f / logo.width,
-                42f / logo.height
+                145f / logo.width,
+                48f / logo.height
             )
 
             val drawWidth = logo.width * scale
@@ -612,19 +632,19 @@ private fun createVehiclePurchaseContract(
             canvas.drawText(
                 "FAHRZEUGKAUFVERTRAG",
                 margin,
-                y + 34f,
+                y + 40f,
                 sectionPaint
             )
 
             canvas.drawLine(
                 margin,
-                y + 44f,
+                y + 52f,
                 pageWidth - margin,
-                y + 44f,
+                y + 52f,
                 linePaint
             )
 
-            y += 61f
+            y += 72f
         }
 
         fun drawFooter() {
@@ -639,7 +659,7 @@ private fun createVehiclePurchaseContract(
             )
 
             canvas.drawText(
-                "CARVITA – Fahrzeugkaufvertrag",
+                "CarLoca – die App für deine Fahrzeuge",
                 margin,
                 footerY,
                 footerPaint
@@ -670,7 +690,7 @@ private fun createVehiclePurchaseContract(
             )
 
             canvas = page.canvas
-            y = 38f
+            y = 52f
             drawHeader()
         }
 
@@ -905,7 +925,7 @@ private fun createVehiclePurchaseContract(
         }
 
         paragraph(
-            "CARVITA – neutrale Vertragsvorlage. Die Vorlage ersetzt keine rechtliche Beratung."
+            "CarLoca – neutrale Vertragsvorlage. Die Vorlage ersetzt keine rechtliche Beratung."
         )
 
         drawFooter()
