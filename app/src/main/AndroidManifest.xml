@@ -17,34 +17,26 @@
             android:exported="true">
 
             <intent-filter>
-
                 <action
                     android:name="android.intent.action.MAIN" />
 
                 <category
                     android:name="android.intent.category.LAUNCHER" />
-
             </intent-filter>
 
         </activity>
 
-        <!-- =====================================================
-             PICKERL ERINNERUNGEN
-             ===================================================== -->
+        <!-- PICKERL ERINNERUNGEN -->
         <receiver
             android:name=".PickerlReceiver"
             android:exported="false" />
 
-        <!-- =====================================================
-             SERVICE ERINNERUNGEN
-             ===================================================== -->
+        <!-- SERVICE ERINNERUNGEN -->
         <receiver
             android:name=".utils.ServiceReminderReceiver"
             android:exported="false" />
 
-        <!-- =====================================================
-             WINTERREIFEN ERINNERUNGEN
-             ===================================================== -->
+        <!-- WINTERREIFEN ERINNERUNGEN -->
         <receiver
             android:name=".utils.WinterTireReminderReceiver"
             android:exported="false" />
