@@ -204,7 +204,6 @@ fun HomePagerScreen(
                 }
             }
 
-            // SEITE 2: Vier zusätzliche Fahrzeugfunktionen
             currentPage == 1 -> {
                 ThirdHomePageContent(
                     visible = visible,
@@ -214,7 +213,6 @@ fun HomePagerScreen(
                 )
             }
 
-            // SEITE 3: Bestehende Fahrzeugfunktionen
             else -> {
                 SecondHomePageContent(
                     visible = visible,
@@ -331,7 +329,6 @@ fun HomePagerScreen(
         }
     }
 
-    // Elektro und Verbrauch sowie Kalender öffnen eigene Seiten.
     selectedAction?.let { action ->
         when (action) {
             "Kalender" -> {
@@ -552,8 +549,8 @@ private fun SecondHomePageContent(
             ThirdPageButton(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.kaufvertrag_icoon,
-                title = "CARVITA Kaufvertrag",
-                contentDescription = "Kaufvertrag",
+                title = "CarLoca Kaufvertrag",
+                contentDescription = "CarLoca Kaufvertrag",
                 onClick = {
                     onAction("Kaufvertrag")
                 }
