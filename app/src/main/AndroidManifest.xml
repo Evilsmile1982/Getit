@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -8,7 +9,7 @@
         android:allowBackup="true"
         android:icon="@drawable/bild_2"
         android:roundIcon="@drawable/bild_2"
-        android:label="AutoCheck"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.AutoCheck">
 
