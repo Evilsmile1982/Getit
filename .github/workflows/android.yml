@@ -1,4 +1,5 @@
-name: AutoCheck Android Build
+
+name: CarLoca Android Build
 
 on:
   workflow_dispatch:
@@ -11,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Android Build
+    name: CarLoca Android Build
     runs-on: ubuntu-latest
 
     steps:
@@ -37,16 +38,22 @@ jobs:
       - name: Android Projekt bauen
         run: gradle assembleDebug --stacktrace
 
-      - name: APK-Datei prüfen
+      - name: APK-Datei prüfen und umbenennen
         run: |
           echo "Suche nach erstellten APK-Dateien:"
           find app/build/outputs/apk -type f -name "*.apk" -print
+
           test -f app/build/outputs/apk/debug/app-debug.apk
 
-      - name: APK hochladen
+          cp app/build/outputs/apk/debug/app-debug.apk CarLoca.apk
+
+          echo "CarLoca.apk wurde erstellt."
+          ls -lh CarLoca.apk
+
+      - name: CarLoca APK hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: AutoCheck-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: CarLoca-APK
+          path: CarLoca.apk
           if-no-files-found: error
           retention-days: 7
