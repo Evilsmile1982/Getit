@@ -366,13 +366,13 @@ fun HomePagerScreen(
             },
             title = {
                 Text(
-                    text = "CARVITA Premium",
+                    text = "CARLOCA Premium",
                     color = CarvitaGold
                 )
             },
             text = {
                 Text(
-                    "Werde CARVITA-Premiummitglied und entdecke " +
+                    "Werde CARLOCA-Premiummitglied und entdecke " +
                         "zusätzliche Funktionen. Die Mitgliedschaft " +
                         "und Bezahlung müssen noch eingerichtet werden."
                 )
