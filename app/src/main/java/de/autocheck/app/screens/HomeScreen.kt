@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -416,11 +417,13 @@ private fun PremiumHomeButton(
 
     val goldBorder = Brush.linearGradient(
         colors = listOf(
-            Color(0xFF805B16),
+            Color(0xFF6D470D),
+            Color(0xFFFFF0B5),
+            Color(0xFFD49B24),
+            Color(0xFFFFF7D2),
+            Color(0xFFB87912),
             Color(0xFFFFE9A0),
-            Color(0xFFD4AF37),
-            Color(0xFFFFF2B0),
-            Color(0xFF805B16)
+            Color(0xFF6D470D)
         )
     )
 
@@ -439,10 +442,10 @@ private fun PremiumHomeButton(
             .padding(2.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF090909)
+            containerColor = Color(0xFF090705)
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp
+            defaultElevation = 6.dp
         )
     ) {
         Row(
@@ -451,14 +454,16 @@ private fun PremiumHomeButton(
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            Color(0xFF17130B),
-                            Color(0xFF050505),
-                            Color(0xFF17130B)
+                            Color(0xFF211707),
+                            Color(0xFF080604),
+                            Color(0xFF30200A),
+                            Color(0xFF080604),
+                            Color(0xFF211707)
                         )
                     )
                 )
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(horizontal = 9.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -467,12 +472,28 @@ private fun PremiumHomeButton(
             ) {
                 Text(
                     text = "♛",
-                    color = Color(0xFFFFE28A),
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFFE9A0),
+                    fontSize = 33.sp,
+                    fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center
                 )
             }
+
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(30.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color(0xFFFFE9A0),
+                                Color(0xFFD4AF37),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -481,20 +502,20 @@ private fun PremiumHomeButton(
             ) {
                 Text(
                     text = "PREMIUM",
-                    color = Color(0xFFFFD76A),
-                    fontSize = 19.sp,
+                    color = Color(0xFFFFDF80),
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.5.sp,
+                    letterSpacing = 1.8.sp,
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
 
                 Text(
                     text = "JETZT EXKLUSIVE FUNKTIONEN ENTDECKEN",
-                    color = Color(0xFFE7D4A0),
+                    color = Color(0xFFFFE8B0),
                     fontSize = 7.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.2.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.3.sp,
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
@@ -502,8 +523,8 @@ private fun PremiumHomeButton(
 
             Text(
                 text = "❯",
-                color = Color(0xFFFFD76A),
-                fontSize = 23.sp,
+                color = Color(0xFFFFE28A),
+                fontSize = 25.sp,
                 fontWeight = FontWeight.Black
             )
         }
