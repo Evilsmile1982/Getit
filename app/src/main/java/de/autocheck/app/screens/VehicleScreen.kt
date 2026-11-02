@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import android.content.Intent
@@ -57,6 +58,9 @@ fun VehicleScreen(
     onSave: (Vehicle, String) -> Unit,
     onDelete: (Vehicle) -> Unit
 ) {
+
+    // CARLOCA-Tarif
+    val currentPlan = CarLocaSubscription.currentPlan
 
     var adding by remember {
         mutableStateOf(false)
@@ -130,6 +134,11 @@ fun VehicleScreen(
         mutableStateOf(false)
     }
 
+    // Hinweis bei erreichtem Fahrzeuglimit
+    var showVehicleLimitDialog by remember {
+        mutableStateOf(false)
+    }
+
     val vehicleTypes =
     listOf(
         "PKW",
@@ -189,14 +198,25 @@ fun VehicleScreen(
             Modifier.fillMaxSize()
     ) {
 
+        // Fahrzeuganzahl passend zum gewählten Tarif
         Text(
-            "${vehicles.size}/5 Fahrzeuge",
+            text =
+                currentPlan.maxVehicles?.let {
+                    "${vehicles.size}/$it Fahrzeuge"
+                } ?: "${vehicles.size} Fahrzeuge – unbegrenzt",
             color =
                 Color(0xFFB8BEC8),
             modifier =
                 Modifier.padding(
-                    bottom = 12.dp
+                    bottom = 4.dp
                 )
+        )
+
+        Text(
+            text = currentPlan.displayName,
+            color = Color(0xFFFFD700),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 12.dp)
         )
 
         if (vehicles.isEmpty()) {
@@ -1339,10 +1359,7 @@ fun VehicleScreen(
          * ========================================================
          */
 
-        if (
-            !adding &&
-            vehicles.size < 5
-        ) {
+        if (!adding) {
 
             Button(
 
@@ -1351,53 +1368,30 @@ fun VehicleScreen(
 
                 onClick = {
 
-                    editingVehicleId =
-                        ""
+                    if (currentPlan.canAddVehicle(vehicles.size)) {
 
-                    editingName =
-                        ""
+                        editingVehicleId = ""
+                        editingName = ""
+                        name = ""
+                        vehicleType = "PKW"
+                        make = ""
+                        model = ""
+                        motorization = ""
+                        power = ""
+                        year = ""
+                        plate = ""
+                        vin = ""
+                        imageUri = ""
+                        purchasePrice = ""
+                        purchasePriceVisible = false
+                        vehicleTypeExpanded = false
 
-                    name =
-                        ""
+                        adding = true
 
-                    vehicleType =
-                        "PKW"
+                    } else {
 
-                    make =
-                        ""
-
-                    model =
-                        ""
-
-                    motorization =
-                        ""
-
-                    power =
-                        ""
-
-                    year =
-                        ""
-
-                    plate =
-                        ""
-
-                    vin =
-                        ""
-
-                    imageUri =
-                        ""
-
-                    purchasePrice =
-                        ""
-
-                    purchasePriceVisible =
-                        false
-
-                    vehicleTypeExpanded =
-                        false
-
-                    adding =
-                        true
+                        showVehicleLimitDialog = true
+                    }
                 }
 
             ) {
@@ -1407,6 +1401,57 @@ fun VehicleScreen(
                 )
             }
         }
+    }
+
+    /*
+     * ============================================================
+     * CARLOCA-FAHRZEUGLIMIT
+     * ============================================================
+     */
+
+    if (showVehicleLimitDialog) {
+
+        val limitMessage =
+            when (currentPlan) {
+
+                CarLocaPlan.FREE ->
+                    "Mit CARLOCA Free kannst du ein Fahrzeug speichern. " +
+                    "Mit CARLOCA Premium sind bis zu 10 Fahrzeuge möglich. " +
+                    "CARLOCA Big-Premium bietet unbegrenzt viele Fahrzeuge."
+
+                CarLocaPlan.PREMIUM ->
+                    "Du hast die Grenze von 10 Fahrzeugen erreicht. " +
+                    "Mit CARLOCA Big-Premium kannst du unbegrenzt viele Fahrzeuge speichern."
+
+                CarLocaPlan.BIG_PREMIUM ->
+                    "Du kannst unbegrenzt viele Fahrzeuge speichern."
+            }
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showVehicleLimitDialog = false
+            },
+
+            title = {
+                Text("Fahrzeuglimit erreicht")
+            },
+
+            text = {
+                Text(limitMessage)
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+                        showVehicleLimitDialog = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     /*
