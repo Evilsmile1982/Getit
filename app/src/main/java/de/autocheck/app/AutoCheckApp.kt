@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import android.content.Context
@@ -5,8 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -81,6 +84,14 @@ fun AutoCheckApp() {
         mutableStateOf(false)
     }
 
+    // Zentraler Tarifstatus.
+    val currentPlan = CarLocaSubscription.currentPlan
+    val vehicleLimit = currentPlan.maxVehicles
+
+    var showVehicleLimitDialog by remember {
+        mutableStateOf(false)
+    }
+
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(300)
         homeReady = true
@@ -137,7 +148,7 @@ fun AutoCheckApp() {
             Screen.GESAMTBLICK -> "Gesamtblick"
             Screen.SERVICE -> "Service und Intervalle"
             Screen.REIFEN -> "Reifen"
-            Screen.HOME -> "CARVITA"
+            Screen.HOME -> "CARLOCA"
             Screen.GEPLANTE_VORHABEN -> "Geplante Vorhaben"
             Screen.TUNING_UND_EXTRAS -> "Tuning und Extras"
             Screen.ELEKTRO_UND_VERBRAUCH -> "Elektro und Verbrauch"
@@ -186,6 +197,7 @@ fun AutoCheckApp() {
                                 }
 
                             if (index >= 0) {
+                                // Bestehendes Fahrzeug bearbeiten.
                                 val oldVehicle = vehicles[index]
                                 vehicles[index] = vehicle
 
@@ -196,13 +208,23 @@ fun AutoCheckApp() {
                                         vehicle.name
                                     )
                                 }
-                            } else if (vehicles.size < 5) {
-                                vehicles.add(vehicle)
-                            }
 
-                            store.save(vehicles)
-                            activeVehicleId = vehicle.id
-                            store.setActiveVehicleId(vehicle.id)
+                                store.save(vehicles)
+                                activeVehicleId = vehicle.id
+                                store.setActiveVehicleId(vehicle.id)
+
+                            } else {
+                                // Neues Fahrzeug nur innerhalb des Tarifs speichern.
+                                if (currentPlan.canAddVehicle(vehicles.size)) {
+                                    vehicles.add(vehicle)
+                                    store.save(vehicles)
+
+                                    activeVehicleId = vehicle.id
+                                    store.setActiveVehicleId(vehicle.id)
+                                } else {
+                                    showVehicleLimitDialog = true
+                                }
+                            }
                         },
                         onDelete = { vehicle ->
                             val wasActive =
@@ -377,12 +399,40 @@ fun AutoCheckApp() {
                     )
 
                 Screen.HOME -> Unit
-
                 Screen.GEPLANTE_VORHABEN -> Unit
                 Screen.TUNING_UND_EXTRAS -> Unit
                 Screen.ELEKTRO_UND_VERBRAUCH -> Unit
                 Screen.KALENDER -> Unit
             }
         }
+    }
+
+    if (showVehicleLimitDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showVehicleLimitDialog = false
+            },
+            title = {
+                Text("Fahrzeuglimit erreicht")
+            },
+            text = {
+                Text(
+                    "Dein aktueller Tarif ${currentPlan.displayName} " +
+                        "erlaubt ${currentPlan.vehicleLimitText()}. " +
+                        "Mit CARLOCA Premium kannst du bis zu 10 Fahrzeuge " +
+                        "verwalten. CARLOCA Big-Premium bietet unbegrenzt " +
+                        "viele Fahrzeuge."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showVehicleLimitDialog = false
+                    }
+                ) {
+                    Text("Verstanden")
+                }
+            }
+        )
     }
 }
