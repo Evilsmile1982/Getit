@@ -155,7 +155,7 @@ fun HomeScreen(
                 ) {
                     Image(
                         painter = painterResource(R.drawable.bild_4),
-                        contentDescription = "CARVITA",
+                        contentDescription = "CARLOCA",
                         modifier = Modifier.fillMaxWidth(),
                         contentScale = ContentScale.Fit
                     )
@@ -323,7 +323,7 @@ fun HomeScreen(
             ) {
                 Image(
                     painter = painterResource(R.drawable.bild_3),
-                    contentDescription = "CARVITA Fahrzeug",
+                    contentDescription = "CARLOCA Fahrzeug",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(210.dp),
@@ -530,12 +530,12 @@ private fun LoginDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Bei CARVITA anmelden")
+            Text("Bei CARLOCA anmelden")
         },
         text = {
             Column {
                 Text(
-                    "Melde dich später mit deinem CARVITA-Konto an, " +
+                    "Melde dich später mit deinem CARLOCA-Konto an, " +
                         "um deine persönlichen Fahrzeugdaten auf " +
                         "verschiedenen Geräten wieder abzurufen.",
                     fontSize = 14.sp
@@ -604,7 +604,7 @@ private fun RegisterDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("CARVITA-Profil erstellen")
+            Text("CARLOCA-Profil erstellen")
         },
         text = {
             Column {
