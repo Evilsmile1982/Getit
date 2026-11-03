@@ -328,6 +328,14 @@ fun HomePagerScreen(
                 )
             }
 
+            pageFourSubmenu == "UNFALLBERICHT" -> {
+                AccidentReportScreen(
+                    onBack = {
+                        pageFourSubmenu = null
+                    }
+                )
+            }
+
             pageFourSubmenu != null -> {
                 PageFourSubmenuScreen(
                     title = pageFourSubmenu!!,
