@@ -12,7 +12,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -90,7 +90,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class MainActivity :
-    ComponentActivity() {
+    FragmentActivity() {
 
     override fun onCreate(
         savedInstanceState: Bundle?
