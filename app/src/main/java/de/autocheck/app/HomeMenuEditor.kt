@@ -31,6 +31,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val MenuRed = Color(0xFFE53935)
+private val MenuGold = Color(0xFFD4AF37)
+
 @Composable
 fun HomeMenuEditor(
     items: List<HomeMenuItem>,
@@ -56,7 +59,7 @@ fun HomeMenuEditor(
     ) {
         Text(
             text = "MENÜ ANPASSEN",
-            color = Color(0xFFD4AF37),
+            color = MenuGold,
             fontSize = 19.sp,
             fontWeight = FontWeight.Bold
         )
@@ -89,12 +92,12 @@ fun HomeMenuEditor(
                         } else {
                             "SEITE 3"
                         },
-                        color = Color(0xFFD4AF37),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = MenuRed,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.padding(
-                            top = 4.dp,
-                            bottom = 1.dp
+                            top = 6.dp,
+                            bottom = 3.dp
                         )
                     )
                 }
@@ -160,7 +163,7 @@ fun HomeMenuEditor(
                     ) {
                         Text(
                             text = "${index + 1}.",
-                            color = Color(0xFFD4AF37),
+                            color = MenuGold,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -177,7 +180,7 @@ fun HomeMenuEditor(
 
                         Text(
                             text = "↕",
-                            color = Color(0xFFD4AF37),
+                            color = MenuGold,
                             fontSize = 20.sp
                         )
                     }
@@ -203,7 +206,7 @@ fun HomeMenuEditor(
             ) {
                 Text(
                     text = "Zurücksetzen",
-                    color = Color(0xFFD4AF37),
+                    color = MenuGold,
                     fontSize = 12.sp
                 )
             }
@@ -214,7 +217,7 @@ fun HomeMenuEditor(
                     .height(44.dp),
                 onClick = onDone,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFD4AF37)
+                    containerColor = MenuGold
                 ),
                 shape = RoundedCornerShape(24.dp)
             ) {
