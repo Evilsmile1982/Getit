@@ -721,14 +721,19 @@ private fun HomeMenuPageContent(
                 initialOffsetX = { fullWidth -> -fullWidth }
             )
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.bild_4),
-                contentDescription = "CARLOCA Logo",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(84.dp),
-                contentScale = ContentScale.Fit
-            )
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.bild_4),
+                    contentDescription = "CARLOCA Logo",
+                    modifier = Modifier
+                        .fillMaxWidth(0.78f)
+                        .height(84.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
     }
 }
