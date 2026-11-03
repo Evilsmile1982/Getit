@@ -754,7 +754,7 @@ private fun PageFourContent(
                 bottom = 112.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
             text = "CARLOCA EXTRAS",
@@ -810,6 +810,22 @@ private fun PageFourContent(
                 ),
                 contentDescription = "Digitales Handschuhfach öffnen",
                 modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+        }
+
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(
+                    id = R.drawable.bild_4
+                ),
+                contentDescription = "CARLOCA Logo",
+                modifier = Modifier
+                    .fillMaxWidth(0.78f)
+                    .height(84.dp),
                 contentScale = ContentScale.Fit
             )
         }
