@@ -160,6 +160,10 @@ fun HomePagerScreen(
         mutableStateOf<String?>(null)
     }
 
+    var pageFourSubmenu by remember {
+        mutableStateOf<String?>(null)
+    }
+
     var showFuelScreen by remember {
         mutableStateOf(false)
     }
@@ -237,6 +241,7 @@ fun HomePagerScreen(
                 showPurchaseContractScreen,
                 showPremiumDialog,
                 selectedAction,
+                pageFourSubmenu,
                 editMenu
             ) {
                 var dragDistance = 0f
@@ -254,12 +259,13 @@ fun HomePagerScreen(
                             showPurchaseContractScreen ||
                             showPremiumDialog ||
                             selectedAction != null ||
+                            pageFourSubmenu != null ||
                             editMenu
 
                         if (!overlayOpen) {
                             if (dragDistance < -70f) {
                                 currentPage =
-                                    (currentPage + 1).coerceAtMost(2)
+                                    (currentPage + 1).coerceAtMost(3)
                             } else if (dragDistance > 70f) {
                                 currentPage =
                                     (currentPage - 1).coerceAtLeast(0)
@@ -321,6 +327,15 @@ fun HomePagerScreen(
                 )
             }
 
+            pageFourSubmenu != null -> {
+                PageFourSubmenuScreen(
+                    title = pageFourSubmenu!!,
+                    onBack = {
+                        pageFourSubmenu = null
+                    }
+                )
+            }
+
             editMenu -> {
                 HomeMenuEditor(
                     items = menuItems.toList(),
@@ -355,36 +370,43 @@ fun HomePagerScreen(
                 }
             }
 
-            else -> {
-                // KORREKTUR:
-                // currentPage 1 ist die echte Seite 2.
-                // currentPage 2 ist die echte Seite 3.
-                val isSecondPage = currentPage == 1
-
-                val pageItems = if (isSecondPage) {
-                    menuItems.take(4)
-                } else {
-                    menuItems.drop(4)
-                }
-
+            currentPage == 1 -> {
                 HomeMenuPageContent(
                     visible = visible,
-                    imageRes = if (isSecondPage) {
-                        R.drawable.menuebild_seite2
-                    } else {
-                        R.drawable.menuebild_seite3
-                    },
-                    heading = if (isSecondPage) {
-                        "DEINE FAHRZEUGE. ALLES IM BLICK."
-                    } else {
-                        "WEITERE FAHRZEUGFUNKTIONEN"
-                    },
-                    items = pageItems,
+                    imageRes = R.drawable.menuebild_seite2,
+                    heading = "DEINE FAHRZEUGE. ALLES IM BLICK.",
+                    items = menuItems.take(4),
                     onAction = { action ->
                         openMenuAction(action)
                     },
                     onEdit = {
                         editMenu = true
+                    }
+                )
+            }
+
+            currentPage == 2 -> {
+                HomeMenuPageContent(
+                    visible = visible,
+                    imageRes = R.drawable.menuebild_seite3,
+                    heading = "WEITERE FAHRZEUGFUNKTIONEN",
+                    items = menuItems.drop(4),
+                    onAction = { action ->
+                        openMenuAction(action)
+                    },
+                    onEdit = {
+                        editMenu = true
+                    }
+                )
+            }
+
+            currentPage == 3 -> {
+                PageFourContent(
+                    onAccidentReport = {
+                        pageFourSubmenu = "UNFALLBERICHT"
+                    },
+                    onDigitalGlovebox = {
+                        pageFourSubmenu = "DIGITALES HANDSCHUHFACH"
                     }
                 )
             }
@@ -396,6 +418,7 @@ fun HomePagerScreen(
             !showPdfScreen &&
             !showPurchaseContractScreen &&
             selectedAction == null &&
+            pageFourSubmenu == null &&
             !editMenu
         ) {
             Column(
@@ -430,14 +453,14 @@ fun HomePagerScreen(
                         )
                     }
 
-                    if (currentPage < 2) {
+                    if (currentPage < 3) {
                         PageNavigationButton(
                             title = "WEITERE FUNKTIONEN",
                             arrow = "›",
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 currentPage =
-                                    (currentPage + 1).coerceAtMost(2)
+                                    (currentPage + 1).coerceAtMost(3)
                             }
                         )
                     }
@@ -447,7 +470,7 @@ fun HomePagerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    repeat(3) { page ->
+                    repeat(4) { page ->
                         Box(
                             modifier = Modifier
                                 .size(
@@ -468,7 +491,7 @@ fun HomePagerScreen(
                     }
 
                     Text(
-                        text = "Seite ${currentPage + 1} von 3",
+                        text = "Seite ${currentPage + 1} von 4",
                         color = Color(0xFFBBBBBB),
                         fontSize = 10.sp
                     )
@@ -692,6 +715,130 @@ private fun HomeMenuPageContent(
                 contentScale = ContentScale.Fit
             )
         }
+    }
+}
+
+@Composable
+private fun PageFourContent(
+    onAccidentReport: () -> Unit,
+    onDigitalGlovebox: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(
+                start = 18.dp,
+                end = 18.dp,
+                top = 14.dp,
+                bottom = 112.dp
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text(
+            text = "CARLOCA EXTRAS",
+            color = CarvitaGold,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .clickable(onClick = onAccidentReport),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.Black
+            ),
+            border = BorderStroke(1.5.dp, CarvitaGold),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 6.dp
+            )
+        ) {
+            Image(
+                painter = painterResource(
+                    id = R.drawable.unfallbericht
+                ),
+                contentDescription = "Unfallbericht öffnen",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .clickable(onClick = onDigitalGlovebox),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.Black
+            ),
+            border = BorderStroke(1.5.dp, CarvitaGold),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 6.dp
+            )
+        ) {
+            Image(
+                painter = painterResource(
+                    id = R.drawable.digitales_handschuhfach
+                ),
+                contentDescription = "Digitales Handschuhfach öffnen",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds
+            )
+        }
+    }
+}
+
+@Composable
+private fun PageFourSubmenuScreen(
+    title: String,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(
+                start = 20.dp,
+                end = 20.dp,
+                top = 24.dp,
+                bottom = 16.dp
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = title,
+            color = CarvitaGold,
+            fontSize = 21.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = "Hier werden später die weiteren Funktionen eingebaut.",
+            color = Color.White,
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        PageNavigationButton(
+            title = "ZURÜCK",
+            arrow = "‹",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp),
+            onClick = onBack
+        )
     }
 }
 
