@@ -2,9 +2,15 @@
 package de.autocheck.app
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
+import android.net.Uri
 import android.os.Environment
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,8 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -56,6 +63,11 @@ private data class ShortAccidentField(
 private data class ShortAccidentSection(
     val title: String,
     val fields: List<ShortAccidentField>
+)
+
+private data class AccidentPhotoCategory(
+    val id: String,
+    val title: String
 )
 
 private fun accidentField(
@@ -150,6 +162,28 @@ private val europeanCircumstancesShort = listOf(
     "Vorrangzeichen oder Rotlicht nicht beachtet"
 )
 
+private val participantPhotoCategories = listOf(
+    AccidentPhotoCategory("id_a", "Ausweis / Führerschein – A"),
+    AccidentPhotoCategory("insurance_a", "Versicherungsnachweis – A"),
+    AccidentPhotoCategory("registration_a", "Zulassungsschein – A"),
+    AccidentPhotoCategory("plate_a", "Kennzeichen – A"),
+    AccidentPhotoCategory("id_b", "Ausweis / Führerschein – B"),
+    AccidentPhotoCategory("insurance_b", "Versicherungsnachweis – B"),
+    AccidentPhotoCategory("registration_b", "Zulassungsschein – B"),
+    AccidentPhotoCategory("plate_b", "Kennzeichen – B")
+)
+
+private val damagePhotoCategories = listOf(
+    AccidentPhotoCategory("vehicle_a", "Gesamtansichten Fahrzeug A"),
+    AccidentPhotoCategory("vehicle_b", "Gesamtansichten Fahrzeug B"),
+    AccidentPhotoCategory("damage_a", "Nahaufnahmen Schäden Fahrzeug A"),
+    AccidentPhotoCategory("damage_b", "Nahaufnahmen Schäden Fahrzeug B"),
+    AccidentPhotoCategory("other_damage", "Sonstige beschädigte Gegenstände"),
+    AccidentPhotoCategory("scene", "Übersicht der Unfallstelle"),
+    AccidentPhotoCategory("signs", "Verkehrszeichen und Ampeln"),
+    AccidentPhotoCategory("markings", "Fahrbahnmarkierungen und Spuren")
+)
+
 @Composable
 fun AccidentReportScreen(
     onBack: () -> Unit
@@ -182,36 +216,74 @@ fun AccidentReportScreen(
 
     val circumstancesA = remember {
         mutableStateMapOf<Int, Boolean>().apply {
-            val saved = preferences.getString("circumstances_a", "")
-            saved.orEmpty().split(",").forEach { item ->
-                item.toIntOrNull()?.let { put(it, true) }
-            }
+            preferences.getString("circumstances_a", "")
+                .orEmpty()
+                .split(",")
+                .forEach { item ->
+                    item.toIntOrNull()?.let { put(it, true) }
+                }
         }
     }
 
     val circumstancesB = remember {
         mutableStateMapOf<Int, Boolean>().apply {
-            val saved = preferences.getString("circumstances_b", "")
-            saved.orEmpty().split(",").forEach { item ->
-                item.toIntOrNull()?.let { put(it, true) }
+            preferences.getString("circumstances_b", "")
+                .orEmpty()
+                .split(",")
+                .forEach { item ->
+                    item.toIntOrNull()?.let { put(it, true) }
+                }
+        }
+    }
+
+    val photos = remember {
+        mutableStateMapOf<String, List<String>>().apply {
+            val saved = preferences.getString("photo_data", null)
+
+            if (!saved.isNullOrBlank()) {
+                try {
+                    val json = JSONObject(saved)
+                    json.keys().forEach { key ->
+                        val array = json.optJSONArray(key) ?: JSONArray()
+                        val paths = mutableListOf<String>()
+
+                        for (index in 0 until array.length()) {
+                            val path = array.optString(index)
+                            if (path.isNotBlank() && File(path).exists()) {
+                                paths.add(path)
+                            }
+                        }
+
+                        if (paths.isNotEmpty()) {
+                            put(key, paths)
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Ungültige Fotodaten ignorieren.
+                }
             }
         }
     }
 
-    var currentStep by remember {
-        mutableStateOf(0)
-    }
+    var currentStep by remember { mutableStateOf(0) }
+    var confirmedA by remember { mutableStateOf(false) }
+    var confirmedB by remember { mutableStateOf(false) }
+    var pdfMessage by remember { mutableStateOf("") }
+    var selectedPhotoCategory by remember { mutableStateOf<String?>(null) }
+    var photoMessage by remember { mutableStateOf("") }
 
-    var confirmedA by remember {
-        mutableStateOf(false)
-    }
+    fun savePhotos() {
+        val json = JSONObject()
 
-    var confirmedB by remember {
-        mutableStateOf(false)
-    }
+        photos.forEach { (category, paths) ->
+            val array = JSONArray()
+            paths.forEach { array.put(it) }
+            json.put(category, array)
+        }
 
-    var pdfMessage by remember {
-        mutableStateOf("")
+        preferences.edit()
+            .putString("photo_data", json.toString())
+            .apply()
     }
 
     fun saveLocally() {
@@ -234,6 +306,65 @@ fun AccidentReportScreen(
                     .keys.sorted().joinToString(",")
             )
             .apply()
+
+        savePhotos()
+    }
+
+    fun copySelectedPhotos(uris: List<Uri>) {
+        val category = selectedPhotoCategory ?: return
+        val destination = File(context.filesDir, "accident_photos")
+
+        if (!destination.exists()) {
+            destination.mkdirs()
+        }
+
+        val currentPaths = photos[category].orEmpty().toMutableList()
+        var added = 0
+
+        uris.forEach { uri ->
+            try {
+                val file = File(
+                    destination,
+                    "photo_${System.currentTimeMillis()}_${currentPaths.size}.jpg"
+                )
+
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(file).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                if (file.exists() && file.length() > 0L) {
+                    currentPaths.add(file.absolutePath)
+                    added++
+                } else {
+                    file.delete()
+                }
+            } catch (_: Exception) {
+                // Nicht lesbare Bilder überspringen.
+            }
+        }
+
+        photos[category] = currentPaths
+        savePhotos()
+
+        photoMessage = if (added > 0) {
+            "$added Foto(s) hinzugefügt."
+        } else {
+            "Die ausgewählten Fotos konnten nicht übernommen werden."
+        }
+
+        selectedPhotoCategory = null
+    }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            copySelectedPhotos(uris)
+        } else {
+            selectedPhotoCategory = null
+        }
     }
 
     val steps = listOf(
@@ -359,6 +490,24 @@ fun AccidentReportScreen(
                         saveLocally()
                     }
                 )
+
+                Spacer(Modifier.height(16.dp))
+
+                PhotoCategorySection(
+                    title = "FOTOS ZU BETEILIGTEN",
+                    categories = participantPhotoCategories,
+                    photos = photos,
+                    onAdd = { category ->
+                        selectedPhotoCategory = category
+                        photoPicker.launch("image/*")
+                    },
+                    onRemove = { category, path ->
+                        val updated = photos[category].orEmpty() - path
+                        photos[category] = updated
+                        File(path).delete()
+                        savePhotos()
+                    }
+                )
             }
 
             2 -> {
@@ -368,6 +517,24 @@ fun AccidentReportScreen(
                     onValueChange = { id, value ->
                         values[id] = value
                         saveLocally()
+                    }
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                PhotoCategorySection(
+                    title = "FOTOS ZU UNFALL UND SCHÄDEN",
+                    categories = damagePhotoCategories,
+                    photos = photos,
+                    onAdd = { category ->
+                        selectedPhotoCategory = category
+                        photoPicker.launch("image/*")
+                    },
+                    onRemove = { category, path ->
+                        val updated = photos[category].orEmpty() - path
+                        photos[category] = updated
+                        File(path).delete()
+                        savePhotos()
                     }
                 )
             }
@@ -518,6 +685,22 @@ fun AccidentReportScreen(
                         Spacer(Modifier.height(12.dp))
 
                         Text(
+                            text = "Fotos im Bericht",
+                            color = AccidentGold,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        val totalPhotos = photos.values.sumOf { it.size }
+
+                        Text(
+                            text = "$totalPhotos Foto(s) werden an das PDF angehängt.",
+                            color = Color.White,
+                            fontSize = 12.sp
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Text(
                             text = "Bestätigung A",
                             color = AccidentGold,
                             fontWeight = FontWeight.Bold
@@ -528,9 +711,7 @@ fun AccidentReportScreen(
                         ) {
                             Checkbox(
                                 checked = confirmedA,
-                                onCheckedChange = {
-                                    confirmedA = it
-                                }
+                                onCheckedChange = { confirmedA = it }
                             )
                             Text(
                                 text = "Beteiligter A hat die Angaben geprüft.",
@@ -550,9 +731,7 @@ fun AccidentReportScreen(
                         ) {
                             Checkbox(
                                 checked = confirmedB,
-                                onCheckedChange = {
-                                    confirmedB = it
-                                }
+                                onCheckedChange = { confirmedB = it }
                             )
                             Text(
                                 text = "Beteiligter B hat die Angaben geprüft.",
@@ -564,7 +743,7 @@ fun AccidentReportScreen(
                         Text(
                             text = "Diese Bestätigungen sind noch keine " +
                                 "gezeichneten Unterschriften. Die echten " +
-                                "Unterschriftsfelder ergänzen wir im nächsten Ausbau.",
+                                "Unterschriftsfelder ergänzen wir später.",
                             color = Color.LightGray,
                             fontSize = 11.sp
                         )
@@ -584,7 +763,8 @@ fun AccidentReportScreen(
                                 selectedA = circumstancesA
                                     .filterValues { it }.keys.toSet(),
                                 selectedB = circumstancesB
-                                    .filterValues { it }.keys.toSet()
+                                    .filterValues { it }.keys.toSet(),
+                                photos = photos.toMap()
                             )
                         } else {
                             pdfMessage =
@@ -594,7 +774,7 @@ fun AccidentReportScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = confirmedA && confirmedB
                 ) {
-                    Text("PDF erstellen")
+                    Text("PDF mit Fotos erstellen")
                 }
 
                 if (pdfMessage.isNotBlank()) {
@@ -606,6 +786,15 @@ fun AccidentReportScreen(
                     )
                 }
             }
+        }
+
+        if (photoMessage.isNotBlank()) {
+            Text(
+                text = photoMessage,
+                color = AccidentGold,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         Spacer(Modifier.height(18.dp))
@@ -651,6 +840,110 @@ fun AccidentReportScreen(
 }
 
 @Composable
+private fun PhotoCategorySection(
+    title: String,
+    categories: List<AccidentPhotoCategory>,
+    photos: Map<String, List<String>>,
+    onAdd: (String) -> Unit,
+    onRemove: (String, String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1D1D1D)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Text(
+                text = title,
+                color = AccidentGold,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "Mehrere Bilder pro Kategorie möglich.",
+                color = Color.LightGray,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
+            )
+
+            categories.forEach { category ->
+                val categoryPhotos = photos[category.id].orEmpty()
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 9.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF292929)
+                    ),
+                    shape = RoundedCornerShape(9.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                        Text(
+                            text = category.title,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+
+                        Text(
+                            text = "${categoryPhotos.size} Foto(s)",
+                            color = Color.LightGray,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(top = 3.dp)
+                        )
+
+                        categoryPhotos.forEachIndexed { index, path ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Bild ${index + 1}",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                TextButton(
+                                    onClick = {
+                                        onRemove(category.id, path)
+                                    }
+                                ) {
+                                    Text(
+                                        "Entfernen",
+                                        color = AccidentGold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Button(
+                            onClick = { onAdd(category.id) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 5.dp)
+                        ) {
+                            Text("Fotos auswählen")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ShortAccidentFormSection(
     section: ShortAccidentSection,
     values: Map<String, String>,
@@ -681,9 +974,7 @@ private fun ShortAccidentFormSection(
                     onValueChange = {
                         onValueChange(item.id, it)
                     },
-                    label = {
-                        Text(item.label)
-                    },
+                    label = { Text(item.label) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
@@ -696,11 +987,40 @@ private fun ShortAccidentFormSection(
     }
 }
 
+private fun decodeAccidentPhoto(path: String): Bitmap? {
+    return try {
+        val bounds = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+
+        BitmapFactory.decodeFile(path, bounds)
+
+        var sampleSize = 1
+        val maxDimension = 1600
+
+        while (
+            bounds.outWidth / sampleSize > maxDimension ||
+            bounds.outHeight / sampleSize > maxDimension
+        ) {
+            sampleSize *= 2
+        }
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+        }
+
+        BitmapFactory.decodeFile(path, options)
+    } catch (_: Exception) {
+        null
+    }
+}
+
 private fun createShortAccidentPdf(
     context: Context,
     values: Map<String, String>,
     selectedA: Set<Int>,
-    selectedB: Set<Int>
+    selectedB: Set<Int>,
+    photos: Map<String, List<String>>
 ): String {
     val document = PdfDocument()
     val pageWidth = 595
@@ -851,6 +1171,94 @@ private fun createShortAccidentPdf(
 
         document.finishPage(page)
 
+        val allCategories =
+            participantPhotoCategories + damagePhotoCategories
+
+        var photoPageCount = 0
+
+        allCategories.forEach { category ->
+            val paths = photos[category.id].orEmpty()
+
+            paths.forEachIndexed { index, path ->
+                val bitmap = decodeAccidentPhoto(path)
+
+                if (bitmap != null) {
+                    pageNumber++
+
+                    val photoPage = document.startPage(
+                        PdfDocument.PageInfo.Builder(
+                            pageWidth,
+                            pageHeight,
+                            pageNumber
+                        ).create()
+                    )
+
+                    val photoCanvas = photoPage.canvas
+                    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = android.graphics.Color.BLACK
+                        textSize = 16f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+
+                    val detailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = android.graphics.Color.DKGRAY
+                        textSize = 10f
+                    }
+
+                    photoCanvas.drawText(
+                        category.title,
+                        40f,
+                        45f,
+                        titlePaint
+                    )
+
+                    photoCanvas.drawText(
+                        "Foto ${index + 1}",
+                        40f,
+                        65f,
+                        detailPaint
+                    )
+
+                    val availableWidth = pageWidth - 80f
+                    val availableHeight = pageHeight - 130f
+
+                    val scale = minOf(
+                        availableWidth / bitmap.width.toFloat(),
+                        availableHeight / bitmap.height.toFloat()
+                    )
+
+                    val displayWidth = bitmap.width * scale
+                    val displayHeight = bitmap.height * scale
+
+                    val left = (pageWidth - displayWidth) / 2f
+                    val top = 90f +
+                        (availableHeight - displayHeight) / 2f
+
+                    val destination = RectF(
+                        left,
+                        top,
+                        left + displayWidth,
+                        top + displayHeight
+                    )
+
+                    val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        isFilterBitmap = true
+                    }
+
+                    photoCanvas.drawBitmap(
+                        bitmap,
+                        null,
+                        destination,
+                        imagePaint
+                    )
+
+                    bitmap.recycle()
+                    document.finishPage(photoPage)
+                    photoPageCount++
+                }
+            }
+        }
+
         val directory = File(
             context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
             "CARLOCA"
@@ -872,7 +1280,8 @@ private fun createShortAccidentPdf(
             document.writeTo(output)
         }
 
-        return "PDF wurde gespeichert: $fileName"
+        return "PDF gespeichert: $fileName\n" +
+            "$photoPageCount Fotoseite(n) eingefügt."
     } catch (exception: Exception) {
         return "PDF konnte nicht erstellt werden: " +
             (exception.message ?: "Unbekannter Fehler")
