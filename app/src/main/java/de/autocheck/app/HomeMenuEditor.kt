@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.statusBarsPadding
 
 @Composable
 fun HomeMenuEditor(
@@ -37,6 +38,9 @@ fun HomeMenuEditor(
     onReset: () -> Unit,
     onDone: () -> Unit
 ) {
+    val density = LocalDensity.current
+    val dragStepPx = with(density) { 54.dp.toPx() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -80,7 +84,11 @@ fun HomeMenuEditor(
 
                 if (index == 0 || index == 4) {
                     Text(
-                        text = if (index == 0) "SEITE 2" else "SEITE 3",
+                        text = if (index == 0) {
+                            "SEITE 2"
+                        } else {
+                            "SEITE 3"
+                        },
                         color = Color(0xFFD4AF37),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -98,9 +106,7 @@ fun HomeMenuEditor(
                         .pointerInput(item.id, items.size) {
                             var currentIndex = index
                             var accumulatedDrag = 0f
-                            val step = with(LocalDensity.current) {
-                                54.dp.toPx()
-                            }
+                            val step = dragStepPx
 
                             detectDragGesturesAfterLongPress(
                                 onDrag = { change, dragAmount ->
@@ -115,6 +121,7 @@ fun HomeMenuEditor(
                                             currentIndex,
                                             currentIndex + 1
                                         )
+
                                         currentIndex++
                                         accumulatedDrag -= step
                                     }
@@ -127,6 +134,7 @@ fun HomeMenuEditor(
                                             currentIndex,
                                             currentIndex - 1
                                         )
+
                                         currentIndex--
                                         accumulatedDrag += step
                                     }
@@ -194,7 +202,7 @@ fun HomeMenuEditor(
                 shape = RoundedCornerShape(24.dp)
             ) {
                 Text(
-                    "Zurücksetzen",
+                    text = "Zurücksetzen",
                     color = Color(0xFFD4AF37),
                     fontSize = 12.sp
                 )
@@ -211,7 +219,7 @@ fun HomeMenuEditor(
                 shape = RoundedCornerShape(24.dp)
             ) {
                 Text(
-                    "Fertig",
+                    text = "Fertig",
                     color = Color.Black,
                     fontSize = 12.sp
                 )
