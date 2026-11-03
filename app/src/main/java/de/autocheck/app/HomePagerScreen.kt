@@ -1,4 +1,3 @@
-
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -8,6 +7,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,8 +66,93 @@ fun HomePagerScreen(
         VehicleStore(context)
     }
 
+    val menuStore = remember {
+        HomeMenuLayoutStore(context)
+    }
+
+    val menuCatalog = remember {
+        listOf(
+            HomeMenuItem(
+                id = "fuel",
+                title = "Tanken & Verbrauch",
+                contentDescription = "Tank-Icon",
+                iconRes = R.drawable.tank_icoon,
+                action = "Tank und Kilometer – Verbrauch"
+            ),
+            HomeMenuItem(
+                id = "history",
+                title = "Fahrzeughistorie",
+                contentDescription = "Fahrzeughistorie-Icon",
+                iconRes = R.drawable.fahrzeughistorie_icoon,
+                action = "Fahrzeughistorie"
+            ),
+            HomeMenuItem(
+                id = "pdf",
+                title = "PDF & Dokumente",
+                contentDescription = "PDF-Icon",
+                iconRes = R.drawable.pdf_icoon,
+                action = "PDF & Dokumente"
+            ),
+            HomeMenuItem(
+                id = "contract",
+                title = "CarLoca Kaufvertrag",
+                contentDescription = "CarLoca Kaufvertrag",
+                iconRes = R.drawable.kaufvertrag_icoon,
+                action = "Kaufvertrag"
+            ),
+            HomeMenuItem(
+                id = "plans",
+                title = "Geplante Vorhaben",
+                contentDescription = "Geplante Vorhaben",
+                iconRes = R.drawable.geplantevorhaben_icoon,
+                action = "Geplante Vorhaben"
+            ),
+            HomeMenuItem(
+                id = "tuning",
+                title = "Tuning und Extras",
+                contentDescription = "Tuning und Extras",
+                iconRes = R.drawable.tuningextras_icoon,
+                action = "Tuning und Extras"
+            ),
+            HomeMenuItem(
+                id = "electric",
+                title = "Elektro und Verbrauch",
+                contentDescription = "Elektro und Verbrauch",
+                iconRes = R.drawable.elektro_icoon,
+                action = "Elektro und Verbrauch"
+            ),
+            HomeMenuItem(
+                id = "calendar",
+                title = "Kalender",
+                contentDescription = "Kalender",
+                iconRes = R.drawable.kalender_icoon,
+                action = "Kalender"
+            )
+        )
+    }
+
+    val menuItems = remember {
+        mutableStateListOf<HomeMenuItem>().apply {
+            val catalogById = menuCatalog.associateBy { it.id }
+
+            menuStore.load().forEach { id ->
+                catalogById[id]?.let { add(it) }
+            }
+
+            menuCatalog.forEach { item ->
+                if (none { it.id == item.id }) {
+                    add(item)
+                }
+            }
+        }
+    }
+
     var currentPage by remember {
         mutableStateOf(0)
+    }
+
+    var editMenu by remember {
+        mutableStateOf(false)
     }
 
     var selectedAction by remember {
@@ -92,6 +179,51 @@ fun HomePagerScreen(
         mutableStateOf(false)
     }
 
+    fun moveMenuItem(from: Int, to: Int) {
+        if (
+            from !in menuItems.indices ||
+            to !in menuItems.indices ||
+            from == to
+        ) {
+            return
+        }
+
+        val movedItem = menuItems.removeAt(from)
+        menuItems.add(to, movedItem)
+
+        menuStore.save(menuItems.map { it.id })
+    }
+
+    fun resetMenu() {
+        menuStore.reset()
+        menuItems.clear()
+        menuItems.addAll(menuCatalog)
+    }
+
+    fun openMenuAction(action: String) {
+        when (action) {
+            "Tank und Kilometer – Verbrauch" -> {
+                showFuelScreen = true
+            }
+
+            "Fahrzeughistorie" -> {
+                showHistoryScreen = true
+            }
+
+            "PDF & Dokumente" -> {
+                showPdfScreen = true
+            }
+
+            "Kaufvertrag" -> {
+                showPurchaseContractScreen = true
+            }
+
+            else -> {
+                selectedAction = action
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -103,7 +235,8 @@ fun HomePagerScreen(
                 showPdfScreen,
                 showPurchaseContractScreen,
                 showPremiumDialog,
-                selectedAction
+                selectedAction,
+                editMenu
             ) {
                 var dragDistance = 0f
 
@@ -119,7 +252,8 @@ fun HomePagerScreen(
                             showPdfScreen ||
                             showPurchaseContractScreen ||
                             showPremiumDialog ||
-                            selectedAction != null
+                            selectedAction != null ||
+                            editMenu
 
                         if (!overlayOpen) {
                             if (dragDistance < -70f) {
@@ -186,6 +320,21 @@ fun HomePagerScreen(
                 )
             }
 
+            editMenu -> {
+                HomeMenuEditor(
+                    items = menuItems.toList(),
+                    onMove = { from, to ->
+                        moveMenuItem(from, to)
+                    },
+                    onReset = {
+                        resetMenu()
+                    },
+                    onDone = {
+                        editMenu = false
+                    }
+                )
+            }
+
             currentPage == 0 -> {
                 Box(
                     modifier = Modifier
@@ -205,40 +354,31 @@ fun HomePagerScreen(
                 }
             }
 
-            currentPage == 1 -> {
-                ThirdHomePageContent(
-                    visible = visible,
-                    onAction = { action ->
-                        selectedAction = action
-                    }
-                )
-            }
-
             else -> {
-                SecondHomePageContent(
+                val pageItems = if (currentPage == 2) {
+                    menuItems.take(4)
+                } else {
+                    menuItems.drop(4)
+                }
+
+                HomeMenuPageContent(
                     visible = visible,
+                    imageRes = if (currentPage == 2) {
+                        R.drawable.menuebild_seite2
+                    } else {
+                        R.drawable.menuebild_seite3
+                    },
+                    heading = if (currentPage == 2) {
+                        "DEINE FAHRZEUGE. ALLES IM BLICK."
+                    } else {
+                        "WEITERE FAHRZEUGFUNKTIONEN"
+                    },
+                    items = pageItems,
                     onAction = { action ->
-                        when (action) {
-                            "Tank und Kilometer – Verbrauch" -> {
-                                showFuelScreen = true
-                            }
-
-                            "Fahrzeughistorie" -> {
-                                showHistoryScreen = true
-                            }
-
-                            "PDF & Dokumente" -> {
-                                showPdfScreen = true
-                            }
-
-                            "Kaufvertrag" -> {
-                                showPurchaseContractScreen = true
-                            }
-
-                            else -> {
-                                selectedAction = action
-                            }
-                        }
+                        openMenuAction(action)
+                    },
+                    onEdit = {
+                        editMenu = true
                     }
                 )
             }
@@ -249,7 +389,8 @@ fun HomePagerScreen(
             !showHistoryScreen &&
             !showPdfScreen &&
             !showPurchaseContractScreen &&
-            selectedAction == null
+            selectedAction == null &&
+            !editMenu
         ) {
             Column(
                 modifier = Modifier
@@ -458,9 +599,13 @@ private fun PageNavigationButton(
 }
 
 @Composable
-private fun SecondHomePageContent(
+private fun HomeMenuPageContent(
     visible: Boolean,
-    onAction: (String) -> Unit
+    imageRes: Int,
+    heading: String,
+    items: List<HomeMenuItem>,
+    onAction: (String) -> Unit,
+    onEdit: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -485,10 +630,8 @@ private fun SecondHomePageContent(
             )
         ) {
             Image(
-                painter = painterResource(
-                    id = R.drawable.menuebild_seite2
-                ),
-                contentDescription = "CARLOCA Dashboard und Lenkrad",
+                painter = painterResource(id = imageRes),
+                contentDescription = "CARLOCA Menü",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
@@ -497,7 +640,7 @@ private fun SecondHomePageContent(
         }
 
         Text(
-            text = "DEINE FAHRZEUGE. ALLES IM BLICK.",
+            text = heading,
             color = CarvitaGold,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
@@ -505,58 +648,26 @@ private fun SecondHomePageContent(
             modifier = Modifier.padding(vertical = 2.dp)
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.tank_icoon,
-                title = "Tanken & Verbrauch",
-                contentDescription = "Tank-Icon",
-                onClick = {
-                    onAction("Tank und Kilometer – Verbrauch")
+        items.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { item ->
+                    ThirdPageButton(
+                        modifier = Modifier.weight(1f),
+                        iconRes = item.iconRes,
+                        title = item.title,
+                        contentDescription = item.contentDescription,
+                        onClick = {
+                            onAction(item.action)
+                        },
+                        onLongClick = onEdit
+                    )
                 }
-            )
-
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.fahrzeughistorie_icoon,
-                title = "Fahrzeughistorie",
-                contentDescription = "Fahrzeughistorie-Icon",
-                onClick = {
-                    onAction("Fahrzeughistorie")
-                }
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.pdf_icoon,
-                title = "PDF & Dokumente",
-                contentDescription = "PDF-Icon",
-                onClick = {
-                    onAction("PDF & Dokumente")
-                }
-            )
-
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.kaufvertrag_icoon,
-                title = "CarLoca Kaufvertrag",
-                contentDescription = "CarLoca Kaufvertrag",
-                onClick = {
-                    onAction("Kaufvertrag")
-                }
-            )
+            }
         }
 
         AnimatedVisibility(
@@ -578,139 +689,23 @@ private fun SecondHomePageContent(
     }
 }
 
-@Composable
-private fun ThirdHomePageContent(
-    visible: Boolean,
-    onAction: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(
-                start = 18.dp,
-                end = 18.dp,
-                top = 8.dp,
-                bottom = 150.dp
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Spacer(Modifier.height(2.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.Black
-            )
-        ) {
-            Image(
-                painter = painterResource(
-                    id = R.drawable.menuebild_seite3
-                ),
-                contentDescription = "CARLOCA Menü Seite 3",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentScale = ContentScale.FillBounds
-            )
-        }
-
-        Text(
-            text = "WEITERE FAHRZEUGFUNKTIONEN",
-            color = CarvitaGold,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 2.dp)
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.geplantevorhaben_icoon,
-                title = "Geplante Vorhaben",
-                contentDescription = "Geplante Vorhaben",
-                onClick = {
-                    onAction("Geplante Vorhaben")
-                }
-            )
-
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.tuningextras_icoon,
-                title = "Tuning und Extras",
-                contentDescription = "Tuning und Extras",
-                onClick = {
-                    onAction("Tuning und Extras")
-                }
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.elektro_icoon,
-                title = "Elektro und Verbrauch",
-                contentDescription = "Elektro und Verbrauch",
-                onClick = {
-                    onAction("Elektro und Verbrauch")
-                }
-            )
-
-            ThirdPageButton(
-                modifier = Modifier.weight(1f),
-                iconRes = R.drawable.kalender_icoon,
-                title = "Kalender",
-                contentDescription = "Kalender",
-                onClick = {
-                    onAction("Kalender")
-                }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = visible,
-            enter = slideInHorizontally(
-                animationSpec = tween(2000),
-                initialOffsetX = { fullWidth -> -fullWidth }
-            )
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.bild_4),
-                contentDescription = "CARLOCA Logo",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(84.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
-    }
-}
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ThirdPageButton(
     modifier: Modifier = Modifier,
     iconRes: Int,
     title: String,
     contentDescription: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Card(
         modifier = modifier
             .fillMaxSize()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xE6222222)
