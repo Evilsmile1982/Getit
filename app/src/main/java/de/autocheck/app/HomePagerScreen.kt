@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -336,7 +337,7 @@ fun HomePagerScreen(
             }
 
             pageFourSubmenu == "DIGITALES HANDSCHUHFACH" -> {
-                DigitalGloveboxScreen(
+                DigitalGloveboxGate(
                     onBack = {
                         pageFourSubmenu = null
                     }
