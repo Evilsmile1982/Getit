@@ -1,4 +1,3 @@
-
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -330,6 +329,14 @@ fun HomePagerScreen(
 
             pageFourSubmenu == "UNFALLBERICHT" -> {
                 AccidentReportScreen(
+                    onBack = {
+                        pageFourSubmenu = null
+                    }
+                )
+            }
+
+            pageFourSubmenu == "DIGITALES HANDSCHUHFACH" -> {
+                DigitalGloveboxScreen(
                     onBack = {
                         pageFourSubmenu = null
                     }
