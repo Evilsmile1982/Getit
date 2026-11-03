@@ -1,3 +1,4 @@
+
 package de.autocheck.app
 
 import androidx.compose.animation.AnimatedVisibility
@@ -355,7 +356,12 @@ fun HomePagerScreen(
             }
 
             else -> {
-                val pageItems = if (currentPage == 2) {
+                // KORREKTUR:
+                // currentPage 1 ist die echte Seite 2.
+                // currentPage 2 ist die echte Seite 3.
+                val isSecondPage = currentPage == 1
+
+                val pageItems = if (isSecondPage) {
                     menuItems.take(4)
                 } else {
                     menuItems.drop(4)
@@ -363,12 +369,12 @@ fun HomePagerScreen(
 
                 HomeMenuPageContent(
                     visible = visible,
-                    imageRes = if (currentPage == 2) {
+                    imageRes = if (isSecondPage) {
                         R.drawable.menuebild_seite2
                     } else {
                         R.drawable.menuebild_seite3
                     },
-                    heading = if (currentPage == 2) {
+                    heading = if (isSecondPage) {
                         "DEINE FAHRZEUGE. ALLES IM BLICK."
                     } else {
                         "WEITERE FAHRZEUGFUNKTIONEN"
