@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -734,7 +735,7 @@ private fun PageFourContent(
                 bottom = 112.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = "CARLOCA EXTRAS",
@@ -744,10 +745,12 @@ private fun PageFourContent(
             textAlign = TextAlign.Center
         )
 
+        Spacer(Modifier.height(2.dp))
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .aspectRatio(1.5f)
                 .clickable(onClick = onAccidentReport),
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(
@@ -764,14 +767,14 @@ private fun PageFourContent(
                 ),
                 contentDescription = "Unfallbericht öffnen",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.FillBounds
+                contentScale = ContentScale.Fit
             )
         }
 
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .aspectRatio(1.5f)
                 .clickable(onClick = onDigitalGlovebox),
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(
@@ -788,7 +791,7 @@ private fun PageFourContent(
                 ),
                 contentDescription = "Digitales Handschuhfach öffnen",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.FillBounds
+                contentScale = ContentScale.Fit
             )
         }
     }
