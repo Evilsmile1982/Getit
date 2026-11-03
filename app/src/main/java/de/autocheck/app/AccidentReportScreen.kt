@@ -269,6 +269,7 @@ fun AccidentReportScreen(
     var confirmedA by remember { mutableStateOf(false) }
     var confirmedB by remember { mutableStateOf(false) }
     var pdfMessage by remember { mutableStateOf("") }
+    var generatedPdfPath by remember { mutableStateOf<String?>(null) }
     var selectedPhotoCategory by remember { mutableStateOf<String?>(null) }
     var photoMessage by remember { mutableStateOf("") }
 
@@ -755,6 +756,7 @@ fun AccidentReportScreen(
                 Button(
                     onClick = {
                         saveLocally()
+                        generatedPdfPath = null
 
                         if (confirmedA && confirmedB) {
                             pdfMessage = createShortAccidentPdf(
@@ -766,6 +768,30 @@ fun AccidentReportScreen(
                                     .filterValues { it }.keys.toSet(),
                                 photos = photos.toMap()
                             )
+
+                            if (pdfMessage.startsWith("PDF gespeichert:")) {
+                                val fileName = pdfMessage
+                                    .substringAfter("PDF gespeichert:")
+                                    .substringBefore("\n")
+                                    .trim()
+
+                                val directory = File(
+                                    context.getExternalFilesDir(
+                                        Environment.DIRECTORY_DOCUMENTS
+                                    ),
+                                    "CARLOCA"
+                                )
+
+                                val pdfFile = File(directory, fileName)
+
+                                if (pdfFile.exists()) {
+                                    generatedPdfPath = pdfFile.absolutePath
+                                } else {
+                                    pdfMessage =
+                                        "PDF wurde gemeldet, aber die Datei " +
+                                            "konnte nicht gefunden werden."
+                                }
+                            }
                         } else {
                             pdfMessage =
                                 "Bitte beide Bestätigungen aktivieren."
@@ -784,6 +810,52 @@ fun AccidentReportScreen(
                         fontSize = 12.sp,
                         modifier = Modifier.padding(top = 10.dp)
                     )
+                }
+
+                if (generatedPdfPath != null) {
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = "UNFALLBERICHT VERSENDEN",
+                        color = AccidentGold,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+
+                    Text(
+                        text = "Wähle aus, wie du den fertigen PDF-Bericht " +
+                            "versenden möchtest.",
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(
+                            top = 5.dp,
+                            bottom = 10.dp
+                        )
+                    )
+
+                    Button(
+                        onClick = {
+                            generatedPdfPath?.let { path ->
+                                shareAccidentPdfWhatsApp(context, path)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Über WhatsApp senden")
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            generatedPdfPath?.let { path ->
+                                shareAccidentPdfEmail(context, path)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Per E-Mail senden")
+                    }
                 }
             }
         }
