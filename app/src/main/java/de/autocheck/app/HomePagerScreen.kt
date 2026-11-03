@@ -637,6 +637,8 @@ private fun HomeMenuPageContent(
     onAction: (String) -> Unit,
     onEdit: () -> Unit
 ) {
+    val isThirdPage = heading == "WEITERE FAHRZEUGFUNKTIONEN"
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -648,7 +650,9 @@ private fun HomeMenuPageContent(
                 bottom = 150.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(
+            if (isThirdPage) 5.dp else 6.dp
+        )
     ) {
         Spacer(Modifier.height(2.dp))
 
@@ -662,10 +666,20 @@ private fun HomeMenuPageContent(
             Image(
                 painter = painterResource(id = imageRes),
                 contentDescription = "CARLOCA Menü",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentScale = ContentScale.FillBounds
+                modifier = if (isThirdPage) {
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                } else {
+                    Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                },
+                contentScale = if (isThirdPage) {
+                    ContentScale.Crop
+                } else {
+                    ContentScale.FillBounds
+                }
             )
         }
 
