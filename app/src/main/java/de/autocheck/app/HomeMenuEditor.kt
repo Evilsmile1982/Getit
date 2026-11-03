@@ -55,7 +55,7 @@ fun HomeMenuEditor(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Halte einen Menüpunkt gedrückt und ziehe ihn an die gewünschte Stelle. Die ersten vier Plätze gehören zu Seite 2, die nächsten vier zu Seite 3.",
+            text = "Halte einen Menüpunkt gedrückt und ziehe ihn nach oben oder unten. Die ersten vier Plätze gehören zu Seite 2, die nächsten vier zu Seite 3.",
             color = Color.White,
             fontSize = 13.sp,
             textAlign = TextAlign.Center
@@ -74,11 +74,7 @@ fun HomeMenuEditor(
 
                 if (index == 0 || index == 4) {
                     Text(
-                        text = if (index == 0) {
-                            "SEITE 2"
-                        } else {
-                            "SEITE 3"
-                        },
+                        text = if (index == 0) "SEITE 2" else "SEITE 3",
                         color = Color(0xFFD4AF37),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -93,12 +89,43 @@ fun HomeMenuEditor(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .pointerInput(items) {
+                        .pointerInput(items.size) {
+                            var currentIndex = index
+                            var accumulatedDrag = 0f
+                            val step = 72.dp.toPx()
+
                             detectDragGesturesAfterLongPress(
-                                onDrag = { change, _ ->
+                                onDrag = { change, dragAmount ->
                                     change.consume()
+                                    accumulatedDrag += dragAmount.y
+
+                                    while (accumulatedDrag > step &&
+                                        currentIndex < items.size - 1
+                                    ) {
+                                        onMove(
+                                            currentIndex,
+                                            currentIndex + 1
+                                        )
+                                        currentIndex++
+                                        accumulatedDrag -= step
+                                    }
+
+                                    while (accumulatedDrag < -step &&
+                                        currentIndex > 0
+                                    ) {
+                                        onMove(
+                                            currentIndex,
+                                            currentIndex - 1
+                                        )
+                                        currentIndex--
+                                        accumulatedDrag += step
+                                    }
                                 },
                                 onDragEnd = {
+                                    accumulatedDrag = 0f
+                                },
+                                onDragCancel = {
+                                    accumulatedDrag = 0f
                                 }
                             )
                         },
