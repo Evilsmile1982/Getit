@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -272,6 +274,8 @@ fun AccidentReportScreen(
     var generatedPdfPath by remember { mutableStateOf<String?>(null) }
     var selectedPhotoCategory by remember { mutableStateOf<String?>(null) }
     var photoMessage by remember { mutableStateOf("") }
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var pendingCameraFile by remember { mutableStateOf<File?>(null) }
 
     fun savePhotos() {
         val json = JSONObject()
@@ -309,6 +313,24 @@ fun AccidentReportScreen(
             .apply()
 
         savePhotos()
+    }
+
+    fun addPhotoFile(file: File) {
+        val category = selectedPhotoCategory ?: return
+
+        if (file.exists() && file.length() > 0L) {
+            val currentPaths = photos[category].orEmpty().toMutableList()
+            currentPaths.add(file.absolutePath)
+            photos[category] = currentPaths
+            savePhotos()
+
+            photoMessage = "Foto erfolgreich hinzugefügt."
+        } else {
+            photoMessage = "Das Foto konnte nicht gespeichert werden."
+            file.delete()
+        }
+
+        selectedPhotoCategory = null
     }
 
     fun copySelectedPhotos(uris: List<Uri>) {
@@ -366,6 +388,100 @@ fun AccidentReportScreen(
         } else {
             selectedPhotoCategory = null
         }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = pendingCameraFile
+
+        if (success && file != null) {
+            addPhotoFile(file)
+        } else {
+            file?.delete()
+            pendingCameraFile = null
+            selectedPhotoCategory = null
+            photoMessage = "Die Kameraaufnahme wurde abgebrochen."
+        }
+    }
+
+    fun openCamera() {
+        val category = selectedPhotoCategory ?: return
+
+        try {
+            val directory = File(context.filesDir, "accident_photos")
+
+            if (!directory.exists() && !directory.mkdirs()) {
+                photoMessage = "Fotoordner konnte nicht erstellt werden."
+                selectedPhotoCategory = null
+                return
+            }
+
+            val file = File(
+                directory,
+                "camera_${System.currentTimeMillis()}.jpg"
+            )
+
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+
+            pendingCameraFile = file
+            cameraLauncher.launch(uri)
+        } catch (exception: Exception) {
+            pendingCameraFile = null
+            selectedPhotoCategory = null
+            photoMessage = "Kamera konnte nicht geöffnet werden: " +
+                (exception.message ?: "Unbekannter Fehler")
+        }
+    }
+
+    if (showPhotoSourceDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPhotoSourceDialog = false
+                selectedPhotoCategory = null
+            },
+            title = {
+                Text("Foto hinzufügen")
+            },
+            text = {
+                Text("Möchtest du ein neues Foto aufnehmen oder ein Bild aus deiner Galerie auswählen?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPhotoSourceDialog = false
+                        openCamera()
+                    }
+                ) {
+                    Text("Kamera öffnen")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            selectedPhotoCategory = null
+                        }
+                    ) {
+                        Text("Abbrechen")
+                    }
+
+                    TextButton(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            photoPicker.launch("image/*")
+                        }
+                    ) {
+                        Text("Galerie")
+                    }
+                }
+            }
+        )
     }
 
     val steps = listOf(
@@ -500,7 +616,7 @@ fun AccidentReportScreen(
                     photos = photos,
                     onAdd = { category ->
                         selectedPhotoCategory = category
-                        photoPicker.launch("image/*")
+                        showPhotoSourceDialog = true
                     },
                     onRemove = { category, path ->
                         val updated = photos[category].orEmpty() - path
@@ -529,7 +645,7 @@ fun AccidentReportScreen(
                     photos = photos,
                     onAdd = { category ->
                         selectedPhotoCategory = category
-                        photoPicker.launch("image/*")
+                        showPhotoSourceDialog = true
                     },
                     onRemove = { category, path ->
                         val updated = photos[category].orEmpty() - path
