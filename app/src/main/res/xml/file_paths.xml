@@ -1,12 +1,18 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Speicherort für Kameraaufnahmen -->
+    <!-- Unfallbericht: Kameraaufnahmen -->
     <files-path
         name="accident_photos"
         path="accident_photos/" />
 
-    <!-- Speicherort für Unfallbericht-PDFs -->
+    <!-- Digitales Handschuhfach: Kameraaufnahmen -->
+    <files-path
+        name="digital_glovebox"
+        path="digital_glovebox/" />
+
+    <!-- Unfallbericht: PDF-Dateien -->
     <external-files-path
         name="accident_reports"
         path="Documents/CARLOCA/" />
