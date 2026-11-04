@@ -1,4 +1,3 @@
-
 package de.autocheck.app
 
 import android.content.Context
@@ -43,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -137,6 +137,8 @@ fun DigitalGloveboxScreen(
     var selectedDocumentId by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf("") }
     var previewPath by remember { mutableStateOf<String?>(null) }
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var pendingCameraFile by remember { mutableStateOf<File?>(null) }
 
     fun saveDocuments() {
         val array = JSONArray()
@@ -154,19 +156,59 @@ fun DigitalGloveboxScreen(
             .apply()
     }
 
+    fun addCameraPhoto(file: File) {
+        val id = selectedDocumentId
+
+        if (id == null) {
+            file.delete()
+            return
+        }
+
+        val index = documents.indexOfFirst { it.id == id }
+
+        if (index < 0) {
+            file.delete()
+            selectedDocumentId = null
+            return
+        }
+
+        if (file.exists() && file.length() > 0L) {
+            val paths = documents[index].paths.toMutableList()
+            paths.add(file.absolutePath)
+
+            documents[index] = documents[index].copy(
+                paths = paths
+            )
+
+            saveDocuments()
+            message = "Foto erfolgreich gespeichert."
+        } else {
+            file.delete()
+            message = "Das Kamera-Foto konnte nicht gespeichert werden."
+        }
+
+        selectedDocumentId = null
+        pendingCameraFile = null
+    }
+
     fun importImages(uris: List<Uri>) {
         val id = selectedDocumentId ?: return
         val index = documents.indexOfFirst { it.id == id }
 
-        if (index < 0) return
+        if (index < 0) {
+            selectedDocumentId = null
+            return
+        }
 
         val folder = File(
             context.filesDir,
             "digital_glovebox"
         )
 
-        if (!folder.exists()) {
-            folder.mkdirs()
+        if (!folder.exists() && !folder.mkdirs()) {
+            message = "Dokumentenordner konnte nicht erstellt werden."
+            selectedDocumentId = null
+            return
         }
 
         val paths = documents[index].paths.toMutableList()
@@ -215,6 +257,59 @@ fun DigitalGloveboxScreen(
             importImages(uris)
         } else {
             selectedDocumentId = null
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = pendingCameraFile
+
+        if (success && file != null) {
+            addCameraPhoto(file)
+        } else {
+            file?.delete()
+            pendingCameraFile = null
+            selectedDocumentId = null
+            message = "Die Kameraaufnahme wurde abgebrochen."
+        }
+    }
+
+    fun openCamera() {
+        if (selectedDocumentId == null) return
+
+        try {
+            val folder = File(
+                context.filesDir,
+                "digital_glovebox"
+            )
+
+            if (!folder.exists() && !folder.mkdirs()) {
+                message = "Dokumentenordner konnte nicht erstellt werden."
+                selectedDocumentId = null
+                return
+            }
+
+            val file = File(
+                folder,
+                "camera_${System.currentTimeMillis()}.jpg"
+            )
+
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+
+            pendingCameraFile = file
+            cameraLauncher.launch(uri)
+
+        } catch (exception: Exception) {
+            pendingCameraFile = null
+            selectedDocumentId = null
+
+            message = "Kamera konnte nicht geöffnet werden: " +
+                (exception.message ?: "Unbekannter Fehler")
         }
     }
 
@@ -336,6 +431,7 @@ fun DigitalGloveboxScreen(
                                                 document.copy(
                                                     paths = document.paths - path
                                                 )
+
                                             saveDocuments()
                                         }
                                     }
@@ -351,7 +447,7 @@ fun DigitalGloveboxScreen(
                         Button(
                             onClick = {
                                 selectedDocumentId = document.id
-                                imagePicker.launch("image/*")
+                                showPhotoSourceDialog = true
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -391,6 +487,55 @@ fun DigitalGloveboxScreen(
         ) {
             Text("Zurück")
         }
+    }
+
+    if (showPhotoSourceDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPhotoSourceDialog = false
+                selectedDocumentId = null
+            },
+            title = {
+                Text("Bild hinzufügen")
+            },
+            text = {
+                Text(
+                    "Möchtest du ein neues Foto aufnehmen " +
+                        "oder ein vorhandenes Bild aus deiner Galerie auswählen?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPhotoSourceDialog = false
+                        openCamera()
+                    }
+                ) {
+                    Text("Kamera öffnen")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            selectedDocumentId = null
+                        }
+                    ) {
+                        Text("Abbrechen")
+                    }
+
+                    TextButton(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            imagePicker.launch("image/*")
+                        }
+                    ) {
+                        Text("Galerie")
+                    }
+                }
+            }
+        )
     }
 
     if (addDialog) {
