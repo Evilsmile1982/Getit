@@ -16,8 +16,20 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(
+                System.getenv("CARLOCA_KEYSTORE_FILE") ?: "carloca-upload.jks"
+            )
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = "carloca-upload"
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
