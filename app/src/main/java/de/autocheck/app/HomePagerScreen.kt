@@ -398,6 +398,9 @@ fun HomePagerScreen(
                     },
                     onEdit = {
                         editMenu = true
+                    },
+                    onLogoClick = {
+                        currentPage = 0
                     }
                 )
             }
@@ -413,6 +416,9 @@ fun HomePagerScreen(
                     },
                     onEdit = {
                         editMenu = true
+                    },
+                    onLogoClick = {
+                        currentPage = 0
                     }
                 )
             }
@@ -424,6 +430,9 @@ fun HomePagerScreen(
                     },
                     onDigitalGlovebox = {
                         pageFourSubmenu = "DIGITALES HANDSCHUHFACH"
+                    },
+                    onLogoClick = {
+                        currentPage = 0
                     }
                 )
             }
@@ -587,6 +596,41 @@ fun HomePagerScreen(
 }
 
 @Composable
+private fun CarLocaHomeButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF181818)
+        ),
+        border = BorderStroke(
+            1.dp,
+            CarvitaGold.copy(alpha = 0.8f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 3.dp
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.bild_4),
+                contentDescription = "CARLOCA – Zurück zur Startseite",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+}
+
+@Composable
 private fun PageNavigationButton(
     title: String,
     arrow: String,
@@ -651,7 +695,8 @@ private fun HomeMenuPageContent(
     heading: String,
     items: List<HomeMenuItem>,
     onAction: (String) -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onLogoClick: () -> Unit
 ) {
     val isThirdPage = heading == "WEITERE FAHRZEUGFUNKTIONEN"
 
@@ -708,25 +753,26 @@ private fun HomeMenuPageContent(
             modifier = Modifier.padding(vertical = 2.dp)
         )
 
-        items.chunked(2).forEach { rowItems ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                rowItems.forEach { item ->
-                    ThirdPageButton(
-                        modifier = Modifier.weight(1f),
-                        iconRes = item.iconRes,
-                        title = item.title,
-                        contentDescription = item.contentDescription,
-                        onClick = {
-                            onAction(item.action)
-                        },
-                        onLongClick = onEdit
-                    )
-                }
+        val topRowItems = items.take(2)
+        val bottomRowItems = items.drop(2).take(2)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            topRowItems.forEach { item ->
+                ThirdPageButton(
+                    modifier = Modifier.weight(1f),
+                    iconRes = item.iconRes,
+                    title = item.title,
+                    contentDescription = item.contentDescription,
+                    onClick = {
+                        onAction(item.action)
+                    },
+                    onLongClick = onEdit
+                )
             }
         }
 
@@ -737,17 +783,30 @@ private fun HomeMenuPageContent(
                 initialOffsetX = { fullWidth -> -fullWidth }
             )
         ) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.bild_4),
-                    contentDescription = "CARLOCA Logo",
-                    modifier = Modifier
-                        .fillMaxWidth(0.78f)
-                        .height(84.dp),
-                    contentScale = ContentScale.Fit
+            CarLocaHomeButton(
+                onClick = onLogoClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            bottomRowItems.forEach { item ->
+                ThirdPageButton(
+                    modifier = Modifier.weight(1f),
+                    iconRes = item.iconRes,
+                    title = item.title,
+                    contentDescription = item.contentDescription,
+                    onClick = {
+                        onAction(item.action)
+                    },
+                    onLongClick = onEdit
                 )
             }
         }
@@ -757,7 +816,8 @@ private fun HomeMenuPageContent(
 @Composable
 private fun PageFourContent(
     onAccidentReport: () -> Unit,
-    onDigitalGlovebox: () -> Unit
+    onDigitalGlovebox: () -> Unit,
+    onLogoClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -806,6 +866,13 @@ private fun PageFourContent(
             )
         }
 
+        CarLocaHomeButton(
+            onClick = onLogoClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+        )
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -826,22 +893,6 @@ private fun PageFourContent(
                 ),
                 contentDescription = "Digitales Handschuhfach öffnen",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-        }
-
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(
-                    id = R.drawable.bild_4
-                ),
-                contentDescription = "CARLOCA Logo",
-                modifier = Modifier
-                    .fillMaxWidth(0.78f)
-                    .height(84.dp),
                 contentScale = ContentScale.Fit
             )
         }
