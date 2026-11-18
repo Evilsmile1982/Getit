@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "901474162401",
+    "project_id": "carloca2027",
+    "storage_bucket": "carloca2027.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:901474162401:android:c9a0f7f73c1aedb3b289a0",
+        "android_client_info": {
+          "package_name": "de.autocheck.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2Yx7GgkPwqRM89ToOkUwL0njxNj70gk8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
