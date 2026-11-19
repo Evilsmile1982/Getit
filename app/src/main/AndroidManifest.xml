@@ -1,5 +1,9 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission
+        android:name="android.permission.INTERNET" />
 
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS" />
@@ -23,7 +27,6 @@
 
         </activity>
 
-        <!-- Sichere PDF-Freigabe für WhatsApp und E-Mail -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -36,17 +39,14 @@
 
         </provider>
 
-        <!-- PICKERL ERINNERUNGEN -->
         <receiver
             android:name=".PickerlReceiver"
             android:exported="false" />
 
-        <!-- SERVICE ERINNERUNGEN -->
         <receiver
             android:name=".utils.ServiceReminderReceiver"
             android:exported="false" />
 
-        <!-- WINTERREIFEN ERINNERUNGEN -->
         <receiver
             android:name=".utils.WinterTireReminderReceiver"
             android:exported="false" />
