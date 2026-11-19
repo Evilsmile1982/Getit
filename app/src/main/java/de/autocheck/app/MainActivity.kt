@@ -29,33 +29,27 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
 
         createNotificationChannel()
-
         scheduleWinterTireReminders(applicationContext)
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(
-                arrayOf(
-                    "android.permission.POST_NOTIFICATIONS"
-                ),
+                arrayOf("android.permission.POST_NOTIFICATIONS"),
                 5001
             )
         }
 
         setContent {
             AutoCheckTheme {
-
                 val firebaseAuth = remember {
                     FirebaseAuth.getInstance()
                 }
 
                 val backup = remember {
-                    FirestoreBackup(applicationContext)
+                    SupabaseBackup(applicationContext)
                 }
 
                 var isAuthenticated by remember {
-                    mutableStateOf(
-                        firebaseAuth.currentUser != null
-                    )
+                    mutableStateOf(firebaseAuth.currentUser != null)
                 }
 
                 var backupReady by remember {
@@ -78,7 +72,7 @@ class MainActivity : FragmentActivity() {
                             onError = { error ->
                                 backupError =
                                     error.localizedMessage
-                                        ?: "Cloud-Sicherung fehlgeschlagen"
+                                        ?: "Supabase-Sicherung fehlgeschlagen"
                             }
                         )
                     }
@@ -100,14 +94,10 @@ class MainActivity : FragmentActivity() {
                     backupError != null -> {
                         Column(
                             modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment =
-                                Alignment.CenterHorizontally,
-                            verticalArrangement =
-                                Arrangement.Center
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Text(
-                                "Cloud-Sicherung fehlgeschlagen:"
-                            )
+                            Text("Cloud-Sicherung fehlgeschlagen:")
                             Text(backupError ?: "")
                         }
                     }
@@ -115,10 +105,8 @@ class MainActivity : FragmentActivity() {
                     else -> {
                         Column(
                             modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment =
-                                Alignment.CenterHorizontally,
-                            verticalArrangement =
-                                Arrangement.Center
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
                             CircularProgressIndicator()
                             Text("CARLOCA-Daten werden geladen …")
