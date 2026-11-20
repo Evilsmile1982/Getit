@@ -1,7 +1,9 @@
-
 package de.autocheck.app
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -59,7 +61,6 @@ fun VehicleScreen(
     onDelete: (Vehicle) -> Unit
 ) {
 
-    // CARLOCA-Tarif
     val currentPlan = CarLocaSubscription.currentPlan
 
     var adding by remember {
@@ -134,13 +135,20 @@ fun VehicleScreen(
         mutableStateOf(false)
     }
 
-    // Hinweis bei erreichtem Fahrzeuglimit
     var showVehicleLimitDialog by remember {
         mutableStateOf(false)
     }
 
-    val vehicleTypes =
-    listOf(
+    // Status für den Supabase-Bildupload
+    var imageUploading by remember {
+        mutableStateOf(false)
+    }
+
+    var imageUploadError by remember {
+        mutableStateOf("")
+    }
+
+    val vehicleTypes = listOf(
         "PKW",
         "WOHNMOBIL",
         "MOTORRAD",
@@ -152,8 +160,115 @@ fun VehicleScreen(
         "ANHÄNGER"
     )
 
-    val context =
-        LocalContext.current
+    val context = LocalContext.current
+
+    val supabaseStorage = remember(context) {
+        SupabaseStorage(context)
+    }
+
+    val mainHandler = remember {
+        Handler(Looper.getMainLooper())
+    }
+
+    /*
+     * Formular zurücksetzen
+     */
+    fun resetVehicleForm() {
+        editingVehicleId = ""
+        editingName = ""
+        name = ""
+        vehicleType = "PKW"
+        make = ""
+        model = ""
+        motorization = ""
+        power = ""
+        year = ""
+        plate = ""
+        vin = ""
+        imageUri = ""
+        purchasePrice = ""
+        purchasePriceVisible = false
+        vehicleTypeExpanded = false
+        imageUploading = false
+        imageUploadError = ""
+        adding = false
+    }
+
+    /*
+     * Fahrzeug speichern.
+     *
+     * Lokale Bilder werden zuerst zu Supabase hochgeladen.
+     * Bereits gespeicherte Supabase-Pfade bleiben erhalten.
+     */
+    fun saveVehicleWithImage(vehicle: Vehicle) {
+
+        imageUploadError = ""
+
+        val selectedUri = imageUri
+
+        val parsedUri = if (selectedUri.isNotBlank()) {
+            runCatching {
+                Uri.parse(selectedUri)
+            }.getOrNull()
+        } else {
+            null
+        }
+
+        val isLocalImage = parsedUri != null &&
+            (
+                parsedUri.scheme == "content" ||
+                parsedUri.scheme == "file"
+            )
+
+        // Kein neues lokales Bild:
+        // Fahrzeug direkt mit dem bisherigen Bildpfad speichern.
+        if (!isLocalImage || parsedUri == null) {
+            onSave(vehicle, editingName)
+            resetVehicleForm()
+            return
+        }
+
+        imageUploading = true
+
+        supabaseStorage.upload(
+            sourceUri = parsedUri,
+            category = "vehicles",
+            vehicleId = vehicle.id,
+            recordId = "main",
+            callback = object : SupabaseStorage.UploadCallback {
+
+                override fun onSuccess(storagePath: String) {
+
+                    mainHandler.post {
+
+                        imageUploading = false
+
+                        val vehicleWithCloudImage = vehicle.copy(
+                            imageUri = storagePath
+                        )
+
+                        onSave(
+                            vehicleWithCloudImage,
+                            editingName
+                        )
+
+                        resetVehicleForm()
+                    }
+                }
+
+                override fun onError(error: Exception) {
+
+                    mainHandler.post {
+
+                        imageUploading = false
+
+                        imageUploadError = error.message
+                            ?: "Das Fahrzeugbild konnte nicht hochgeladen werden."
+                    }
+                }
+            }
+        )
+    }
 
     /*
      * ============================================================
@@ -176,14 +291,12 @@ fun VehicleScreen(
                             Intent.FLAG_GRANT_READ_URI_PERMISSION
                         )
 
-                } catch (
-                    _: SecurityException
-                ) {
+                } catch (_: SecurityException) {
                     // Nicht jeder Provider erlaubt persistente Rechte.
                 }
 
-                imageUri =
-                    uri.toString()
+                imageUri = uri.toString()
+                imageUploadError = ""
             }
         }
 
@@ -194,22 +307,15 @@ fun VehicleScreen(
      */
 
     Column(
-        modifier =
-            Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
 
-        // Fahrzeuganzahl passend zum gewählten Tarif
         Text(
-            text =
-                currentPlan.maxVehicles?.let {
-                    "${vehicles.size}/$it Fahrzeuge"
-                } ?: "${vehicles.size} Fahrzeuge – unbegrenzt",
-            color =
-                Color(0xFFB8BEC8),
-            modifier =
-                Modifier.padding(
-                    bottom = 4.dp
-                )
+            text = currentPlan.maxVehicles?.let {
+                "${vehicles.size}/$it Fahrzeuge"
+            } ?: "${vehicles.size} Fahrzeuge – unbegrenzt",
+            color = Color(0xFFB8BEC8),
+            modifier = Modifier.padding(bottom = 4.dp)
         )
 
         Text(
@@ -223,18 +329,13 @@ fun VehicleScreen(
 
             Text(
                 "Noch kein Fahrzeug angelegt.",
-                color =
-                    Color.White,
-                fontSize =
-                    20.sp,
-                fontWeight =
-                    FontWeight.Bold
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(
-                Modifier.height(
-                    8.dp
-                )
+                Modifier.height(8.dp)
             )
         }
 
@@ -245,189 +346,109 @@ fun VehicleScreen(
          */
 
         LazyColumn(
-
-            modifier =
-                Modifier.weight(
-                    1f
-                ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
 
             items(
                 vehicles,
-                key = {
-                    it.id
-                }
+                key = { it.id }
             ) { vehicle ->
 
                 Card(
-
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor =
-                                Color(
-                                    0xFF11141A
-                                )
-                        ),
-
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF11141A)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
 
                     Column(
-                        Modifier.padding(
-                            16.dp
-                        )
+                        Modifier.padding(16.dp)
                     ) {
 
                         /*
-                         * ==================================================
                          * FAHRZEUGKOPF
-                         * ==================================================
                          */
 
                         Row(
-
-                            verticalAlignment =
-                                Alignment.CenterVertically
-
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
 
                             VehicleImage(
-
-                                uri =
-                                    vehicle.imageUri,
-
-                                modifier =
-                                    Modifier.size(
-                                        82.dp
-                                    )
+                                uri = vehicle.imageUri,
+                                modifier = Modifier.size(82.dp)
                             )
 
                             Spacer(
-                                Modifier.width(
-                                    12.dp
-                                )
+                                Modifier.width(12.dp)
                             )
 
                             Column(
-
-                                modifier =
-                                    Modifier.weight(
-                                        1f
-                                    )
-
+                                modifier = Modifier.weight(1f)
                             ) {
 
                                 Text(
                                     vehicle.name,
-                                    color =
-                                        Color.White,
-                                    fontWeight =
-                                        FontWeight.Bold,
-                                    fontSize =
-                                        18.sp
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
                                 )
 
                                 Text(
-                                    "${vehicle.vehicleType} • ${vehicle.make} ${vehicle.model}"
-                                        .trim(),
-                                    color =
-                                        Color(
-                                            0xFFB8BEC8
-                                        )
+                                    "${vehicle.vehicleType} • ${vehicle.make} ${vehicle.model}".trim(),
+                                    color = Color(0xFFB8BEC8)
                                 )
 
-                                if (
-                                    vehicle.motorization.isNotBlank()
-                                ) {
-
+                                if (vehicle.motorization.isNotBlank()) {
                                     Text(
                                         "Motorisierung: ${vehicle.motorization}",
-                                        color =
-                                            Color(
-                                                0xFFB8BEC8
-                                            )
+                                        color = Color(0xFFB8BEC8)
                                     )
                                 }
 
-                                if (
-                                    vehicle.power.isNotBlank()
-                                ) {
-
+                                if (vehicle.power.isNotBlank()) {
                                     Text(
                                         "PS/KW: ${vehicle.power}",
-                                        color =
-                                            Color(
-                                                0xFFB8BEC8
-                                            )
+                                        color = Color(0xFFB8BEC8)
                                     )
                                 }
 
-                                if (
-                                    vehicle.year.isNotBlank()
-                                ) {
-
+                                if (vehicle.year.isNotBlank()) {
                                     Text(
                                         "Baujahr: ${vehicle.year}",
-                                        color =
-                                            Color(
-                                                0xFFB8BEC8
-                                            )
+                                        color = Color(0xFFB8BEC8)
                                     )
                                 }
 
-                                if (
-                                    vehicle.plate.isNotBlank()
-                                ) {
-
+                                if (vehicle.plate.isNotBlank()) {
                                     Text(
                                         "Kennzeichen: ${vehicle.plate}",
-                                        color =
-                                            Color.White
+                                        color = Color.White
                                     )
                                 }
 
-                                if (
-                                    vehicle.vin.isNotBlank()
-                                ) {
-
+                                if (vehicle.vin.isNotBlank()) {
                                     Text(
                                         "FIN/VIN: ${vehicle.vin}",
-                                        color =
-                                            Color(
-                                                0xFFB8BEC8
-                                            ),
-                                        maxLines =
-                                            1
+                                        color = Color(0xFFB8BEC8),
+                                        maxLines = 1
                                     )
                                 }
 
                                 /*
-                                 * ==================================================
                                  * KAUFPREIS
-                                 * ==================================================
                                  */
 
                                 val priceVisible =
-                                    revealedPurchasePriceIds
-                                        .contains(vehicle.id)
+                                    revealedPurchasePriceIds.contains(vehicle.id)
 
                                 Row(
-                                    verticalAlignment =
-                                        Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
 
                                     Text(
                                         "Kaufpreis: ",
-                                        color =
-                                            Color(
-                                                0xFFB8BEC8
-                                            )
+                                        color = Color(0xFFB8BEC8)
                                     )
 
                                     Text(
@@ -439,56 +460,32 @@ fun VehicleScreen(
                                         } else {
                                             "******** €"
                                         },
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.clickable {
 
-                                        color =
-                                            Color.White,
-
-                                        fontWeight =
-                                            FontWeight.Medium,
-
-                                        modifier =
-                                            Modifier.clickable {
-
-                                                revealedPurchasePriceIds =
-                                                    if (
-                                                        priceVisible
-                                                    ) {
-
-                                                        revealedPurchasePriceIds -
-                                                            vehicle.id
-
-                                                    } else {
-
-                                                        revealedPurchasePriceIds +
-                                                            vehicle.id
-                                                    }
-                                            }
+                                            revealedPurchasePriceIds =
+                                                if (priceVisible) {
+                                                    revealedPurchasePriceIds - vehicle.id
+                                                } else {
+                                                    revealedPurchasePriceIds + vehicle.id
+                                                }
+                                        }
                                     )
 
                                     Spacer(
-                                        Modifier.width(
-                                            10.dp
-                                        )
+                                        Modifier.width(10.dp)
                                     )
 
                                     EyeIcon(
-                                        visible =
-                                            priceVisible,
-
+                                        visible = priceVisible,
                                         onClick = {
 
                                             revealedPurchasePriceIds =
-                                                if (
-                                                    priceVisible
-                                                ) {
-
-                                                    revealedPurchasePriceIds -
-                                                        vehicle.id
-
+                                                if (priceVisible) {
+                                                    revealedPurchasePriceIds - vehicle.id
                                                 } else {
-
-                                                    revealedPurchasePriceIds +
-                                                        vehicle.id
+                                                    revealedPurchasePriceIds + vehicle.id
                                                 }
                                         }
                                     )
@@ -497,193 +494,100 @@ fun VehicleScreen(
                         }
 
                         Spacer(
-                            Modifier.height(
-                                10.dp
-                            )
+                            Modifier.height(10.dp)
                         )
 
                         /*
-                         * ==================================================
                          * AKTIV / BEARBEITEN
-                         * ==================================================
                          */
 
                         Row(
-
-                            horizontalArrangement =
-                                Arrangement.spacedBy(
-                                    8.dp
-                                )
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
 
-                            /*
-                             * ==================================================
-                             * AKTIV-BUTTON
-                             * ==================================================
-                             *
-                             * AKTIVES FAHRZEUG:
-                             * GRÜN + "AKTIV"
-                             *
-                             * NICHT AKTIVES FAHRZEUG:
-                             * GOLD + "Aktiv setzen"
-                             * ==================================================
-                             */
-
                             Button(
-
                                 onClick = {
-
-                                    onActiveVehicle(
-                                        vehicle.id
-                                    )
+                                    onActiveVehicle(vehicle.id)
                                 },
+                                colors = ButtonDefaults.buttonColors(
 
-                                colors =
-                                    ButtonDefaults.buttonColors(
+                                    containerColor =
+                                        if (activeVehicle == vehicle.id) {
+                                            Color(0xFF4CAF50)
+                                        } else {
+                                            Color(0xFFFFD700)
+                                        },
 
-                                        containerColor =
-                                            if (
-                                                activeVehicle ==
-                                                vehicle.id
-                                            ) {
-
-                                                Color(
-                                                    0xFF4CAF50
-                                                )
-
-                                            } else {
-
-                                                Color(
-                                                    0xFFFFD700
-                                                )
-                                            },
-
-                                        contentColor =
-                                            if (
-                                                activeVehicle ==
-                                                vehicle.id
-                                            ) {
-
-                                                Color.White
-
-                                            } else {
-
-                                                Color.Black
-                                            }
-                                    )
-
+                                    contentColor =
+                                        if (activeVehicle == vehicle.id) {
+                                            Color.White
+                                        } else {
+                                            Color.Black
+                                        }
+                                )
                             ) {
 
                                 Text(
-
-                                    if (
-                                        activeVehicle ==
-                                        vehicle.id
-                                    ) {
-
+                                    if (activeVehicle == vehicle.id) {
                                         "AKTIV"
-
                                     } else {
-
                                         "Aktiv setzen"
                                     },
-
-                                    fontWeight =
-                                        FontWeight.Bold
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
 
                             /*
-                             * ==================================================
                              * BEARBEITEN
-                             * ==================================================
                              */
 
                             OutlinedButton(
-
                                 onClick = {
 
-                                    editingVehicleId =
-                                        vehicle.id
-
-                                    editingName =
-                                        vehicle.name
-
-                                    name =
-                                        vehicle.name
+                                    editingVehicleId = vehicle.id
+                                    editingName = vehicle.name
+                                    name = vehicle.name
 
                                     vehicleType =
                                         vehicle.vehicleType.ifBlank {
                                             "PKW"
                                         }
 
-                                    make =
-                                        vehicle.make
+                                    make = vehicle.make
+                                    model = vehicle.model
+                                    motorization = vehicle.motorization
+                                    power = vehicle.power
+                                    year = vehicle.year
+                                    plate = vehicle.plate
+                                    vin = vehicle.vin
+                                    imageUri = vehicle.imageUri
+                                    purchasePrice = vehicle.purchasePrice
 
-                                    model =
-                                        vehicle.model
-
-                                    motorization =
-                                        vehicle.motorization
-
-                                    power =
-                                        vehicle.power
-
-                                    year =
-                                        vehicle.year
-
-                                    plate =
-                                        vehicle.plate
-
-                                    vin =
-                                        vehicle.vin
-
-                                    imageUri =
-                                        vehicle.imageUri
-
-                                    purchasePrice =
-                                        vehicle.purchasePrice
-
-                                    purchasePriceVisible =
-                                        false
-
-                                    adding =
-                                        true
+                                    purchasePriceVisible = false
+                                    imageUploadError = ""
+                                    adding = true
                                 }
-
                             ) {
 
-                                Text(
-                                    "Bearbeiten"
-                                )
+                                Text("Bearbeiten")
                             }
                         }
 
                         Spacer(
-                            Modifier.height(
-                                4.dp
-                            )
+                            Modifier.height(4.dp)
                         )
 
                         /*
-                         * ==================================================
                          * FAHRZEUG LÖSCHEN
-                         * ==================================================
                          */
 
                         OutlinedButton(
-
                             onClick = {
-
-                                vehicleToDelete =
-                                    vehicle
+                                vehicleToDelete = vehicle
                             }
-
                         ) {
 
-                            Text(
-                                "Fahrzeug entfernen"
-                            )
+                            Text("Fahrzeug entfernen")
                         }
                     }
                 }
@@ -700,425 +604,259 @@ fun VehicleScreen(
                 item {
 
                     Card(
-
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor =
-                                    Color(
-                                        0xFF11141A
-                                    )
-                            ),
-
-                        modifier =
-                            Modifier.fillMaxWidth()
-
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF11141A)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
 
                         Column(
-
-                            Modifier.padding(
-                                16.dp
-                            ),
-
-                            verticalArrangement =
-                                Arrangement.spacedBy(
-                                    8.dp
-                                )
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
 
                             Text(
-
-                                if (
-                                    editingVehicleId.isBlank()
-                                ) {
+                                if (editingVehicleId.isBlank()) {
                                     "Fahrzeug hinzufügen"
                                 } else {
                                     "Fahrzeug bearbeiten"
                                 },
-
-                                color =
-                                    Color.White,
-
-                                fontWeight =
-                                    FontWeight.Bold
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
                             )
 
                             /*
-                             * ==================================================
                              * FAHRZEUGTYP
-                             * ==================================================
                              */
 
                             OutlinedButton(
-
                                 onClick = {
-
-                                    vehicleTypeExpanded =
-                                        true
+                                    vehicleTypeExpanded = true
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             ) {
 
-                                Text(
-                                    "Bezeichnung: $vehicleType"
-                                )
+                                Text("Bezeichnung: $vehicleType")
                             }
 
                             DropdownMenu(
-
-                                expanded =
-                                    vehicleTypeExpanded,
-
+                                expanded = vehicleTypeExpanded,
                                 onDismissRequest = {
-
-                                    vehicleTypeExpanded =
-                                        false
+                                    vehicleTypeExpanded = false
                                 }
-
                             ) {
 
                                 vehicleTypes.forEach { type ->
 
                                     DropdownMenuItem(
-
                                         text = {
-                                            Text(
-                                                type
-                                            )
+                                            Text(type)
                                         },
-
                                         onClick = {
-
-                                            vehicleType =
-                                                type
-
-                                            vehicleTypeExpanded =
-                                                false
+                                            vehicleType = type
+                                            vehicleTypeExpanded = false
                                         }
                                     )
                                 }
                             }
 
                             /*
-                             * ==================================================
                              * MARKE
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    make,
-
+                                value = make,
                                 onValueChange = {
-                                    make =
-                                        it
+                                    make = it
                                 },
-
                                 label = {
-                                    Text(
-                                        "Marke"
-                                    )
+                                    Text("Marke")
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * MODELL
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    model,
-
+                                value = model,
                                 onValueChange = {
-                                    model =
-                                        it
+                                    model = it
                                 },
-
                                 label = {
-                                    Text(
-                                        "Modell"
-                                    )
+                                    Text("Modell")
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * MOTORISIERUNG
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    motorization,
-
+                                value = motorization,
                                 onValueChange = {
-                                    motorization =
-                                        it
+                                    motorization = it
                                 },
-
                                 label = {
-                                    Text(
-                                        "Motorisierung"
-                                    )
+                                    Text("Motorisierung")
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * PS / KW
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    power,
-
+                                value = power,
                                 onValueChange = {
-                                    power =
-                                        it
+                                    power = it
                                 },
-
                                 label = {
-                                    Text(
-                                        "PS/KW"
-                                    )
+                                    Text("PS/KW")
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * BAUJAHR
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    year,
-
+                                value = year,
                                 onValueChange = {
-                                    year =
-                                        it
+                                    year = it
                                 },
-
                                 label = {
-                                    Text(
-                                        "Baujahr"
-                                    )
+                                    Text("Baujahr")
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * KENNZEICHEN
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    plate,
-
+                                value = plate,
                                 onValueChange = {
-                                    plate =
-                                        it
+                                    plate = it
                                 },
-
                                 label = {
-                                    Text(
-                                        "Kennzeichen"
-                                    )
+                                    Text("Kennzeichen")
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * FIN / VIN
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    vin,
-
+                                value = vin,
                                 onValueChange = {
-                                    vin =
-                                        it
+                                    vin = it
                                 },
-
                                 label = {
-                                    Text(
-                                        "FIN / VIN"
-                                    )
+                                    Text("FIN / VIN")
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * KAUFPREIS
-                             * ==================================================
                              */
 
                             OutlinedTextField(
-
-                                value =
-                                    purchasePrice,
-
+                                value = purchasePrice,
                                 onValueChange = { value ->
 
-                                    purchasePrice =
-                                        value.filter {
-                                            it.isDigit() ||
-                                                it == ',' ||
-                                                it == '.'
-                                        }
+                                    purchasePrice = value.filter {
+                                        it.isDigit() ||
+                                            it == ',' ||
+                                            it == '.'
+                                    }
                                 },
-
                                 label = {
-                                    Text(
-                                        "Kaufpreis in €"
-                                    )
+                                    Text("Kaufpreis in €")
                                 },
-
                                 placeholder = {
-                                    Text(
-                                        "z. B. 12500"
-                                    )
+                                    Text("z. B. 12500")
                                 },
-
-                                singleLine =
-                                    true,
-
-                                keyboardOptions =
-                                    KeyboardOptions(
-                                        keyboardType =
-                                            KeyboardType.Decimal
-                                    ),
-
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal
+                                ),
                                 visualTransformation =
-                                    if (
-                                        purchasePriceVisible
-                                    ) {
-
+                                    if (purchasePriceVisible) {
                                         VisualTransformation.None
-
                                     } else {
-
                                         AsteriskVisualTransformation
                                     },
-
                                 trailingIcon = {
 
                                     EyeIcon(
-                                        visible =
-                                            purchasePriceVisible,
-
+                                        visible = purchasePriceVisible,
                                         onClick = {
-
                                             purchasePriceVisible =
                                                 !purchasePriceVisible
                                         }
                                     )
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
 
                             /*
-                             * ==================================================
                              * FAHRZEUGBILD
-                             * ==================================================
                              */
 
                             OutlinedButton(
-
                                 onClick = {
 
                                     launcher.launch(
-                                        arrayOf(
-                                            "image/*"
-                                        )
+                                        arrayOf("image/*")
                                     )
                                 },
-
-                                modifier =
-                                    Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             ) {
 
+                                Text("Fahrzeugbild aus Galerie wählen")
+                            }
+
+                            if (imageUploadError.isNotBlank()) {
+
                                 Text(
-                                    "Fahrzeugbild aus Galerie wählen"
+                                    text = imageUploadError,
+                                    color = Color(0xFFFF7777)
                                 )
                             }
 
-                            if (
-                                imageUri.isNotBlank()
-                            ) {
+                            if (imageUri.isNotBlank()) {
 
                                 VehicleImage(
-
-                                    uri =
-                                        imageUri,
-
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(
-                                                160.dp
-                                            )
+                                    uri = imageUri,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(160.dp)
                                 )
                             }
 
                             /*
-                             * ==================================================
                              * SPEICHERN / ABBRECHEN
-                             * ==================================================
                              */
 
                             Row(
-
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(
-                                        8.dp
-                                    )
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
 
                                 Button(
-
                                     enabled =
                                         vehicleType.isNotBlank() &&
                                             make.isNotBlank() &&
-                                            model.isNotBlank(),
+                                            model.isNotBlank() &&
+                                            !imageUploading,
 
                                     onClick = {
 
@@ -1132,219 +870,65 @@ fun VehicleScreen(
                                                 .filter {
                                                     it.isNotBlank()
                                                 }
-                                                .joinToString(
-                                                    " "
-                                                )
+                                                .joinToString(" ")
 
                                         val vehicleToSave =
 
-                                            if (
-                                                editingVehicleId.isNotBlank()
-                                            ) {
+                                            if (editingVehicleId.isNotBlank()) {
 
                                                 Vehicle(
-
-                                                    id =
-                                                        editingVehicleId,
-
-                                                    name =
-                                                        generatedName,
-
-                                                    vehicleType =
-                                                        vehicleType,
-
-                                                    make =
-                                                        make.trim(),
-
-                                                    model =
-                                                        model.trim(),
-
-                                                    motorization =
-                                                        motorization.trim(),
-
-                                                    power =
-                                                        power.trim(),
-
-                                                    year =
-                                                        year.trim(),
-
-                                                    plate =
-                                                        plate.trim(),
-
-                                                    vin =
-                                                        vin.trim(),
-
-                                                    imageUri =
-                                                        imageUri,
-
-                                                    purchasePrice =
-                                                        purchasePrice.trim()
+                                                    id = editingVehicleId,
+                                                    name = generatedName,
+                                                    vehicleType = vehicleType,
+                                                    make = make.trim(),
+                                                    model = model.trim(),
+                                                    motorization = motorization.trim(),
+                                                    power = power.trim(),
+                                                    year = year.trim(),
+                                                    plate = plate.trim(),
+                                                    vin = vin.trim(),
+                                                    imageUri = imageUri,
+                                                    purchasePrice = purchasePrice.trim()
                                                 )
 
                                             } else {
 
                                                 Vehicle(
-
-                                                    name =
-                                                        generatedName,
-
-                                                    vehicleType =
-                                                        vehicleType,
-
-                                                    make =
-                                                        make.trim(),
-
-                                                    model =
-                                                        model.trim(),
-
-                                                    motorization =
-                                                        motorization.trim(),
-
-                                                    power =
-                                                        power.trim(),
-
-                                                    year =
-                                                        year.trim(),
-
-                                                    plate =
-                                                        plate.trim(),
-
-                                                    vin =
-                                                        vin.trim(),
-
-                                                    imageUri =
-                                                        imageUri,
-
-                                                    purchasePrice =
-                                                        purchasePrice.trim()
+                                                    name = generatedName,
+                                                    vehicleType = vehicleType,
+                                                    make = make.trim(),
+                                                    model = model.trim(),
+                                                    motorization = motorization.trim(),
+                                                    power = power.trim(),
+                                                    year = year.trim(),
+                                                    plate = plate.trim(),
+                                                    vin = vin.trim(),
+                                                    imageUri = imageUri,
+                                                    purchasePrice = purchasePrice.trim()
                                                 )
                                             }
 
-                                        onSave(
-
-                                            vehicleToSave,
-
-                                            editingName
-                                        )
-
-                                        /*
-                                         * Formular zurücksetzen
-                                         */
-
-                                        editingVehicleId =
-                                            ""
-
-                                        editingName =
-                                            ""
-
-                                        name =
-                                            ""
-
-                                        vehicleType =
-                                            "PKW"
-
-                                        make =
-                                            ""
-
-                                        model =
-                                            ""
-
-                                        motorization =
-                                            ""
-
-                                        power =
-                                            ""
-
-                                        year =
-                                            ""
-
-                                        plate =
-                                            ""
-
-                                        vin =
-                                            ""
-
-                                        imageUri =
-                                            ""
-
-                                        purchasePrice =
-                                            ""
-
-                                        purchasePriceVisible =
-                                            false
-
-                                        vehicleTypeExpanded =
-                                            false
-
-                                        adding =
-                                            false
+                                        saveVehicleWithImage(vehicleToSave)
                                     }
-
                                 ) {
 
                                     Text(
-                                        "Speichern"
+                                        if (imageUploading) {
+                                            "Bild wird hochgeladen …"
+                                        } else {
+                                            "Speichern"
+                                        }
                                     )
                                 }
 
                                 OutlinedButton(
-
+                                    enabled = !imageUploading,
                                     onClick = {
-
-                                        adding =
-                                            false
-
-                                        editingVehicleId =
-                                            ""
-
-                                        editingName =
-                                            ""
-
-                                        name =
-                                            ""
-
-                                        vehicleType =
-                                            "PKW"
-
-                                        make =
-                                            ""
-
-                                        model =
-                                            ""
-
-                                        motorization =
-                                            ""
-
-                                        power =
-                                            ""
-
-                                        year =
-                                            ""
-
-                                        plate =
-                                            ""
-
-                                        vin =
-                                            ""
-
-                                        imageUri =
-                                            ""
-
-                                        purchasePrice =
-                                            ""
-
-                                        purchasePriceVisible =
-                                            false
-
-                                        vehicleTypeExpanded =
-                                            false
+                                        resetVehicleForm()
                                     }
-
                                 ) {
 
-                                    Text(
-                                        "Abbrechen"
-                                    )
+                                    Text("Abbrechen")
                                 }
                             }
                         }
@@ -1354,38 +938,18 @@ fun VehicleScreen(
         }
 
         /*
-         * ========================================================
          * NEUES FAHRZEUG
-         * ========================================================
          */
 
         if (!adding) {
 
             Button(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
+                modifier = Modifier.fillMaxWidth(),
                 onClick = {
 
                     if (currentPlan.canAddVehicle(vehicles.size)) {
 
-                        editingVehicleId = ""
-                        editingName = ""
-                        name = ""
-                        vehicleType = "PKW"
-                        make = ""
-                        model = ""
-                        motorization = ""
-                        power = ""
-                        year = ""
-                        plate = ""
-                        vin = ""
-                        imageUri = ""
-                        purchasePrice = ""
-                        purchasePriceVisible = false
-                        vehicleTypeExpanded = false
-
+                        resetVehicleForm()
                         adding = true
 
                     } else {
@@ -1393,12 +957,9 @@ fun VehicleScreen(
                         showVehicleLimitDialog = true
                     }
                 }
-
             ) {
 
-                Text(
-                    "Fahrzeug hinzufügen"
-                )
+                Text("Fahrzeug hinzufügen")
             }
         }
     }
@@ -1416,31 +977,27 @@ fun VehicleScreen(
 
                 CarLocaPlan.FREE ->
                     "Mit CARLOCA Free kannst du ein Fahrzeug speichern. " +
-                    "Mit CARLOCA Premium sind bis zu 10 Fahrzeuge möglich. " +
-                    "CARLOCA Big-Premium bietet unbegrenzt viele Fahrzeuge."
+                        "Mit CARLOCA Premium sind bis zu 10 Fahrzeuge möglich. " +
+                        "CARLOCA Big-Premium bietet unbegrenzt viele Fahrzeuge."
 
                 CarLocaPlan.PREMIUM ->
                     "Du hast die Grenze von 10 Fahrzeugen erreicht. " +
-                    "Mit CARLOCA Big-Premium kannst du unbegrenzt viele Fahrzeuge speichern."
+                        "Mit CARLOCA Big-Premium kannst du unbegrenzt viele Fahrzeuge speichern."
 
                 CarLocaPlan.BIG_PREMIUM ->
                     "Du kannst unbegrenzt viele Fahrzeuge speichern."
             }
 
         AlertDialog(
-
             onDismissRequest = {
                 showVehicleLimitDialog = false
             },
-
             title = {
                 Text("Fahrzeuglimit erreicht")
             },
-
             text = {
                 Text(limitMessage)
             },
-
             confirmButton = {
 
                 TextButton(
@@ -1448,6 +1005,7 @@ fun VehicleScreen(
                         showVehicleLimitDialog = false
                     }
                 ) {
+
                     Text("OK")
                 }
             }
@@ -1460,76 +1018,48 @@ fun VehicleScreen(
      * ============================================================
      */
 
-    if (
-        vehicleToDelete != null
-    ) {
+    if (vehicleToDelete != null) {
 
-        val vehicle =
-            vehicleToDelete!!
+        val vehicle = vehicleToDelete!!
 
         AlertDialog(
-
             onDismissRequest = {
-
-                vehicleToDelete =
-                    null
+                vehicleToDelete = null
             },
-
             title = {
-
-                Text(
-                    "Fahrzeug löschen?"
-                )
+                Text("Fahrzeug löschen?")
             },
-
             text = {
-
                 Text(
                     "Möchtest du das Fahrzeug „${vehicle.name}“ wirklich löschen? Alle gespeicherten Daten dieses Fahrzeugs werden entfernt."
                 )
             },
-
             confirmButton = {
 
                 TextButton(
-
                     onClick = {
 
-                        onDelete(
-                            vehicle
-                        )
+                        onDelete(vehicle)
 
                         revealedPurchasePriceIds =
-                            revealedPurchasePriceIds -
-                                vehicle.id
+                            revealedPurchasePriceIds - vehicle.id
 
-                        vehicleToDelete =
-                            null
+                        vehicleToDelete = null
                     }
-
                 ) {
 
-                    Text(
-                        "Löschen"
-                    )
+                    Text("Löschen")
                 }
             },
-
             dismissButton = {
 
                 TextButton(
-
                     onClick = {
-
-                        vehicleToDelete =
-                            null
+                        vehicleToDelete = null
                     }
-
                 ) {
 
-                    Text(
-                        "Abbrechen"
-                    )
+                    Text("Abbrechen")
                 }
             }
         )
@@ -1549,72 +1079,42 @@ private fun EyeIcon(
 ) {
 
     Canvas(
-
-        modifier =
-            Modifier
-                .size(34.dp)
-                .clickable {
-                    onClick()
-                }
-
+        modifier = Modifier
+            .size(34.dp)
+            .clickable {
+                onClick()
+            }
     ) {
 
-        val eyeColor =
-            Color(0xFFB8BEC8)
-
-        val strokeWidth =
-            2.dp.toPx()
+        val eyeColor = Color(0xFFB8BEC8)
+        val strokeWidth = 2.dp.toPx()
 
         drawOval(
-
-            color =
-                eyeColor,
-
-            style =
-                Stroke(
-                    width =
-                        strokeWidth
-                )
+            color = eyeColor,
+            style = Stroke(
+                width = strokeWidth
+            )
         )
 
         drawCircle(
-
-            color =
-                eyeColor,
-
-            radius =
-                4.dp.toPx()
+            color = eyeColor,
+            radius = 4.dp.toPx()
         )
 
         if (visible) {
 
             drawLine(
-
-                color =
-                    eyeColor,
-
-                start =
-                    androidx.compose.ui.geometry.Offset(
-                        x = 4.dp.toPx(),
-                        y = 4.dp.toPx()
-                    ),
-
-                end =
-                    androidx.compose.ui.geometry.Offset(
-                        x =
-                            size.width -
-                                4.dp.toPx(),
-
-                        y =
-                            size.height -
-                                4.dp.toPx()
-                    ),
-
-                strokeWidth =
-                    strokeWidth,
-
-                cap =
-                    StrokeCap.Round
+                color = eyeColor,
+                start = androidx.compose.ui.geometry.Offset(
+                    x = 4.dp.toPx(),
+                    y = 4.dp.toPx()
+                ),
+                end = androidx.compose.ui.geometry.Offset(
+                    x = size.width - 4.dp.toPx(),
+                    y = size.height - 4.dp.toPx()
+                ),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round
             )
         }
     }
@@ -1633,12 +1133,9 @@ private object AsteriskVisualTransformation :
         text: AnnotatedString
     ): TransformedText {
 
-        val maskedText =
-            AnnotatedString(
-                "*".repeat(
-                    text.text.length
-                )
-            )
+        val maskedText = AnnotatedString(
+            "*".repeat(text.text.length)
+        )
 
         return TransformedText(
             maskedText,
