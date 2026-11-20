@@ -5,6 +5,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,42 +43,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Locale
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 private fun repairDisplayDate(value: String): String {
 
     val trimmed = value.trim()
 
-    if (trimmed.isBlank()) {
-        return ""
-    }
+    if (trimmed.isBlank()) return ""
 
-    if (
-        trimmed.matches(
-            Regex("""\d{4}-\d{2}-\d{2}""")
-        )
-    ) {
-
+    if (trimmed.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
         val parts = trimmed.split("-")
-
         if (parts.size == 3) {
             return "${parts[2]}.${parts[1]}.${parts[0]}"
         }
     }
 
-    if (
-        trimmed.matches(
-            Regex("""\d{1,2}/\d{1,2}/\d{4}""")
-        )
-    ) {
-
+    if (trimmed.matches(Regex("""\d{1,2}/\d{1,2}/\d{4}"""))) {
         val parts = trimmed.split("/")
-
         if (parts.size == 3) {
-
             val month = parts[0].padStart(2, '0')
             val day = parts[1].padStart(2, '0')
-
             return "$day.$month.${parts[2]}"
         }
     }
@@ -86,175 +78,220 @@ private fun repairDisplayDate(value: String): String {
 
 private fun repairMoneyValue(value: String): Double {
 
-    val cleaned =
-        value
-            .replace("€", "")
-            .replace(" ", "")
-            .trim()
+    val cleaned = value
+        .replace("€", "")
+        .replace(" ", "")
+        .trim()
 
-    if (cleaned.isBlank()) {
-        return 0.0
-    }
+    if (cleaned.isBlank()) return 0.0
 
     return try {
-
-        if (
-            cleaned.contains(",") &&
-            cleaned.contains(".")
-        ) {
-
-            cleaned
-                .replace(".", "")
-                .replace(",", ".")
-                .toDouble()
-
-        } else if (
-            cleaned.contains(",")
-        ) {
-
-            cleaned
-                .replace(",", ".")
-                .toDouble()
-
+        if (cleaned.contains(",") && cleaned.contains(".")) {
+            cleaned.replace(".", "").replace(",", ".").toDouble()
+        } else if (cleaned.contains(",")) {
+            cleaned.replace(",", ".").toDouble()
         } else {
-
             cleaned.toDouble()
         }
-
-    } catch (
-        _: NumberFormatException
-    ) {
-
+    } catch (_: NumberFormatException) {
         0.0
     }
 }
 
 private fun repairMoneyText(value: Double): String {
-
-    return String.format(
-        Locale.GERMANY,
-        "%.2f €",
-        value
-    )
+    return String.format(Locale.GERMANY, "%.2f €", value)
 }
 
-private fun repairPartsTotal(
-    repair: Repair
-): Double {
-
+private fun repairPartsTotal(repair: Repair): Double {
     return repair.parts.sumOf {
-        repairMoneyValue(
-            it.cost
-        )
+        repairMoneyValue(it.cost)
     }
 }
 
-private fun repairLaborTotal(
-    repair: Repair
-): Double {
+private fun repairLaborTotal(repair: Repair): Double {
 
-    val newLabor =
-        repairMoneyValue(
-            repair.laborCost
-        )
+    val newLabor = repairMoneyValue(repair.laborCost)
 
-    if (newLabor > 0.0) {
-        return newLabor
-    }
+    if (newLabor > 0.0) return newLabor
 
-    /*
-     * Alte Reparaturen hatten nur ein gemeinsames
-     * Kostenfeld. Dieses bleibt deshalb als Fallback
-     * erhalten.
-     */
-    if (
-        repair.parts.isEmpty() &&
-        repair.cost.isNotBlank()
-    ) {
-        return repairMoneyValue(
-            repair.cost
-        )
+    if (repair.parts.isEmpty() && repair.cost.isNotBlank()) {
+        return repairMoneyValue(repair.cost)
     }
 
     return 0.0
 }
 
-private fun repairTotal(
-    repair: Repair
-): Double {
+private fun repairTotal(repair: Repair): Double {
 
-    val parts =
-        repairPartsTotal(
-            repair
-        )
-
-    val labor =
-        repairLaborTotal(
-            repair
-        )
+    val parts = repairPartsTotal(repair)
+    val labor = repairLaborTotal(repair)
 
     if (
         repair.parts.isEmpty() &&
         repair.laborCost.isBlank() &&
         repair.cost.isNotBlank()
     ) {
-        return repairMoneyValue(
-            repair.cost
-        )
+        return repairMoneyValue(repair.cost)
     }
 
     return parts + labor
 }
 
-private fun loadRepairBitmap(
-    context: Context,
-    uriString: String
-): Bitmap? {
+private fun createCameraUri(context: Context): Uri? {
 
-    if (uriString.isBlank()) {
-        return null
+    val values = android.content.ContentValues().apply {
+        put(
+            MediaStore.Images.Media.DISPLAY_NAME,
+            "AutoCheck_${System.currentTimeMillis()}.jpg"
+        )
+        put(
+            MediaStore.Images.Media.MIME_TYPE,
+            "image/jpeg"
+        )
     }
-
-    return try {
-
-        context.contentResolver.openInputStream(
-            Uri.parse(uriString)
-        )?.use {
-
-            BitmapFactory.decodeStream(
-                it
-            )
-        }
-
-    } catch (
-        _: Exception
-    ) {
-
-        null
-    }
-}
-
-private fun createCameraUri(
-    context: Context
-): Uri? {
-
-    val values =
-        android.content.ContentValues().apply {
-
-            put(
-                MediaStore.Images.Media.DISPLAY_NAME,
-                "AutoCheck_${System.currentTimeMillis()}.jpg"
-            )
-
-            put(
-                MediaStore.Images.Media.MIME_TYPE,
-                "image/jpeg"
-            )
-        }
 
     return context.contentResolver.insert(
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
         values
+    )
+}
+
+/**
+ * Lädt ein Bild in Supabase hoch, wenn es noch eine lokale URI ist.
+ *
+ * Bereits gespeicherte Supabase-Pfade werden unverändert übernommen.
+ */
+private fun uploadRepairImageIfNeeded(
+    storage: SupabaseStorage,
+    imageUri: String,
+    vehicleId: String,
+    repairId: Long,
+    imageType: String,
+    callback: (String?, Exception?) -> Unit
+) {
+
+    if (imageUri.isBlank()) {
+        callback("", null)
+        return
+    }
+
+    val parsedUri = Uri.parse(imageUri)
+
+    if (parsedUri.scheme != "content" && parsedUri.scheme != "file") {
+        callback(imageUri, null)
+        return
+    }
+
+    if (vehicleId.isBlank()) {
+        callback(
+            null,
+            IllegalStateException(
+                "Die Fahrzeug-ID konnte nicht gefunden werden."
+            )
+        )
+        return
+    }
+
+    storage.upload(
+        sourceUri = parsedUri,
+        category = "repairs",
+        vehicleId = vehicleId,
+        recordId = "${repairId}_$imageType",
+        callback = object : SupabaseStorage.UploadCallback {
+
+            override fun onSuccess(storagePath: String) {
+                Handler(Looper.getMainLooper()).post {
+                    callback(storagePath, null)
+                }
+            }
+
+            override fun onError(error: Exception) {
+                Handler(Looper.getMainLooper()).post {
+                    callback(null, error)
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Lädt ein Reparaturbild aus Supabase oder vom lokalen Gerät.
+ */
+private suspend fun loadRepairImage(
+    context: Context,
+    storage: SupabaseStorage,
+    imagePath: String
+): Bitmap? {
+
+    if (imagePath.isBlank()) return null
+
+    val parsedUri = Uri.parse(imagePath)
+
+    val localUri = when (parsedUri.scheme) {
+
+        "content", "file" -> parsedUri
+
+        else -> {
+            val file = File(imagePath)
+
+            if (file.exists() && file.isFile) {
+                Uri.fromFile(file)
+            } else {
+                downloadRepairImage(
+                    storage = storage,
+                    storagePath = imagePath
+                )
+            }
+        }
+    }
+
+    return withContext(Dispatchers.IO) {
+        try {
+            when (localUri.scheme) {
+
+                "content" -> {
+                    context.contentResolver
+                        .openInputStream(localUri)
+                        ?.use { stream ->
+                            BitmapFactory.decodeStream(stream)
+                        }
+                }
+
+                "file" -> {
+                    localUri.path?.let {
+                        BitmapFactory.decodeFile(it)
+                    }
+                }
+
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
+private suspend fun downloadRepairImage(
+    storage: SupabaseStorage,
+    storagePath: String
+): Uri = suspendCancellableCoroutine { continuation ->
+
+    storage.download(
+        storagePath,
+        object : SupabaseStorage.DownloadCallback {
+
+            override fun onSuccess(localUri: Uri) {
+                if (continuation.isActive) {
+                    continuation.resume(localUri)
+                }
+            }
+
+            override fun onError(error: Exception) {
+                if (continuation.isActive) {
+                    continuation.resumeWithException(error)
+                }
+            }
+        }
     )
 }
 
@@ -267,17 +304,18 @@ fun RepairScreen(
     onVisited: () -> Unit
 ) {
 
-    val context =
-        androidx.compose.ui.platform.LocalContext.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val storage = remember(context) {
+        SupabaseStorage(context)
+    }
 
     LaunchedEffect(Unit) {
         onVisited()
     }
 
     var repairs by remember {
-        mutableStateOf(
-            store.loadRepairs()
-        )
+        mutableStateOf(store.loadRepairs())
     }
 
     var showForm by remember {
@@ -292,51 +330,22 @@ fun RepairScreen(
         mutableStateOf<Repair?>(null)
     }
 
-    var date by remember {
-        mutableStateOf("")
-    }
-
-    var mileage by remember {
-        mutableStateOf("")
-    }
-
-    var description by remember {
-        mutableStateOf("")
-    }
-
-    var repairDescription by remember {
-        mutableStateOf("")
-    }
-
-    var laborCost by remember {
-        mutableStateOf("")
-    }
-
-    var workshop by remember {
-        mutableStateOf("")
-    }
+    var date by remember { mutableStateOf("") }
+    var mileage by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var repairDescription by remember { mutableStateOf("") }
+    var laborCost by remember { mutableStateOf("") }
+    var workshop by remember { mutableStateOf("") }
 
     var parts by remember {
-        mutableStateOf(
-            emptyList<RepairPart>()
-        )
+        mutableStateOf(emptyList<RepairPart>())
     }
 
-    var newPartName by remember {
-        mutableStateOf("")
-    }
+    var newPartName by remember { mutableStateOf("") }
+    var newPartCost by remember { mutableStateOf("") }
 
-    var newPartCost by remember {
-        mutableStateOf("")
-    }
-
-    var beforeImageUri by remember {
-        mutableStateOf("")
-    }
-
-    var afterImageUri by remember {
-        mutableStateOf("")
-    }
+    var beforeImageUri by remember { mutableStateOf("") }
+    var afterImageUri by remember { mutableStateOf("") }
 
     var cameraTarget by remember {
         mutableStateOf<String?>(null)
@@ -344,6 +353,14 @@ fun RepairScreen(
 
     var cameraUri by remember {
         mutableStateOf<Uri?>(null)
+    }
+
+    var isSaving by remember {
+        mutableStateOf(false)
+    }
+
+    var saveError by remember {
+        mutableStateOf("")
     }
 
     val galleryLauncher =
@@ -354,34 +371,17 @@ fun RepairScreen(
             if (uri != null) {
 
                 try {
-
                     context.contentResolver.takePersistableUriPermission(
                         uri,
                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
-
-                } catch (
-                    _: Exception
-                ) {
-                    // Nicht jeder Anbieter unterstützt
-                    // persistente Berechtigungen.
+                } catch (_: Exception) {
+                    // Nicht jeder Anbieter unterstützt persistente Berechtigungen.
                 }
 
-                if (
-                    cameraTarget ==
-                    "before"
-                ) {
-
-                    beforeImageUri =
-                        uri.toString()
-
-                } else if (
-                    cameraTarget ==
-                    "after"
-                ) {
-
-                    afterImageUri =
-                        uri.toString()
+                when (cameraTarget) {
+                    "before" -> beforeImageUri = uri.toString()
+                    "after" -> afterImageUri = uri.toString()
                 }
             }
 
@@ -393,44 +393,20 @@ fun RepairScreen(
             ActivityResultContracts.TakePicture()
         ) { success ->
 
-            val uri =
-                cameraUri
+            val uri = cameraUri
 
-            if (
-                success &&
-                uri != null
-            ) {
+            if (success && uri != null) {
 
-                if (
-                    cameraTarget ==
-                    "before"
-                ) {
-
-                    beforeImageUri =
-                        uri.toString()
-
-                } else if (
-                    cameraTarget ==
-                    "after"
-                ) {
-
-                    afterImageUri =
-                        uri.toString()
+                when (cameraTarget) {
+                    "before" -> beforeImageUri = uri.toString()
+                    "after" -> afterImageUri = uri.toString()
                 }
 
-            } else if (
-                uri != null
-            ) {
+            } else if (uri != null) {
 
                 try {
-                    context.contentResolver.delete(
-                        uri,
-                        null,
-                        null
-                    )
-                } catch (
-                    _: Exception
-                ) {
+                    context.contentResolver.delete(uri, null, null)
+                } catch (_: Exception) {
                 }
             }
 
@@ -439,7 +415,6 @@ fun RepairScreen(
         }
 
     fun resetForm() {
-
         editingId = null
         date = ""
         mileage = ""
@@ -452,11 +427,12 @@ fun RepairScreen(
         newPartCost = ""
         beforeImageUri = ""
         afterImageUri = ""
+        saveError = ""
+        isSaving = false
         showForm = false
     }
 
     fun startNewRepair() {
-
         editingId = null
         date = ""
         mileage = ""
@@ -469,146 +445,206 @@ fun RepairScreen(
         newPartCost = ""
         beforeImageUri = ""
         afterImageUri = ""
+        saveError = ""
         showForm = true
     }
 
-    fun startEdit(
-        repair: Repair
-    ) {
+    fun startEdit(repair: Repair) {
 
-        editingId =
-            repair.id
+        editingId = repair.id
 
-        date =
-            repairDisplayDate(
-                repair.date
-            )
+        date = repairDisplayDate(repair.date)
+        mileage = repair.mileage
+        description = repair.description
+        repairDescription = repair.repairDescription
 
-        mileage =
-            repair.mileage
+        laborCost = repair.laborCost.ifBlank {
+            if (repair.parts.isEmpty()) repair.cost else ""
+        }
 
-        description =
-            repair.description
-
-        repairDescription =
-            repair.repairDescription
-
-        laborCost =
-            repair.laborCost.ifBlank {
-                if (
-                    repair.parts.isEmpty()
-                ) {
-                    repair.cost
-                } else {
-                    ""
-                }
-            }
-
-        workshop =
-            repair.workshop
-
-        parts =
-            repair.parts
-
-        beforeImageUri =
-            repair.beforeImageUri
-
-        afterImageUri =
-            repair.afterImageUri
+        workshop = repair.workshop
+        parts = repair.parts
+        beforeImageUri = repair.beforeImageUri
+        afterImageUri = repair.afterImageUri
 
         newPartName = ""
         newPartCost = ""
-
+        saveError = ""
         showForm = true
     }
 
-    val list =
-        repairs.filter {
-            it.vehicle ==
-                activeVehicle
+    /**
+     * Speichert die Reparatur erst, wenn beide Bild-Uploads
+     * erfolgreich abgeschlossen wurden.
+     */
+    fun saveRepairWithImages() {
+
+        if (isSaving) return
+
+        saveError = ""
+
+        val vehicle = vehicles.firstOrNull {
+            it.name == activeVehicle
         }
 
-    /*
-     * Gesamte bisherige Reparaturinvestition
-     * ausschließlich für das aktuell aktive Fahrzeug.
-     */
-    val totalRepairInvestment =
-        list.sumOf {
-            repairTotal(
-                it
+        if (vehicle == null) {
+            saveError = "Das aktive Fahrzeug wurde nicht gefunden."
+            return
+        }
+
+        val repairId = editingId ?: System.currentTimeMillis()
+
+        val existingRepair = repairs.firstOrNull {
+            it.id == repairId
+        }
+
+        val baseRepair = if (existingRepair != null) {
+
+            existingRepair.copy(
+                vehicle = activeVehicle,
+                date = date.trim(),
+                mileage = mileage.trim(),
+                description = description.trim(),
+                repairDescription = repairDescription.trim(),
+                parts = parts,
+                laborCost = laborCost.trim(),
+                workshop = workshop.trim(),
+                beforeImageUri = beforeImageUri,
+                afterImageUri = afterImageUri
+            )
+
+        } else {
+
+            Repair(
+                id = repairId,
+                vehicle = activeVehicle,
+                date = date.trim(),
+                mileage = mileage.trim(),
+                description = description.trim(),
+                repairDescription = repairDescription.trim(),
+                parts = parts,
+                laborCost = laborCost.trim(),
+                cost = laborCost.trim(),
+                workshop = workshop.trim(),
+                beforeImageUri = beforeImageUri,
+                afterImageUri = afterImageUri
             )
         }
 
-    if (
-        detailRepair != null
-    ) {
+        isSaving = true
 
-        val repair =
-            detailRepair!!
+        // Zuerst das Vorher-Bild hochladen.
+        uploadRepairImageIfNeeded(
+            storage = storage,
+            imageUri = beforeImageUri,
+            vehicleId = vehicle.id,
+            repairId = repairId,
+            imageType = "before"
+        ) { uploadedBefore, beforeError ->
+
+            if (beforeError != null || uploadedBefore == null) {
+
+                isSaving = false
+                saveError =
+                    "Vorher-Bild konnte nicht hochgeladen werden: " +
+                    (beforeError?.message ?: "Unbekannter Fehler")
+
+            } else {
+
+                // Anschließend das Nachher-Bild hochladen.
+                uploadRepairImageIfNeeded(
+                    storage = storage,
+                    imageUri = afterImageUri,
+                    vehicleId = vehicle.id,
+                    repairId = repairId,
+                    imageType = "after"
+                ) { uploadedAfter, afterError ->
+
+                    if (afterError != null || uploadedAfter == null) {
+
+                        isSaving = false
+                        saveError =
+                            "Nachher-Bild konnte nicht hochgeladen werden: " +
+                            (afterError?.message ?: "Unbekannter Fehler")
+
+                    } else {
+
+                        val savedRepair = baseRepair.copy(
+                            beforeImageUri = uploadedBefore,
+                            afterImageUri = uploadedAfter
+                        )
+
+                        val updatedRepairs = if (existingRepair != null) {
+
+                            repairs.map {
+                                if (it.id == repairId) savedRepair else it
+                            }
+
+                        } else {
+
+                            repairs + savedRepair
+                        }
+
+                        repairs = updatedRepairs
+                        store.saveRepairs(updatedRepairs)
+
+                        resetForm()
+                    }
+                }
+            }
+        }
+    }
+
+    val list = repairs.filter {
+        it.vehicle == activeVehicle
+    }
+
+    val totalRepairInvestment = list.sumOf {
+        repairTotal(it)
+    }
+
+    if (detailRepair != null) {
+
+        val repair = detailRepair!!
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
 
             Row(
-                modifier =
-                    Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             ) {
-
                 OutlinedButton(
                     onClick = {
                         detailRepair = null
                     }
                 ) {
-
-                    Text(
-                        "← Zurück"
-                    )
+                    Text("← Zurück")
                 }
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(12.dp)
-            )
+            Spacer(Modifier.height(12.dp))
 
             Text(
-                text =
-                    repair.description.ifBlank {
-                        "Reparatur"
-                    },
-                color =
-                    Color.White,
-                fontSize =
-                    22.sp,
-                fontWeight =
-                    FontWeight.Bold
+                text = repair.description.ifBlank { "Reparatur" },
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(
-                modifier =
-                    Modifier.height(16.dp)
-            )
+            Spacer(Modifier.height(16.dp))
 
             LazyColumn(
-                modifier =
-                    Modifier.weight(1f),
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        12.dp
-                    )
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
                 item {
-
                     RepairDetailCard(
-                        repair =
-                            repair,
-                        context =
-                            context
+                        repair = repair,
+                        context = context,
+                        storage = storage
                     )
                 }
             }
@@ -618,8 +654,7 @@ fun RepairScreen(
     }
 
     Column(
-        modifier =
-            Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
 
         VehicleSelector(
@@ -628,110 +663,58 @@ fun RepairScreen(
             onActiveVehicle
         )
 
-        Spacer(
-            modifier =
-                Modifier.height(10.dp)
-        )
+        Spacer(Modifier.height(10.dp))
 
-        /*
-         * Gesamtinvestition Reparaturen
-         * für das aktuell aktive Fahrzeug.
-         * Die Farbe orientiert sich am blauen
-         * Reparaturbereich.
-         */
         Card(
-            colors =
-                CardDefaults.cardColors(
-                    containerColor =
-                        Color(
-                            0xFF11141A
-                        )
-                ),
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        bottom = 10.dp
-                    )
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF11141A)
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp)
         ) {
 
             Column(
-                modifier =
-                    Modifier.padding(
-                        16.dp
-                    )
+                modifier = Modifier.padding(16.dp)
             ) {
 
                 Text(
                     "REPARATURHISTORIE",
-                    color =
-                        Color.White,
-                    fontSize =
-                        18.sp,
-                    fontWeight =
-                        FontWeight.Bold
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            6.dp
-                        )
-                )
+                Spacer(Modifier.height(6.dp))
 
                 Text(
                     "Gesamte bisherige Reparaturkosten",
-                    color =
-                        Color(
-                            0xFFB8BEC8
-                        )
+                    color = Color(0xFFB8BEC8)
                 )
 
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            4.dp
-                        )
-                )
+                Spacer(Modifier.height(4.dp))
 
                 Text(
-                    repairMoneyText(
-                        totalRepairInvestment
-                    ),
-                    color =
-                        Color(
-                            0xFF4A90E2
-                        ),
-                    fontSize =
-                        22.sp,
-                    fontWeight =
-                        FontWeight.Bold
+                    repairMoneyText(totalRepairInvestment),
+                    color = Color(0xFF4A90E2),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
 
-        if (
-            vehicles.isEmpty()
-        ) {
-
+        if (vehicles.isEmpty()) {
             EmptyCard(
                 "Bitte zuerst unter „Mein Auto“ ein Fahrzeug anlegen."
             )
-
             return@Column
         }
 
-        if (
-            showForm
-        ) {
+        if (showForm) {
 
             LazyColumn(
-                modifier =
-                    Modifier.weight(1f),
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
-                    ),
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding =
                     androidx.compose.foundation.layout.PaddingValues(
                         bottom = 20.dp
@@ -743,41 +726,25 @@ fun RepairScreen(
                     CardForm {
 
                         Text(
-                            text =
-                                if (
-                                    editingId !=
-                                    null
-                                ) {
-                                    "Reparatur bearbeiten"
-                                } else {
-                                    "Neue Reparatur"
-                                },
-                            color =
-                                Color.White,
-                            fontSize =
-                                20.sp,
-                            fontWeight =
-                                FontWeight.Bold
+                            text = if (editingId != null) {
+                                "Reparatur bearbeiten"
+                            } else {
+                                "Neue Reparatur"
+                            },
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        FormField(
-                            "Datum (TT.MM.JJJJ)",
-                            date
-                        ) {
+                        FormField("Datum (TT.MM.JJJJ)", date) {
                             date = it
                         }
 
-                        FormField(
-                            "Kilometerstand",
-                            mileage
-                        ) {
+                        FormField("Kilometerstand", mileage) {
                             mileage = it
                         }
 
-                        FormField(
-                            "Fehler / Reparatur",
-                            description
-                        ) {
+                        FormField("Fehler / Reparatur", description) {
                             description = it
                         }
 
@@ -788,146 +755,85 @@ fun RepairScreen(
                             repairDescription = it
                         }
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(6.dp)
-                        )
+                        Spacer(Modifier.height(6.dp))
 
                         Text(
                             "Ersatzteile",
-                            color =
-                                Color.White,
-                            fontWeight =
-                                FontWeight.Bold
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        parts.forEachIndexed {
-                            index,
-                            part ->
+                        parts.forEachIndexed { index, part ->
 
                             Row(
-                                modifier =
-                                    Modifier.fillMaxWidth(),
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(
-                                        8.dp
-                                    )
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
 
                                 Column(
-                                    modifier =
-                                        Modifier.weight(
-                                            1f
-                                        )
+                                    modifier = Modifier.weight(1f)
                                 ) {
 
                                     Text(
-                                        part.name.ifBlank {
-                                            "Ersatzteil"
-                                        },
-                                        color =
-                                            Color.White
+                                        part.name.ifBlank { "Ersatzteil" },
+                                        color = Color.White
                                     )
 
                                     Text(
                                         repairMoneyText(
-                                            repairMoneyValue(
-                                                part.cost
-                                            )
+                                            repairMoneyValue(part.cost)
                                         ),
-                                        color =
-                                            Color(
-                                                0xFFB8BEC8
-                                            )
+                                        color = Color(0xFFB8BEC8)
                                     )
                                 }
 
                                 OutlinedButton(
                                     onClick = {
-
-                                        parts =
-                                            parts.filterIndexed {
-                                                partIndex,
-                                                _ ->
-                                                partIndex !=
-                                                    index
-                                            }
+                                        parts = parts.filterIndexed {
+                                            partIndex, _ ->
+                                            partIndex != index
+                                        }
                                     }
                                 ) {
-
-                                    Text(
-                                        "Entfernen"
-                                    )
+                                    Text("Entfernen")
                                 }
                             }
                         }
 
                         OutlinedTextField(
-                            value =
-                                newPartName,
-                            onValueChange = {
-                                newPartName = it
-                            },
-                            label = {
-                                Text(
-                                    "Ersatzteil"
-                                )
-                            },
-                            modifier =
-                                Modifier.fillMaxWidth()
+                            value = newPartName,
+                            onValueChange = { newPartName = it },
+                            label = { Text("Ersatzteil") },
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         OutlinedTextField(
-                            value =
-                                newPartCost,
-                            onValueChange = {
-                                newPartCost = it
-                            },
-                            label = {
-                                Text(
-                                    "Ersatzteilkosten"
-                                )
-                            },
-                            keyboardOptions =
-                                KeyboardOptions(
-                                    keyboardType =
-                                        KeyboardType.Decimal
-                                ),
-                            modifier =
-                                Modifier.fillMaxWidth()
+                            value = newPartCost,
+                            onValueChange = { newPartCost = it },
+                            label = { Text("Ersatzteilkosten") },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         OutlinedButton(
-                            modifier =
-                                Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             onClick = {
 
-                                if (
-                                    newPartName
-                                        .trim()
-                                        .isNotBlank()
-                                ) {
+                                if (newPartName.trim().isNotBlank()) {
 
-                                    parts =
-                                        parts +
-                                            RepairPart(
-                                                name =
-                                                    newPartName
-                                                        .trim(),
-                                                cost =
-                                                    newPartCost
-                                                        .trim()
-                                            )
+                                    parts = parts + RepairPart(
+                                        name = newPartName.trim(),
+                                        cost = newPartCost.trim()
+                                    )
 
                                     newPartName = ""
                                     newPartCost = ""
                                 }
                             }
                         ) {
-
-                            Text(
-                                "Ersatzteil hinzufügen"
-                            )
+                            Text("Ersatzteil hinzufügen")
                         }
 
                         FormField(
@@ -937,90 +843,51 @@ fun RepairScreen(
                             laborCost = it
                         }
 
-                        FormField(
-                            "Werkstatt",
-                            workshop
-                        ) {
+                        FormField("Werkstatt", workshop) {
                             workshop = it
                         }
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(4.dp)
-                        )
+                        Spacer(Modifier.height(4.dp))
 
                         Text(
                             "Gesamtkosten: ${
                                 repairMoneyText(
                                     parts.sumOf {
-                                        repairMoneyValue(
-                                            it.cost
-                                        )
-                                    } +
-                                        repairMoneyValue(
-                                            laborCost
-                                        )
+                                        repairMoneyValue(it.cost)
+                                    } + repairMoneyValue(laborCost)
                                 )
                             }",
-                            color =
-                                Color.White,
-                            fontSize =
-                                18.sp,
-                            fontWeight =
-                                FontWeight.Bold
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(8.dp)
-                        )
+                        Spacer(Modifier.height(8.dp))
 
                         Text(
                             "Vorher-Bild",
-                            color =
-                                Color.White,
-                            fontWeight =
-                                FontWeight.Bold
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
                         )
 
                         RepairImageChooser(
-                            imageUri =
-                                beforeImageUri,
-                            label =
-                                "Vorher",
-                            context =
-                                context,
+                            imageUri = beforeImageUri,
+                            label = "Vorher",
+                            context = context,
+                            storage = storage,
                             onGallery = {
-
-                                cameraTarget =
-                                    "before"
-
-                                galleryLauncher.launch(
-                                    arrayOf(
-                                        "image/*"
-                                    )
-                                )
+                                cameraTarget = "before"
+                                galleryLauncher.launch(arrayOf("image/*"))
                             },
                             onCamera = {
 
-                                cameraTarget =
-                                    "before"
+                                cameraTarget = "before"
 
-                                val uri =
-                                    createCameraUri(
-                                        context
-                                    )
+                                val uri = createCameraUri(context)
+                                cameraUri = uri
 
-                                cameraUri =
-                                    uri
-
-                                if (
-                                    uri != null
-                                ) {
-
-                                    cameraLauncher.launch(
-                                        uri
-                                    )
+                                if (uri != null) {
+                                    cameraLauncher.launch(uri)
                                 }
                             },
                             onRemove = {
@@ -1028,57 +895,32 @@ fun RepairScreen(
                             }
                         )
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(8.dp)
-                        )
+                        Spacer(Modifier.height(8.dp))
 
                         Text(
                             "Nachher-Bild",
-                            color =
-                                Color.White,
-                            fontWeight =
-                                FontWeight.Bold
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
                         )
 
                         RepairImageChooser(
-                            imageUri =
-                                afterImageUri,
-                            label =
-                                "Nachher",
-                            context =
-                                context,
+                            imageUri = afterImageUri,
+                            label = "Nachher",
+                            context = context,
+                            storage = storage,
                             onGallery = {
-
-                                cameraTarget =
-                                    "after"
-
-                                galleryLauncher.launch(
-                                    arrayOf(
-                                        "image/*"
-                                    )
-                                )
+                                cameraTarget = "after"
+                                galleryLauncher.launch(arrayOf("image/*"))
                             },
                             onCamera = {
 
-                                cameraTarget =
-                                    "after"
+                                cameraTarget = "after"
 
-                                val uri =
-                                    createCameraUri(
-                                        context
-                                    )
+                                val uri = createCameraUri(context)
+                                cameraUri = uri
 
-                                cameraUri =
-                                    uri
-
-                                if (
-                                    uri != null
-                                ) {
-
-                                    cameraLauncher.launch(
-                                        uri
-                                    )
+                                if (uri != null) {
+                                    cameraLauncher.launch(uri)
                                 }
                             },
                             onRemove = {
@@ -1086,118 +928,42 @@ fun RepairScreen(
                             }
                         )
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(10.dp)
-                        )
+                        Spacer(Modifier.height(10.dp))
+
+                        if (saveError.isNotBlank()) {
+                            Text(
+                                text = saveError,
+                                color = Color(0xFFFF7777)
+                            )
+
+                            Spacer(Modifier.height(8.dp))
+                        }
+
+                        if (isSaving) {
+                            Text(
+                                "Bilder werden hochgeladen und Reparatur wird gespeichert …",
+                                color = Color(0xFF4A90E2)
+                            )
+
+                            Spacer(Modifier.height(8.dp))
+                        }
 
                         Row(
-                            modifier =
-                                Modifier.fillMaxWidth(),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(
-                                    10.dp
-                                )
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
 
                             Button(
-                                modifier =
-                                    Modifier.weight(
-                                        1f
-                                    ),
+                                modifier = Modifier.weight(1f),
+                                enabled = !isSaving,
                                 onClick = {
-
-                                    val newRepair =
-
-                                        if (
-                                            editingId !=
-                                            null
-                                        ) {
-
-                                            repairs.map {
-                                                existing ->
-
-                                                if (
-                                                    existing.id ==
-                                                    editingId
-                                                ) {
-
-                                                    existing.copy(
-                                                        vehicle =
-                                                            activeVehicle,
-                                                        date =
-                                                            date.trim(),
-                                                        mileage =
-                                                            mileage.trim(),
-                                                        description =
-                                                            description.trim(),
-                                                        repairDescription =
-                                                            repairDescription.trim(),
-                                                        parts =
-                                                            parts,
-                                                        laborCost =
-                                                            laborCost.trim(),
-                                                        workshop =
-                                                            workshop.trim(),
-                                                        beforeImageUri =
-                                                            beforeImageUri,
-                                                        afterImageUri =
-                                                            afterImageUri
-                                                    )
-
-                                                } else {
-
-                                                    existing
-                                                }
-                                            }
-
-                                        } else {
-
-                                            repairs +
-                                                Repair(
-                                                    id =
-                                                        System.currentTimeMillis(),
-                                                    vehicle =
-                                                        activeVehicle,
-                                                    date =
-                                                        date.trim(),
-                                                    mileage =
-                                                        mileage.trim(),
-                                                    description =
-                                                        description.trim(),
-                                                    repairDescription =
-                                                        repairDescription.trim(),
-                                                    parts =
-                                                        parts,
-                                                    laborCost =
-                                                        laborCost.trim(),
-                                                    cost =
-                                                        laborCost.trim(),
-                                                    workshop =
-                                                        workshop.trim(),
-                                                    beforeImageUri =
-                                                        beforeImageUri,
-                                                    afterImageUri =
-                                                        afterImageUri
-                                                )
-                                        }
-
-                                    repairs =
-                                        newRepair
-
-                                    store.saveRepairs(
-                                        newRepair
-                                    )
-
-                                    resetForm()
+                                    saveRepairWithImages()
                                 }
                             ) {
-
                                 Text(
-                                    if (
-                                        editingId !=
-                                        null
-                                    ) {
+                                    if (isSaving) {
+                                        "Bitte warten …"
+                                    } else if (editingId != null) {
                                         "Änderung speichern"
                                     } else {
                                         "Speichern"
@@ -1206,18 +972,13 @@ fun RepairScreen(
                             }
 
                             OutlinedButton(
-                                modifier =
-                                    Modifier.weight(
-                                        1f
-                                    ),
+                                modifier = Modifier.weight(1f),
+                                enabled = !isSaving,
                                 onClick = {
                                     resetForm()
                                 }
                             ) {
-
-                                Text(
-                                    "Abbrechen"
-                                )
+                                Text("Abbrechen")
                             }
                         }
                     }
@@ -1227,92 +988,59 @@ fun RepairScreen(
         } else {
 
             LazyColumn(
-                modifier =
-                    Modifier.weight(1f),
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
-                    ),
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding =
                     androidx.compose.foundation.layout.PaddingValues(
                         bottom = 10.dp
                     )
             ) {
 
-                if (
-                    list.isEmpty()
-                ) {
-
+                if (list.isEmpty()) {
                     item {
-
-                        EmptyCard(
-                            "Noch keine Reparatur eingetragen."
-                        )
+                        EmptyCard("Noch keine Reparatur eingetragen.")
                     }
                 }
 
                 items(
-                    items =
-                        list,
-                    key = {
-                        it.id
-                    }
+                    items = list,
+                    key = { it.id }
                 ) { repair ->
 
                     RepairRecordCard(
-                        repair =
-                            repair,
+                        repair = repair,
                         onOpen = {
-                            detailRepair =
-                                repair
+                            detailRepair = repair
                         },
                         onEdit = {
-                            startEdit(
-                                repair
-                            )
+                            startEdit(repair)
                         },
                         onDelete = {
 
-                            repairs =
-                                repairs.filterNot {
-                                    it.id ==
-                                        repair.id
-                                }
+                            repairs = repairs.filterNot {
+                                it.id == repair.id
+                            }
 
-                            store.saveRepairs(
-                                repairs
-                            )
+                            store.saveRepairs(repairs)
                         }
                     )
                 }
             }
 
             Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            top = 6.dp
-                        ),
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
 
                 Button(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
+                    modifier = Modifier.weight(1f),
                     onClick = {
                         startNewRepair()
                     }
                 ) {
-
-                    Text(
-                        "Reparatur hinzufügen"
-                    )
+                    Text("Reparatur hinzufügen")
                 }
             }
         }
@@ -1328,124 +1056,68 @@ private fun RepairRecordCard(
 ) {
 
     Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(
-                        0xFF11141A
-                    )
-            ),
-        modifier =
-            Modifier.fillMaxWidth()
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11141A)
+        ),
+        modifier = Modifier.fillMaxWidth()
     ) {
 
         Column(
-            modifier =
-                Modifier.padding(
-                    16.dp
-                )
+            modifier = Modifier.padding(16.dp)
         ) {
 
             Text(
-                text =
-                    repair.description.ifBlank {
-                        "Reparatur"
-                    },
-                color =
-                    Color.White,
-                fontSize =
-                    19.sp,
-                fontWeight =
-                    FontWeight.Bold,
-                modifier =
-                    Modifier.clickable {
-                        onOpen()
-                    }
+                text = repair.description.ifBlank { "Reparatur" },
+                color = Color.White,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable {
+                    onOpen()
+                }
             )
 
-            Spacer(
-                modifier =
-                    Modifier.height(8.dp)
-            )
+            Spacer(Modifier.height(8.dp))
 
-            val partsTotal =
-                repairPartsTotal(
-                    repair
-                )
+            val laborTotal = repairLaborTotal(repair)
+            val total = repairTotal(repair)
 
-            val laborTotal =
-                repairLaborTotal(
-                    repair
-                )
-
-            val total =
-                repairTotal(
-                    repair
-                )
-
-            if (
-                repair.parts.isNotEmpty()
-            ) {
+            if (repair.parts.isNotEmpty()) {
 
                 repair.parts.forEach { part ->
 
                     Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth()
                     ) {
 
                         Text(
-                            text =
-                                part.name.ifBlank {
-                                    "Ersatzteil"
-                                },
-                            color =
-                                Color(
-                                    0xFFB8BEC8
-                                ),
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                )
+                            text = part.name.ifBlank { "Ersatzteil" },
+                            color = Color(0xFFB8BEC8),
+                            modifier = Modifier.weight(1f)
                         )
 
                         Text(
-                            text =
-                                repairMoneyText(
-                                    repairMoneyValue(
-                                        part.cost
-                                    )
-                                ),
-                            color =
-                                Color.White
+                            text = repairMoneyText(
+                                repairMoneyValue(part.cost)
+                            ),
+                            color = Color.White
                         )
                     }
                 }
-            } else if (
-                repair.cost.isNotBlank()
-            ) {
+
+            } else if (repair.cost.isNotBlank()) {
 
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-
                     Text(
                         "Kosten",
-                        color =
-                            Color(
-                                0xFFB8BEC8
-                            ),
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
+                        color = Color(0xFFB8BEC8),
+                        modifier = Modifier.weight(1f)
                     )
 
                     Text(
                         repair.cost,
-                        color =
-                            Color.White
+                        color = Color.White
                     )
                 }
             }
@@ -1454,33 +1126,23 @@ private fun RepairRecordCard(
                 laborTotal > 0.0 &&
                 (
                     repair.parts.isNotEmpty() ||
-                        repair.laborCost.isNotBlank()
+                    repair.laborCost.isNotBlank()
                 )
             ) {
 
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
 
                     Text(
                         "Einbaukosten",
-                        color =
-                            Color(
-                                0xFFB8BEC8
-                            ),
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
+                        color = Color(0xFFB8BEC8),
+                        modifier = Modifier.weight(1f)
                     )
 
                     Text(
-                        repairMoneyText(
-                            laborTotal
-                        ),
-                        color =
-                            Color.White
+                        repairMoneyText(laborTotal),
+                        color = Color.White
                     )
                 }
             }
@@ -1490,76 +1152,40 @@ private fun RepairRecordCard(
                 repair.laborCost.isNotBlank()
             ) {
 
-                Spacer(
-                    modifier =
-                        Modifier.height(4.dp)
-                )
+                Spacer(Modifier.height(4.dp))
 
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
 
                     Text(
                         "Gesamt",
-                        color =
-                            Color(
-                                0xFF4A90E2
-                            ),
-                        fontWeight =
-                            FontWeight.Bold,
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
+                        color = Color(0xFF4A90E2),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
                     )
 
                     Text(
-                        repairMoneyText(
-                            total
-                        ),
-                        color =
-                            Color(
-                                0xFF4A90E2
-                            ),
-                        fontWeight =
-                            FontWeight.Bold
+                        repairMoneyText(total),
+                        color = Color(0xFF4A90E2),
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(8.dp)
-            )
+            Spacer(Modifier.height(8.dp))
 
-            if (
-                repair.date.isNotBlank()
-            ) {
-
+            if (repair.date.isNotBlank()) {
                 Text(
-                    "Datum: ${
-                        repairDisplayDate(
-                            repair.date
-                        )
-                    }",
-                    color =
-                        Color(
-                            0xFF4A90E2
-                        )
+                    "Datum: ${repairDisplayDate(repair.date)}",
+                    color = Color(0xFF4A90E2)
                 )
             }
 
-            if (
-                repair.mileage.isNotBlank()
-            ) {
-
+            if (repair.mileage.isNotBlank()) {
                 Text(
                     "Kilometerstand: ${repair.mileage}",
-                    color =
-                        Color(
-                            0xFFB8BEC8
-                        )
+                    color = Color(0xFFB8BEC8)
                 )
             }
 
@@ -1567,74 +1193,41 @@ private fun RepairRecordCard(
                 repair.beforeImageUri.isNotBlank() ||
                 repair.afterImageUri.isNotBlank()
             ) {
-
                 Text(
                     "Bilder vorhanden – antippen für Details",
-                    color =
-                        Color(
-                            0xFFB8BEC8
-                        ),
-                    modifier =
-                        Modifier.clickable {
-                            onOpen()
-                        }
+                    color = Color(0xFFB8BEC8),
+                    modifier = Modifier.clickable {
+                        onOpen()
+                    }
                 )
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(10.dp)
-            )
+            Spacer(Modifier.height(10.dp))
 
             Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        10.dp
-                    )
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
 
                 OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick =
-                        onOpen
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpen
                 ) {
-
-                    Text(
-                        "Details"
-                    )
+                    Text("Details")
                 }
 
                 OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick =
-                        onEdit
+                    modifier = Modifier.weight(1f),
+                    onClick = onEdit
                 ) {
-
-                    Text(
-                        "Bearbeiten"
-                    )
+                    Text("Bearbeiten")
                 }
 
                 OutlinedButton(
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        ),
-                    onClick =
-                        onDelete
+                    modifier = Modifier.weight(1f),
+                    onClick = onDelete
                 ) {
-
-                    Text(
-                        "Löschen"
-                    )
+                    Text("Löschen")
                 }
             }
         }
@@ -1644,229 +1237,139 @@ private fun RepairRecordCard(
 @Composable
 private fun RepairDetailCard(
     repair: Repair,
-    context: Context
+    context: Context,
+    storage: SupabaseStorage
 ) {
 
     CardForm {
 
-        if (
-            repair.date.isNotBlank()
-        ) {
-
+        if (repair.date.isNotBlank()) {
             Text(
-                "Datum: ${
-                    repairDisplayDate(
-                        repair.date
-                    )
-                }",
-                color =
-                    Color(
-                        0xFF4A90E2
-                    )
+                "Datum: ${repairDisplayDate(repair.date)}",
+                color = Color(0xFF4A90E2)
             )
         }
 
-        if (
-            repair.mileage.isNotBlank()
-        ) {
-
+        if (repair.mileage.isNotBlank()) {
             Text(
                 "Kilometerstand: ${repair.mileage}",
-                color =
-                    Color(
-                        0xFFB8BEC8
-                    )
+                color = Color(0xFFB8BEC8)
             )
         }
 
-        if (
-            repair.repairDescription.isNotBlank()
-        ) {
+        if (repair.repairDescription.isNotBlank()) {
 
             Text(
                 "Reparatur",
-                color =
-                    Color.White,
-                fontWeight =
-                    FontWeight.Bold
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
 
             Text(
                 repair.repairDescription,
-                color =
-                    Color(
-                        0xFFB8BEC8
-                    )
+                color = Color(0xFFB8BEC8)
             )
         }
 
-        if (
-            repair.parts.isNotEmpty()
-        ) {
+        if (repair.parts.isNotEmpty()) {
 
-            Spacer(
-                modifier =
-                    Modifier.height(8.dp)
-            )
+            Spacer(Modifier.height(8.dp))
 
             Text(
                 "Ersatzteile",
-                color =
-                    Color.White,
-                fontWeight =
-                    FontWeight.Bold
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
 
             repair.parts.forEach { part ->
 
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
 
                     Text(
-                        part.name.ifBlank {
-                            "Ersatzteil"
-                        },
-                        color =
-                            Color(
-                                0xFFB8BEC8
-                            ),
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
+                        part.name.ifBlank { "Ersatzteil" },
+                        color = Color(0xFFB8BEC8),
+                        modifier = Modifier.weight(1f)
                     )
 
                     Text(
                         repairMoneyText(
-                            repairMoneyValue(
-                                part.cost
-                            )
+                            repairMoneyValue(part.cost)
                         ),
-                        color =
-                            Color.White
+                        color = Color.White
                     )
                 }
             }
         }
 
-        Spacer(
-            modifier =
-                Modifier.height(10.dp)
-        )
+        Spacer(Modifier.height(10.dp))
 
         Text(
             "Kosten",
-            color =
-                Color.White,
-            fontWeight =
-                FontWeight.Bold
+            color = Color.White,
+            fontWeight = FontWeight.Bold
         )
 
         Text(
             "Ersatzteile: ${
-                repairMoneyText(
-                    repairPartsTotal(
-                        repair
-                    )
-                )
+                repairMoneyText(repairPartsTotal(repair))
             }",
-            color =
-                Color(
-                    0xFFB8BEC8
-                )
+            color = Color(0xFFB8BEC8)
         )
 
         Text(
             "Einbaukosten: ${
-                repairMoneyText(
-                    repairLaborTotal(
-                        repair
-                    )
-                )
+                repairMoneyText(repairLaborTotal(repair))
             }",
-            color =
-                Color(
-                    0xFFB8BEC8
-                )
+            color = Color(0xFFB8BEC8)
         )
 
         Text(
             "Gesamt: ${
-                repairMoneyText(
-                    repairTotal(
-                        repair
-                    )
-                )
+                repairMoneyText(repairTotal(repair))
             }",
-            color =
-                Color(
-                    0xFF4A90E2
-                ),
-            fontWeight =
-                FontWeight.Bold
+            color = Color(0xFF4A90E2),
+            fontWeight = FontWeight.Bold
         )
 
-        if (
-            repair.workshop.isNotBlank()
-        ) {
-
+        if (repair.workshop.isNotBlank()) {
             Text(
                 "Werkstatt: ${repair.workshop}",
-                color =
-                    Color(
-                        0xFFB8BEC8
-                    )
+                color = Color(0xFFB8BEC8)
             )
         }
 
-        Spacer(
-            modifier =
-                Modifier.height(12.dp)
-        )
+        Spacer(Modifier.height(12.dp))
 
         Text(
             "VORHER",
-            color =
-                Color.White,
-            fontSize =
-                16.sp,
-            fontWeight =
-                FontWeight.Bold
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
         )
 
         RepairStoredImage(
-            context =
-                context,
-            uriString =
-                repair.beforeImageUri,
-            emptyText =
-                "Kein Vorher-Bild vorhanden."
+            context = context,
+            storage = storage,
+            uriString = repair.beforeImageUri,
+            emptyText = "Kein Vorher-Bild vorhanden."
         )
 
-        Spacer(
-            modifier =
-                Modifier.height(16.dp)
-        )
+        Spacer(Modifier.height(16.dp))
 
         Text(
             "NACHHER",
-            color =
-                Color.White,
-            fontSize =
-                16.sp,
-            fontWeight =
-                FontWeight.Bold
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
         )
 
         RepairStoredImage(
-            context =
-                context,
-            uriString =
-                repair.afterImageUri,
-            emptyText =
-                "Kein Nachher-Bild vorhanden."
+            context = context,
+            storage = storage,
+            uriString = repair.afterImageUri,
+            emptyText = "Kein Nachher-Bild vorhanden."
         )
     }
 }
@@ -1874,47 +1377,64 @@ private fun RepairDetailCard(
 @Composable
 private fun RepairStoredImage(
     context: Context,
+    storage: SupabaseStorage,
     uriString: String,
     emptyText: String
 ) {
 
-    val bitmap =
-        remember(
-            uriString
-        ) {
+    var bitmap by remember(uriString) {
+        mutableStateOf<Bitmap?>(null)
+    }
 
-            loadRepairBitmap(
-                context,
-                uriString
+    var loading by remember(uriString) {
+        mutableStateOf(uriString.isNotBlank())
+    }
+
+    LaunchedEffect(uriString) {
+
+        bitmap = null
+        loading = uriString.isNotBlank()
+
+        if (uriString.isNotBlank()) {
+            bitmap = try {
+                loadRepairImage(
+                    context = context,
+                    storage = storage,
+                    imagePath = uriString
+                )
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        loading = false
+    }
+
+    when {
+        bitmap != null -> {
+            Image(
+                bitmap = bitmap!!.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(230.dp),
+                contentScale = ContentScale.Fit
             )
         }
 
-    if (
-        bitmap != null
-    ) {
+        loading -> {
+            Text(
+                "Bild wird geladen …",
+                color = Color(0xFFB8BEC8)
+            )
+        }
 
-        Image(
-            bitmap =
-                bitmap.asImageBitmap(),
-            contentDescription =
-                null,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(230.dp),
-            contentScale =
-                ContentScale.Fit
-        )
-
-    } else {
-
-        Text(
-            emptyText,
-            color =
-                Color(
-                    0xFFB8BEC8
-                )
-        )
+        else -> {
+            Text(
+                emptyText,
+                color = Color(0xFFB8BEC8)
+            )
+        }
     }
 }
 
@@ -1923,93 +1443,84 @@ private fun RepairImageChooser(
     imageUri: String,
     label: String,
     context: Context,
+    storage: SupabaseStorage,
     onGallery: () -> Unit,
     onCamera: () -> Unit,
     onRemove: () -> Unit
 ) {
 
-    val bitmap =
-        remember(
-            imageUri
-        ) {
+    var bitmap by remember(imageUri) {
+        mutableStateOf<Bitmap?>(null)
+    }
 
-            loadRepairBitmap(
-                context,
-                imageUri
-            )
+    var loading by remember(imageUri) {
+        mutableStateOf(imageUri.isNotBlank())
+    }
+
+    LaunchedEffect(imageUri) {
+
+        bitmap = null
+        loading = imageUri.isNotBlank()
+
+        if (imageUri.isNotBlank()) {
+            bitmap = try {
+                loadRepairImage(
+                    context = context,
+                    storage = storage,
+                    imagePath = imageUri
+                )
+            } catch (_: Exception) {
+                null
+            }
         }
 
-    if (
-        bitmap != null
-    ) {
+        loading = false
+    }
+
+    if (bitmap != null) {
 
         Image(
-            bitmap =
-                bitmap.asImageBitmap(),
-            contentDescription =
-                label,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-            contentScale =
-                ContentScale.Fit
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = label,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp),
+            contentScale = ContentScale.Fit
+        )
+
+    } else if (loading) {
+
+        Text(
+            "Bild wird geladen …",
+            color = Color(0xFFB8BEC8)
         )
     }
 
     Row(
-        modifier =
-            Modifier.fillMaxWidth(),
-        horizontalArrangement =
-            Arrangement.spacedBy(
-                8.dp
-            )
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
 
         OutlinedButton(
-            modifier =
-                Modifier.weight(
-                    1f
-                ),
-            onClick =
-                onGallery
+            modifier = Modifier.weight(1f),
+            onClick = onGallery
         ) {
-
-            Text(
-                "Galerie"
-            )
+            Text("Galerie")
         }
 
         OutlinedButton(
-            modifier =
-                Modifier.weight(
-                    1f
-                ),
-            onClick =
-                onCamera
+            modifier = Modifier.weight(1f),
+            onClick = onCamera
         ) {
-
-            Text(
-                "Kamera"
-            )
+            Text("Kamera")
         }
 
-        if (
-            imageUri.isNotBlank()
-        ) {
-
+        if (imageUri.isNotBlank()) {
             OutlinedButton(
-                modifier =
-                    Modifier.weight(
-                        1f
-                    ),
-                onClick =
-                    onRemove
+                modifier = Modifier.weight(1f),
+                onClick = onRemove
             ) {
-
-                Text(
-                    "Entfernen"
-                )
+                Text("Entfernen")
             }
         }
     }
