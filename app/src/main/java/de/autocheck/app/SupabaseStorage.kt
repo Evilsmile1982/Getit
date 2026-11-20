@@ -9,6 +9,7 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.Executors
 
@@ -39,12 +40,6 @@ class SupabaseStorage(context: Context) {
         fun onError(error: Exception)
     }
 
-    /**
-     * Lädt ein lokales Bild oder PDF in den privaten
-     * CARLOCA-Speicher hoch.
-     *
-     * Jeder Dateipfad beginnt mit der Firebase-UID.
-     */
     fun upload(
         sourceUri: Uri,
         category: String,
@@ -63,7 +58,6 @@ class SupabaseStorage(context: Context) {
 
         user.getIdToken(false)
             .addOnSuccessListener { result ->
-
                 val token = result.token
 
                 if (token.isNullOrBlank()) {
@@ -87,7 +81,6 @@ class SupabaseStorage(context: Context) {
                         )
 
                         callback.onSuccess(path)
-
                     } catch (e: Exception) {
                         callback.onError(e)
                     }
@@ -123,18 +116,12 @@ class SupabaseStorage(context: Context) {
         val safeVehicle = safeSegment(vehicleId)
         val safeRecord = safeSegment(recordId)
 
-        val fileName =
-            "${UUID.randomUUID()}.$extension"
+        val fileName = "${UUID.randomUUID()}.$extension"
 
         val storagePath =
             "$userId/$safeCategory/$safeVehicle/$safeRecord/$fileName"
 
-        val encodedPath = storagePath
-            .split("/")
-            .joinToString("/") {
-                URLEncoder.encode(it, "UTF-8")
-                    .replace("+", "%20")
-            }
+        val encodedPath = encodeStoragePath(storagePath)
 
         val url =
             "$SUPABASE_URL/storage/v1/object/$BUCKET/$encodedPath"
@@ -147,25 +134,10 @@ class SupabaseStorage(context: Context) {
         connection.connectTimeout = 30000
         connection.readTimeout = 30000
 
-        connection.setRequestProperty(
-            "apikey",
-            SUPABASE_KEY
-        )
-
-        connection.setRequestProperty(
-            "Authorization",
-            "Bearer $token"
-        )
-
-        connection.setRequestProperty(
-            "Content-Type",
-            mimeType
-        )
-
-        connection.setRequestProperty(
-            "x-upsert",
-            "true"
-        )
+        connection.setRequestProperty("apikey", SUPABASE_KEY)
+        connection.setRequestProperty("Authorization", "Bearer $token")
+        connection.setRequestProperty("Content-Type", mimeType)
+        connection.setRequestProperty("x-upsert", "true")
 
         try {
             val input =
@@ -195,16 +167,11 @@ class SupabaseStorage(context: Context) {
             }
 
             return storagePath
-
         } finally {
             connection.disconnect()
         }
     }
 
-    /**
-     * Lädt eine private Datei anhand ihres Speicherpfades
-     * wieder auf das Gerät.
-     */
     fun download(
         storagePath: String,
         callback: DownloadCallback
@@ -229,7 +196,6 @@ class SupabaseStorage(context: Context) {
 
         user.getIdToken(false)
             .addOnSuccessListener { result ->
-
                 val token = result.token
 
                 if (token.isNullOrBlank()) {
@@ -247,7 +213,6 @@ class SupabaseStorage(context: Context) {
                             downloadFile(storagePath, token)
 
                         callback.onSuccess(localUri)
-
                     } catch (e: Exception) {
                         callback.onError(e)
                     }
@@ -263,12 +228,25 @@ class SupabaseStorage(context: Context) {
         token: String
     ): Uri {
 
-        val encodedPath = storagePath
-            .split("/")
-            .joinToString("/") {
-                URLEncoder.encode(it, "UTF-8")
-                    .replace("+", "%20")
-            }
+        val downloadDirectory =
+            File(appContext.filesDir, "carloca_storage")
+
+        if (!downloadDirectory.exists()) {
+            downloadDirectory.mkdirs()
+        }
+
+        // Eindeutiger Dateiname aus dem vollständigen Supabase-Pfad.
+        // So können gleichnamige Bilder verschiedener Fahrzeuge
+        // nicht versehentlich dieselbe lokale Datei verwenden.
+        val hash = sha256(storagePath)
+        val localFile = File(downloadDirectory, "$hash.img")
+
+        // Bereits heruntergeladene Datei wiederverwenden.
+        if (localFile.exists() && localFile.length() > 0L) {
+            return Uri.fromFile(localFile)
+        }
+
+        val encodedPath = encodeStoragePath(storagePath)
 
         val url =
             "$SUPABASE_URL/storage/v1/object/authenticated/$BUCKET/$encodedPath"
@@ -280,15 +258,11 @@ class SupabaseStorage(context: Context) {
         connection.connectTimeout = 30000
         connection.readTimeout = 30000
 
-        connection.setRequestProperty(
-            "apikey",
-            SUPABASE_KEY
-        )
+        connection.setRequestProperty("apikey", SUPABASE_KEY)
+        connection.setRequestProperty("Authorization", "Bearer $token")
 
-        connection.setRequestProperty(
-            "Authorization",
-            "Bearer $token"
-        )
+        val temporaryFile =
+            File(downloadDirectory, "$hash.tmp")
 
         try {
             val responseCode = connection.responseCode
@@ -305,25 +279,52 @@ class SupabaseStorage(context: Context) {
                 )
             }
 
-            val fileName =
-                storagePath.substringAfterLast("/")
-
-            val localFile =
-                File(
-                    appContext.cacheDir,
-                    "carloca_$fileName"
-                )
-
             connection.inputStream.use { input ->
-                FileOutputStream(localFile).use { output ->
+                FileOutputStream(temporaryFile).use { output ->
                     input.copyTo(output)
                 }
             }
 
-            return Uri.fromFile(localFile)
+            if (!temporaryFile.exists() || temporaryFile.length() == 0L) {
+                throw IllegalStateException(
+                    "Die heruntergeladene Datei ist leer."
+                )
+            }
 
+            if (localFile.exists()) {
+                localFile.delete()
+            }
+
+            if (!temporaryFile.renameTo(localFile)) {
+                temporaryFile.copyTo(localFile, overwrite = true)
+                temporaryFile.delete()
+            }
+
+            return Uri.fromFile(localFile)
         } finally {
             connection.disconnect()
+
+            if (temporaryFile.exists()) {
+                temporaryFile.delete()
+            }
+        }
+    }
+
+    private fun encodeStoragePath(path: String): String {
+        return path.split("/")
+            .joinToString("/") {
+                URLEncoder.encode(it, "UTF-8")
+                    .replace("+", "%20")
+            }
+    }
+
+    private fun sha256(value: String): String {
+        val bytes = MessageDigest
+            .getInstance("SHA-256")
+            .digest(value.toByteArray(Charsets.UTF_8))
+
+        return bytes.joinToString("") {
+            "%02x".format(it)
         }
     }
 
