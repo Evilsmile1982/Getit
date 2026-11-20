@@ -1,287 +1,496 @@
 
-import { importX509, jwtVerify } from "npm:jose@5";
+package de.autocheck.app
 
-const PROJECT_ID = "carloca2027";
-const BUCKET = "carloca-files";
+import android.content.Context
+import android.net.Uri
+import com.google.firebase.auth.FirebaseAuth
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.MessageDigest
+import java.util.UUID
+import java.util.concurrent.Executors
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+class SupabaseStorage(context: Context) {
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, apikey, content-type, x-client-info",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+    companion object {
+        private const val SUPABASE_URL =
+            "https://dpkvxszzhaucdymaekkx.supabase.co"
 
-let cachedCertificates: Record<string, string> | null = null;
-let certificatesExpiry = 0;
+        private const val SUPABASE_KEY =
+            "sb_publishable_VyllOzxYb1q-iRfTe3UI8w_mk1jsqxO"
 
-async function getFirebaseCertificates() {
-  if (cachedCertificates && Date.now() < certificatesExpiry) {
-    return cachedCertificates;
-  }
-
-  const response = await fetch(
-    "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
-  );
-
-  if (!response.ok) {
-    throw new Error("Firebase-Zertifikate konnten nicht geladen werden.");
-  }
-
-  cachedCertificates = await response.json();
-
-  const cacheControl = response.headers.get("cache-control") || "";
-  const maxAge = Number(
-    cacheControl.match(/max-age=(\d+)/)?.[1] || "300"
-  );
-
-  certificatesExpiry = Date.now() + maxAge * 1000;
-
-  return cachedCertificates!;
-}
-
-async function verifyFirebaseToken(token: string) {
-  const { payload, protectedHeader } = await jwtVerify(
-    token,
-    async (header) => {
-      const certificates = await getFirebaseCertificates();
-      const certificate = certificates[header.kid || ""];
-
-      if (!certificate) {
-        throw new Error("Unbekannter Firebase-Signaturschlüssel.");
-      }
-
-      return await importX509(certificate, "RS256");
-    },
-    {
-      issuer: `https://securetoken.google.com/${PROJECT_ID}`,
-      audience: PROJECT_ID,
-      algorithms: ["RS256"],
+        private const val FUNCTION_URL =
+            "$SUPABASE_URL/functions/v1/carloca-upload"
     }
-  );
 
-  if (!payload.sub || typeof payload.sub !== "string") {
-    throw new Error("Firebase-Benutzerkennung fehlt.");
-  }
+    private val appContext = context.applicationContext
+    private val auth = FirebaseAuth.getInstance()
+    private val executor = Executors.newSingleThreadExecutor()
 
-  return payload.sub;
-}
+    interface UploadCallback {
+        fun onSuccess(storagePath: String)
+        fun onError(error: Exception)
+    }
 
-function jsonResponse(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
-  });
-}
+    interface DownloadCallback {
+        fun onSuccess(localUri: Uri)
+        fun onError(error: Exception)
+    }
 
-function safeSegment(value: string) {
-  return value
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .slice(0, 100) || "allgemein";
-}
+    // ============================================================
+    // BILD HOCHLADEN
+    // ============================================================
 
-function validateUserPath(path: string, userId: string) {
-  const parts = path.split("/");
+    fun upload(
+        sourceUri: Uri,
+        category: String,
+        vehicleId: String,
+        recordId: String,
+        callback: UploadCallback
+    ) {
+        val user = auth.currentUser
 
-  return (
-    parts.length === 5 &&
-    parts[0] === userId &&
-    ["vehicles", "repairs"].includes(parts[1]) &&
-    parts.every(
-      (part) => part.length > 0 && part !== "." && part !== ".."
-    )
-  );
-}
-
-Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  if (request.method !== "POST") {
-    return jsonResponse({ error: "POST erforderlich." }, 405);
-  }
-
-  if (!SUPABASE_URL || !SERVICE_KEY) {
-    return jsonResponse({
-      error: "Supabase-Serverkonfiguration fehlt."
-    }, 500);
-  }
-
-  const authorization = request.headers.get("Authorization");
-
-  if (!authorization?.startsWith("Bearer ")) {
-    return jsonResponse({ error: "Firebase-Anmeldung fehlt." }, 401);
-  }
-
-  let userId: string;
-
-  try {
-    userId = await verifyFirebaseToken(
-      authorization.substring(7)
-    );
-  } catch (error) {
-    console.error("Firebase-Token ungültig:", error);
-
-    return jsonResponse({
-      error: "Firebase-Anmeldung konnte nicht bestätigt werden."
-    }, 401);
-  }
-
-  try {
-    const contentType =
-      request.headers.get("Content-Type") || "";
-
-    // BILDER HERUNTERLADEN
-    if (contentType.includes("application/json")) {
-      const body = await request.json();
-
-      if (body.action !== "download") {
-        return jsonResponse({ error: "Ungültige Aktion." }, 400);
-      }
-
-      const storagePath = String(body.storagePath || "");
-
-      if (!validateUserPath(storagePath, userId)) {
-        return jsonResponse({
-          error: "Kein Zugriff auf diese Datei."
-        }, 403);
-      }
-
-      const encodedPath = storagePath
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/");
-
-      const downloadResponse = await fetch(
-        `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${encodedPath}`,
-        {
-          method: "GET",
-          headers: {
-            apikey: SERVICE_KEY,
-            Authorization: `Bearer ${SERVICE_KEY}`,
-          },
+        if (user == null) {
+            callback.onError(
+                IllegalStateException("Bitte zuerst anmelden.")
+            )
+            return
         }
-      );
 
-      if (!downloadResponse.ok) {
-        const error = await downloadResponse.text();
+        user.getIdToken(false)
+            .addOnSuccessListener { result ->
 
-        return jsonResponse({
-          error: "Bild konnte nicht heruntergeladen werden.",
-          details: error,
-        }, downloadResponse.status);
-      }
+                val token = result.token
 
-      return new Response(downloadResponse.body, {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type":
-            downloadResponse.headers.get("Content-Type") ||
-            "application/octet-stream",
-          "Cache-Control": "private, no-store",
-        },
-      });
+                if (token.isNullOrBlank()) {
+                    callback.onError(
+                        IllegalStateException(
+                            "Firebase-Anmeldetoken fehlt."
+                        )
+                    )
+                    return@addOnSuccessListener
+                }
+
+                executor.execute {
+                    try {
+                        val storagePath = uploadFile(
+                            sourceUri = sourceUri,
+                            token = token,
+                            category = category,
+                            vehicleId = vehicleId,
+                            recordId = recordId
+                        )
+
+                        callback.onSuccess(storagePath)
+
+                    } catch (e: Exception) {
+                        callback.onError(e)
+                    }
+                }
+            }
+            .addOnFailureListener {
+                callback.onError(it)
+            }
     }
 
-    // BILDER HOCHLADEN
-    const form = await request.formData();
+    private fun uploadFile(
+        sourceUri: Uri,
+        token: String,
+        category: String,
+        vehicleId: String,
+        recordId: String
+    ): String {
 
-    const file = form.get("file");
-    const category = String(form.get("category") || "");
-    const vehicleId = String(form.get("vehicleId") || "");
-    const recordId = String(form.get("recordId") || "");
+        val detectedMimeType =
+            appContext.contentResolver.getType(sourceUri)
+                ?: "image/jpeg"
 
-    if (!(file instanceof File)) {
-      return jsonResponse({ error: "Bilddatei fehlt." }, 400);
+        val mimeType = when (detectedMimeType) {
+            "image/jpg" -> "image/jpeg"
+            else -> detectedMimeType
+        }
+
+        if (mimeType !in listOf(
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+            )
+        ) {
+            throw IllegalArgumentException(
+                "Bitte ein JPG-, PNG- oder WEBP-Bild auswählen."
+            )
+        }
+
+        val extension = when (mimeType) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
+
+        val boundary =
+            "CARLOCA_${UUID.randomUUID().toString().replace("-", "")}"
+
+        val connection =
+            URL(FUNCTION_URL).openConnection() as HttpURLConnection
+
+        connection.requestMethod = "POST"
+        connection.doOutput = true
+        connection.connectTimeout = 30000
+        connection.readTimeout = 60000
+        connection.setChunkedStreamingMode(64 * 1024)
+
+        connection.setRequestProperty(
+            "apikey",
+            SUPABASE_KEY
+        )
+
+        connection.setRequestProperty(
+            "Authorization",
+            "Bearer $token"
+        )
+
+        connection.setRequestProperty(
+            "Content-Type",
+            "multipart/form-data; boundary=$boundary"
+        )
+
+        connection.setRequestProperty(
+            "Accept",
+            "application/json"
+        )
+
+        try {
+            connection.outputStream.use { output ->
+
+                writeFormField(
+                    output, boundary, "category", category
+                )
+
+                writeFormField(
+                    output, boundary, "vehicleId", vehicleId
+                )
+
+                writeFormField(
+                    output, boundary, "recordId", recordId
+                )
+
+                output.write(
+                    "--$boundary\r\n".toByteArray(Charsets.UTF_8)
+                )
+
+                output.write(
+                    (
+                        "Content-Disposition: form-data; " +
+                            "name=\"file\"; filename=\"image.$extension\"\r\n"
+                        ).toByteArray(Charsets.UTF_8)
+                )
+
+                output.write(
+                    "Content-Type: $mimeType\r\n\r\n"
+                        .toByteArray(Charsets.UTF_8)
+                )
+
+                val input =
+                    appContext.contentResolver.openInputStream(sourceUri)
+                        ?: throw IllegalStateException(
+                            "Das ausgewählte Bild kann nicht gelesen werden."
+                        )
+
+                input.use {
+                    it.copyTo(output)
+                }
+
+                output.write(
+                    "\r\n--$boundary--\r\n"
+                        .toByteArray(Charsets.UTF_8)
+                )
+
+                output.flush()
+            }
+
+            val responseCode = connection.responseCode
+
+            val responseText = readResponseText(
+                if (responseCode in 200..299) {
+                    connection.inputStream
+                } else {
+                    connection.errorStream
+                }
+            )
+
+            if (responseCode !in 200..299) {
+                throw IllegalStateException(
+                    "CARLOCA-Bild-Upload fehlgeschlagen " +
+                        "(HTTP $responseCode): $responseText"
+                )
+            }
+
+            val json = JSONObject(responseText)
+
+            val storagePath = json.optString("storagePath")
+
+            if (
+                !json.optBoolean("success", false) ||
+                storagePath.isBlank()
+            ) {
+                throw IllegalStateException(
+                    "Supabase hat keinen gültigen Bildpfad zurückgegeben: " +
+                        responseText
+                )
+            }
+
+            return storagePath
+
+        } finally {
+            connection.disconnect()
+        }
     }
 
-    if (!["vehicles", "repairs"].includes(category)) {
-      return jsonResponse({ error: "Ungültige Kategorie." }, 400);
+    private fun writeFormField(
+        output: java.io.OutputStream,
+        boundary: String,
+        name: String,
+        value: String
+    ) {
+        output.write(
+            "--$boundary\r\n".toByteArray(Charsets.UTF_8)
+        )
+
+        output.write(
+            "Content-Disposition: form-data; name=\"$name\"\r\n\r\n"
+                .toByteArray(Charsets.UTF_8)
+        )
+
+        output.write(value.toByteArray(Charsets.UTF_8))
+
+        output.write(
+            "\r\n".toByteArray(Charsets.UTF_8)
+        )
     }
 
-    if (!vehicleId || !recordId) {
-      return jsonResponse({
-        error: "Fahrzeug- oder Datensatz-ID fehlt."
-      }, 400);
+    // ============================================================
+    // BILD HERUNTERLADEN
+    // ============================================================
+
+    fun download(
+        storagePath: String,
+        callback: DownloadCallback
+    ) {
+        val user = auth.currentUser
+
+        if (user == null) {
+            callback.onError(
+                IllegalStateException("Bitte zuerst anmelden.")
+            )
+            return
+        }
+
+        if (!storagePath.startsWith("${user.uid}/")) {
+            callback.onError(
+                SecurityException(
+                    "Diese Datei gehört nicht zum angemeldeten Profil."
+                )
+            )
+            return
+        }
+
+        user.getIdToken(false)
+            .addOnSuccessListener { result ->
+
+                val token = result.token
+
+                if (token.isNullOrBlank()) {
+                    callback.onError(
+                        IllegalStateException(
+                            "Firebase-Anmeldetoken fehlt."
+                        )
+                    )
+                    return@addOnSuccessListener
+                }
+
+                executor.execute {
+                    try {
+                        val localUri =
+                            downloadFile(storagePath, token)
+
+                        callback.onSuccess(localUri)
+
+                    } catch (e: Exception) {
+                        callback.onError(e)
+                    }
+                }
+            }
+            .addOnFailureListener {
+                callback.onError(it)
+            }
     }
 
-    if (file.size <= 0 || file.size > 10 * 1024 * 1024) {
-      return jsonResponse({
-        error: "Das Bild darf maximal 10 MB groß sein."
-      }, 400);
+    private fun downloadFile(
+        storagePath: String,
+        token: String
+    ): Uri {
+
+        val downloadDirectory =
+            File(appContext.filesDir, "carloca_storage")
+
+        if (
+            !downloadDirectory.exists() &&
+            !downloadDirectory.mkdirs()
+        ) {
+            throw IllegalStateException(
+                "Lokaler Bildspeicher konnte nicht erstellt werden."
+            )
+        }
+
+        val hash = sha256(storagePath)
+
+        val localFile =
+            File(downloadDirectory, "$hash.img")
+
+        if (
+            localFile.exists() &&
+            localFile.length() > 0L
+        ) {
+            return Uri.fromFile(localFile)
+        }
+
+        val connection =
+            URL(FUNCTION_URL).openConnection() as HttpURLConnection
+
+        connection.requestMethod = "POST"
+        connection.doOutput = true
+        connection.connectTimeout = 30000
+        connection.readTimeout = 60000
+
+        connection.setRequestProperty(
+            "apikey",
+            SUPABASE_KEY
+        )
+
+        connection.setRequestProperty(
+            "Authorization",
+            "Bearer $token"
+        )
+
+        connection.setRequestProperty(
+            "Content-Type",
+            "application/json"
+        )
+
+        connection.setRequestProperty(
+            "Accept",
+            "image/*"
+        )
+
+        val temporaryFile =
+            File(downloadDirectory, "$hash.tmp")
+
+        try {
+            val requestBody = JSONObject()
+                .put("action", "download")
+                .put("storagePath", storagePath)
+                .toString()
+
+            connection.outputStream.use { output ->
+                output.write(
+                    requestBody.toByteArray(Charsets.UTF_8)
+                )
+                output.flush()
+            }
+
+            val responseCode = connection.responseCode
+
+            if (responseCode !in 200..299) {
+                val errorText = readResponseText(
+                    connection.errorStream
+                )
+
+                throw IllegalStateException(
+                    "CARLOCA-Bild-Download fehlgeschlagen " +
+                        "(HTTP $responseCode): $errorText"
+                )
+            }
+
+            val contentType =
+                connection.contentType ?: ""
+
+            if (contentType.contains("application/json")) {
+                val errorText = readResponseText(
+                    connection.inputStream
+                )
+
+                throw IllegalStateException(
+                    "Unerwartete Serverantwort: $errorText"
+                )
+            }
+
+            connection.inputStream.use { input ->
+                FileOutputStream(temporaryFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            if (
+                !temporaryFile.exists() ||
+                temporaryFile.length() == 0L
+            ) {
+                throw IllegalStateException(
+                    "Das heruntergeladene Bild ist leer."
+                )
+            }
+
+            if (localFile.exists()) {
+                localFile.delete()
+            }
+
+            if (!temporaryFile.renameTo(localFile)) {
+                temporaryFile.copyTo(
+                    localFile,
+                    overwrite = true
+                )
+                temporaryFile.delete()
+            }
+
+            return Uri.fromFile(localFile)
+
+        } finally {
+            connection.disconnect()
+
+            if (temporaryFile.exists()) {
+                temporaryFile.delete()
+            }
+        }
     }
 
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-    ];
+    // ============================================================
+    // HILFSFUNKTIONEN
+    // ============================================================
 
-    if (!allowedTypes.includes(file.type)) {
-      return jsonResponse({
-        error: "Dieses Bildformat wird nicht unterstützt."
-      }, 400);
+    private fun readResponseText(
+        input: InputStream?
+    ): String {
+        if (input == null) return ""
+
+        return input.bufferedReader(Charsets.UTF_8).use {
+            it.readText()
+        }
     }
 
-    const extension =
-      file.type === "image/png" ? "png" :
-      file.type === "image/webp" ? "webp" : "jpg";
+    private fun sha256(value: String): String {
+        val bytes = MessageDigest
+            .getInstance("SHA-256")
+            .digest(value.toByteArray(Charsets.UTF_8))
 
-    const storagePath = [
-      userId,
-      category,
-      safeSegment(vehicleId),
-      safeSegment(recordId),
-      `${crypto.randomUUID()}.${extension}`,
-    ].join("/");
-
-    const encodedPath = storagePath
-      .split("/")
-      .map(encodeURIComponent)
-      .join("/");
-
-    const uploadResponse = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${encodedPath}`,
-      {
-        method: "POST",
-        headers: {
-          apikey: SERVICE_KEY,
-          Authorization: `Bearer ${SERVICE_KEY}`,
-          "Content-Type": file.type,
-          "x-upsert": "true",
-        },
-        body: await file.arrayBuffer(),
-      }
-    );
-
-    if (!uploadResponse.ok) {
-      const error = await uploadResponse.text();
-
-      return jsonResponse({
-        error: "Supabase-Speicherung fehlgeschlagen.",
-        details: error,
-      }, uploadResponse.status);
+        return bytes.joinToString("") {
+            "%02x".format(it)
+        }
     }
 
-    return jsonResponse({
-      success: true,
-      storagePath,
-    });
-
-  } catch (error) {
-    console.error("CARLOCA Upload-Fehler:", error);
-
-    return jsonResponse({
-      error: error instanceof Error
-        ? error.message
-        : "Unbekannter Serverfehler.",
-    }, 500);
-  }
-});
+    fun shutdown() {
+        executor.shutdown()
+    }
+}
