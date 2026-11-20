@@ -28,92 +28,44 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
-
-/**
- * Fahrzeugbild-Anzeige für AutoCheck.
- *
- * Unterstützt:
- * - Dauerhaft gespeicherte lokale Bilder
- * - Content-URIs
- * - Bildanzeige nach erneutem Öffnen der App
- * - Platzhalter bei fehlenden Bildern
- */
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 @Composable
 fun VehicleImage(
     uri: String,
     modifier: Modifier = Modifier
 ) {
-
     val context = LocalContext.current
+
+    val storage = remember(context) {
+        SupabaseStorage(context)
+    }
 
     var bitmap by remember(uri) {
         mutableStateOf<ImageBitmap?>(null)
     }
 
-    var loading by remember(uri) {
-        mutableStateOf(true)
-    }
-
     LaunchedEffect(uri) {
-
-        loading = true
         bitmap = null
 
-        bitmap = withContext(Dispatchers.IO) {
-
-            if (uri.isBlank()) {
+        if (uri.isNotBlank()) {
+            bitmap = try {
+                loadVehicleImage(
+                    context = context,
+                    storage = storage,
+                    imagePath = uri
+                )
+            } catch (_: Exception) {
                 null
-            } else {
-                try {
-
-                    val parsedUri = Uri.parse(uri)
-
-                    when (parsedUri.scheme) {
-
-                        "file" -> {
-                            BitmapFactory.decodeFile(
-                                parsedUri.path
-                            )?.asImageBitmap()
-                        }
-
-                        "content" -> {
-                            context.contentResolver
-                                .openInputStream(parsedUri)
-                                ?.use { stream ->
-                                    BitmapFactory
-                                        .decodeStream(stream)
-                                        ?.asImageBitmap()
-                                }
-                        }
-
-                        else -> {
-
-                            val file = File(uri)
-
-                            if (file.exists()) {
-                                BitmapFactory.decodeFile(
-                                    file.absolutePath
-                                )?.asImageBitmap()
-                            } else {
-                                null
-                            }
-                        }
-                    }
-
-                } catch (e: Exception) {
-                    null
-                }
             }
         }
-
-        loading = false
     }
 
     if (bitmap != null) {
-
         Image(
             bitmap = bitmap!!,
             contentDescription = "Fahrzeugbild",
@@ -122,20 +74,13 @@ fun VehicleImage(
             ),
             contentScale = ContentScale.Crop
         )
-
     } else {
-
         Box(
             modifier = modifier
-                .clip(
-                    RoundedCornerShape(12.dp)
-                )
-                .background(
-                    Color(0xFF20242D)
-                ),
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF20242D)),
             contentAlignment = Alignment.Center
         ) {
-
             Icon(
                 imageVector = Icons.Filled.DirectionsCar,
                 contentDescription = "Kein Fahrzeugbild",
@@ -144,4 +89,85 @@ fun VehicleImage(
             )
         }
     }
+}
+
+private suspend fun loadVehicleImage(
+    context: Context,
+    storage: SupabaseStorage,
+    imagePath: String
+): ImageBitmap? {
+
+    val parsedUri = Uri.parse(imagePath)
+
+    val localUri = when (parsedUri.scheme) {
+        "content", "file" -> {
+            parsedUri
+        }
+
+        else -> {
+            val localFile = File(imagePath)
+
+            if (localFile.exists() && localFile.isFile) {
+                Uri.fromFile(localFile)
+            } else {
+                downloadVehicleImage(
+                    storage = storage,
+                    storagePath = imagePath
+                )
+            }
+        }
+    }
+
+    return withContext(Dispatchers.IO) {
+        try {
+            when (localUri.scheme) {
+                "content" -> {
+                    context.contentResolver
+                        .openInputStream(localUri)
+                        ?.use { stream ->
+                            BitmapFactory
+                                .decodeStream(stream)
+                                ?.asImageBitmap()
+                        }
+                }
+
+                "file" -> {
+                    val path = localUri.path
+                        ?: return@withContext null
+
+                    BitmapFactory
+                        .decodeFile(path)
+                        ?.asImageBitmap()
+                }
+
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
+private suspend fun downloadVehicleImage(
+    storage: SupabaseStorage,
+    storagePath: String
+): Uri = suspendCancellableCoroutine { continuation ->
+
+    storage.download(
+        storagePath,
+        object : SupabaseStorage.DownloadCallback {
+
+            override fun onSuccess(localUri: Uri) {
+                if (continuation.isActive) {
+                    continuation.resume(localUri)
+                }
+            }
+
+            override fun onError(error: Exception) {
+                if (continuation.isActive) {
+                    continuation.resumeWithException(error)
+                }
+            }
+        }
+    )
 }
