@@ -1,1145 +1,147 @@
+
 package de.autocheck.app
 
-import android.content.Intent
+import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Handler
-import android.os.Looper
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+
+/**
+ * Fahrzeugbild-Anzeige für AutoCheck.
+ *
+ * Unterstützt:
+ * - Dauerhaft gespeicherte lokale Bilder
+ * - Content-URIs
+ * - Bildanzeige nach erneutem Öffnen der App
+ * - Platzhalter bei fehlenden Bildern
+ */
 
 @Composable
-fun VehicleScreen(
-    vehicles: MutableList<Vehicle>,
-    activeVehicle: String,
-    onActiveVehicle: (String) -> Unit,
-    onSave: (Vehicle, String) -> Unit,
-    onDelete: (Vehicle) -> Unit
+fun VehicleImage(
+    uri: String,
+    modifier: Modifier = Modifier
 ) {
-
-    val currentPlan = CarLocaSubscription.currentPlan
-
-    var adding by remember {
-        mutableStateOf(false)
-    }
-
-    var editingVehicleId by remember {
-        mutableStateOf("")
-    }
-
-    var editingName by remember {
-        mutableStateOf("")
-    }
-
-    var name by remember {
-        mutableStateOf("")
-    }
-
-    var vehicleType by remember {
-        mutableStateOf("PKW")
-    }
-
-    var make by remember {
-        mutableStateOf("")
-    }
-
-    var model by remember {
-        mutableStateOf("")
-    }
-
-    var motorization by remember {
-        mutableStateOf("")
-    }
-
-    var power by remember {
-        mutableStateOf("")
-    }
-
-    var year by remember {
-        mutableStateOf("")
-    }
-
-    var plate by remember {
-        mutableStateOf("")
-    }
-
-    var vin by remember {
-        mutableStateOf("")
-    }
-
-    var imageUri by remember {
-        mutableStateOf("")
-    }
-
-    var purchasePrice by remember {
-        mutableStateOf("")
-    }
-
-    var purchasePriceVisible by remember {
-        mutableStateOf(false)
-    }
-
-    var revealedPurchasePriceIds by remember {
-        mutableStateOf(setOf<String>())
-    }
-
-    var vehicleToDelete by remember {
-        mutableStateOf<Vehicle?>(null)
-    }
-
-    var vehicleTypeExpanded by remember {
-        mutableStateOf(false)
-    }
-
-    var showVehicleLimitDialog by remember {
-        mutableStateOf(false)
-    }
-
-    // Status für den Supabase-Bildupload
-    var imageUploading by remember {
-        mutableStateOf(false)
-    }
-
-    var imageUploadError by remember {
-        mutableStateOf("")
-    }
-
-    val vehicleTypes = listOf(
-        "PKW",
-        "WOHNMOBIL",
-        "MOTORRAD",
-        "QUAD",
-        "MOPED",
-        "NUTZFAHRZEUG",
-        "LKW",
-        "BAUMASCHINE",
-        "ANHÄNGER"
-    )
 
     val context = LocalContext.current
 
-    val supabaseStorage = remember(context) {
-        SupabaseStorage(context)
+    var bitmap by remember(uri) {
+        mutableStateOf<ImageBitmap?>(null)
     }
 
-    val mainHandler = remember {
-        Handler(Looper.getMainLooper())
+    var loading by remember(uri) {
+        mutableStateOf(true)
     }
 
-    /*
-     * Formular zurücksetzen
-     */
-    fun resetVehicleForm() {
-        editingVehicleId = ""
-        editingName = ""
-        name = ""
-        vehicleType = "PKW"
-        make = ""
-        model = ""
-        motorization = ""
-        power = ""
-        year = ""
-        plate = ""
-        vin = ""
-        imageUri = ""
-        purchasePrice = ""
-        purchasePriceVisible = false
-        vehicleTypeExpanded = false
-        imageUploading = false
-        imageUploadError = ""
-        adding = false
-    }
+    LaunchedEffect(uri) {
 
-    /*
-     * Fahrzeug speichern.
-     *
-     * Lokale Bilder werden zuerst zu Supabase hochgeladen.
-     * Bereits gespeicherte Supabase-Pfade bleiben erhalten.
-     */
-    fun saveVehicleWithImage(vehicle: Vehicle) {
+        loading = true
+        bitmap = null
 
-        imageUploadError = ""
+        bitmap = withContext(Dispatchers.IO) {
 
-        val selectedUri = imageUri
-
-        val parsedUri = if (selectedUri.isNotBlank()) {
-            runCatching {
-                Uri.parse(selectedUri)
-            }.getOrNull()
-        } else {
-            null
-        }
-
-        val isLocalImage = parsedUri != null &&
-            (
-                parsedUri.scheme == "content" ||
-                parsedUri.scheme == "file"
-            )
-
-        // Kein neues lokales Bild:
-        // Fahrzeug direkt mit dem bisherigen Bildpfad speichern.
-        if (!isLocalImage || parsedUri == null) {
-            onSave(vehicle, editingName)
-            resetVehicleForm()
-            return
-        }
-
-        imageUploading = true
-
-        supabaseStorage.upload(
-            sourceUri = parsedUri,
-            category = "vehicles",
-            vehicleId = vehicle.id,
-            recordId = "main",
-            callback = object : SupabaseStorage.UploadCallback {
-
-                override fun onSuccess(storagePath: String) {
-
-                    mainHandler.post {
-
-                        imageUploading = false
-
-                        val vehicleWithCloudImage = vehicle.copy(
-                            imageUri = storagePath
-                        )
-
-                        onSave(
-                            vehicleWithCloudImage,
-                            editingName
-                        )
-
-                        resetVehicleForm()
-                    }
-                }
-
-                override fun onError(error: Exception) {
-
-                    mainHandler.post {
-
-                        imageUploading = false
-
-                        imageUploadError = error.message
-                            ?: "Das Fahrzeugbild konnte nicht hochgeladen werden."
-                    }
-                }
-            }
-        )
-    }
-
-    /*
-     * ============================================================
-     * BILD AUS GALERIE
-     * ============================================================
-     */
-
-    val launcher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.OpenDocument()
-        ) { uri ->
-
-            if (uri != null) {
-
+            if (uri.isBlank()) {
+                null
+            } else {
                 try {
 
-                    context.contentResolver
-                        .takePersistableUriPermission(
-                            uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
+                    val parsedUri = Uri.parse(uri)
 
-                } catch (_: SecurityException) {
-                    // Nicht jeder Provider erlaubt persistente Rechte.
+                    when (parsedUri.scheme) {
+
+                        "file" -> {
+                            BitmapFactory.decodeFile(
+                                parsedUri.path
+                            )?.asImageBitmap()
+                        }
+
+                        "content" -> {
+                            context.contentResolver
+                                .openInputStream(parsedUri)
+                                ?.use { stream ->
+                                    BitmapFactory
+                                        .decodeStream(stream)
+                                        ?.asImageBitmap()
+                                }
+                        }
+
+                        else -> {
+
+                            val file = File(uri)
+
+                            if (file.exists()) {
+                                BitmapFactory.decodeFile(
+                                    file.absolutePath
+                                )?.asImageBitmap()
+                            } else {
+                                null
+                            }
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    null
                 }
-
-                imageUri = uri.toString()
-                imageUploadError = ""
             }
         }
 
-    /*
-     * ============================================================
-     * HAUPTBEREICH
-     * ============================================================
-     */
+        loading = false
+    }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    if (bitmap != null) {
 
-        Text(
-            text = currentPlan.maxVehicles?.let {
-                "${vehicles.size}/$it Fahrzeuge"
-            } ?: "${vehicles.size} Fahrzeuge – unbegrenzt",
-            color = Color(0xFFB8BEC8),
-            modifier = Modifier.padding(bottom = 4.dp)
+        Image(
+            bitmap = bitmap!!,
+            contentDescription = "Fahrzeugbild",
+            modifier = modifier.clip(
+                RoundedCornerShape(12.dp)
+            ),
+            contentScale = ContentScale.Crop
         )
 
-        Text(
-            text = currentPlan.displayName,
-            color = Color(0xFFFFD700),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+    } else {
 
-        if (vehicles.isEmpty()) {
-
-            Text(
-                "Noch kein Fahrzeug angelegt.",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(
-                Modifier.height(8.dp)
-            )
-        }
-
-        /*
-         * ========================================================
-         * FAHRZEUGLISTE
-         * ========================================================
-         */
-
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Box(
+            modifier = modifier
+                .clip(
+                    RoundedCornerShape(12.dp)
+                )
+                .background(
+                    Color(0xFF20242D)
+                ),
+            contentAlignment = Alignment.Center
         ) {
 
-            items(
-                vehicles,
-                key = { it.id }
-            ) { vehicle ->
-
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF11141A)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-
-                    Column(
-                        Modifier.padding(16.dp)
-                    ) {
-
-                        /*
-                         * FAHRZEUGKOPF
-                         */
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            VehicleImage(
-                                uri = vehicle.imageUri,
-                                modifier = Modifier.size(82.dp)
-                            )
-
-                            Spacer(
-                                Modifier.width(12.dp)
-                            )
-
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-
-                                Text(
-                                    vehicle.name,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
-
-                                Text(
-                                    "${vehicle.vehicleType} • ${vehicle.make} ${vehicle.model}".trim(),
-                                    color = Color(0xFFB8BEC8)
-                                )
-
-                                if (vehicle.motorization.isNotBlank()) {
-                                    Text(
-                                        "Motorisierung: ${vehicle.motorization}",
-                                        color = Color(0xFFB8BEC8)
-                                    )
-                                }
-
-                                if (vehicle.power.isNotBlank()) {
-                                    Text(
-                                        "PS/KW: ${vehicle.power}",
-                                        color = Color(0xFFB8BEC8)
-                                    )
-                                }
-
-                                if (vehicle.year.isNotBlank()) {
-                                    Text(
-                                        "Baujahr: ${vehicle.year}",
-                                        color = Color(0xFFB8BEC8)
-                                    )
-                                }
-
-                                if (vehicle.plate.isNotBlank()) {
-                                    Text(
-                                        "Kennzeichen: ${vehicle.plate}",
-                                        color = Color.White
-                                    )
-                                }
-
-                                if (vehicle.vin.isNotBlank()) {
-                                    Text(
-                                        "FIN/VIN: ${vehicle.vin}",
-                                        color = Color(0xFFB8BEC8),
-                                        maxLines = 1
-                                    )
-                                }
-
-                                /*
-                                 * KAUFPREIS
-                                 */
-
-                                val priceVisible =
-                                    revealedPurchasePriceIds.contains(vehicle.id)
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-
-                                    Text(
-                                        "Kaufpreis: ",
-                                        color = Color(0xFFB8BEC8)
-                                    )
-
-                                    Text(
-                                        if (
-                                            priceVisible &&
-                                            vehicle.purchasePrice.isNotBlank()
-                                        ) {
-                                            "${vehicle.purchasePrice} €"
-                                        } else {
-                                            "******** €"
-                                        },
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.clickable {
-
-                                            revealedPurchasePriceIds =
-                                                if (priceVisible) {
-                                                    revealedPurchasePriceIds - vehicle.id
-                                                } else {
-                                                    revealedPurchasePriceIds + vehicle.id
-                                                }
-                                        }
-                                    )
-
-                                    Spacer(
-                                        Modifier.width(10.dp)
-                                    )
-
-                                    EyeIcon(
-                                        visible = priceVisible,
-                                        onClick = {
-
-                                            revealedPurchasePriceIds =
-                                                if (priceVisible) {
-                                                    revealedPurchasePriceIds - vehicle.id
-                                                } else {
-                                                    revealedPurchasePriceIds + vehicle.id
-                                                }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(
-                            Modifier.height(10.dp)
-                        )
-
-                        /*
-                         * AKTIV / BEARBEITEN
-                         */
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-
-                            Button(
-                                onClick = {
-                                    onActiveVehicle(vehicle.id)
-                                },
-                                colors = ButtonDefaults.buttonColors(
-
-                                    containerColor =
-                                        if (activeVehicle == vehicle.id) {
-                                            Color(0xFF4CAF50)
-                                        } else {
-                                            Color(0xFFFFD700)
-                                        },
-
-                                    contentColor =
-                                        if (activeVehicle == vehicle.id) {
-                                            Color.White
-                                        } else {
-                                            Color.Black
-                                        }
-                                )
-                            ) {
-
-                                Text(
-                                    if (activeVehicle == vehicle.id) {
-                                        "AKTIV"
-                                    } else {
-                                        "Aktiv setzen"
-                                    },
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            /*
-                             * BEARBEITEN
-                             */
-
-                            OutlinedButton(
-                                onClick = {
-
-                                    editingVehicleId = vehicle.id
-                                    editingName = vehicle.name
-                                    name = vehicle.name
-
-                                    vehicleType =
-                                        vehicle.vehicleType.ifBlank {
-                                            "PKW"
-                                        }
-
-                                    make = vehicle.make
-                                    model = vehicle.model
-                                    motorization = vehicle.motorization
-                                    power = vehicle.power
-                                    year = vehicle.year
-                                    plate = vehicle.plate
-                                    vin = vehicle.vin
-                                    imageUri = vehicle.imageUri
-                                    purchasePrice = vehicle.purchasePrice
-
-                                    purchasePriceVisible = false
-                                    imageUploadError = ""
-                                    adding = true
-                                }
-                            ) {
-
-                                Text("Bearbeiten")
-                            }
-                        }
-
-                        Spacer(
-                            Modifier.height(4.dp)
-                        )
-
-                        /*
-                         * FAHRZEUG LÖSCHEN
-                         */
-
-                        OutlinedButton(
-                            onClick = {
-                                vehicleToDelete = vehicle
-                            }
-                        ) {
-
-                            Text("Fahrzeug entfernen")
-                        }
-                    }
-                }
-            }
-
-            /*
-             * ========================================================
-             * FORMULAR
-             * ========================================================
-             */
-
-            if (adding) {
-
-                item {
-
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF11141A)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-
-                        Column(
-                            Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-
-                            Text(
-                                if (editingVehicleId.isBlank()) {
-                                    "Fahrzeug hinzufügen"
-                                } else {
-                                    "Fahrzeug bearbeiten"
-                                },
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            /*
-                             * FAHRZEUGTYP
-                             */
-
-                            OutlinedButton(
-                                onClick = {
-                                    vehicleTypeExpanded = true
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-
-                                Text("Bezeichnung: $vehicleType")
-                            }
-
-                            DropdownMenu(
-                                expanded = vehicleTypeExpanded,
-                                onDismissRequest = {
-                                    vehicleTypeExpanded = false
-                                }
-                            ) {
-
-                                vehicleTypes.forEach { type ->
-
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(type)
-                                        },
-                                        onClick = {
-                                            vehicleType = type
-                                            vehicleTypeExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-
-                            /*
-                             * MARKE
-                             */
-
-                            OutlinedTextField(
-                                value = make,
-                                onValueChange = {
-                                    make = it
-                                },
-                                label = {
-                                    Text("Marke")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * MODELL
-                             */
-
-                            OutlinedTextField(
-                                value = model,
-                                onValueChange = {
-                                    model = it
-                                },
-                                label = {
-                                    Text("Modell")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * MOTORISIERUNG
-                             */
-
-                            OutlinedTextField(
-                                value = motorization,
-                                onValueChange = {
-                                    motorization = it
-                                },
-                                label = {
-                                    Text("Motorisierung")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * PS / KW
-                             */
-
-                            OutlinedTextField(
-                                value = power,
-                                onValueChange = {
-                                    power = it
-                                },
-                                label = {
-                                    Text("PS/KW")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * BAUJAHR
-                             */
-
-                            OutlinedTextField(
-                                value = year,
-                                onValueChange = {
-                                    year = it
-                                },
-                                label = {
-                                    Text("Baujahr")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * KENNZEICHEN
-                             */
-
-                            OutlinedTextField(
-                                value = plate,
-                                onValueChange = {
-                                    plate = it
-                                },
-                                label = {
-                                    Text("Kennzeichen")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * FIN / VIN
-                             */
-
-                            OutlinedTextField(
-                                value = vin,
-                                onValueChange = {
-                                    vin = it
-                                },
-                                label = {
-                                    Text("FIN / VIN")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * KAUFPREIS
-                             */
-
-                            OutlinedTextField(
-                                value = purchasePrice,
-                                onValueChange = { value ->
-
-                                    purchasePrice = value.filter {
-                                        it.isDigit() ||
-                                            it == ',' ||
-                                            it == '.'
-                                    }
-                                },
-                                label = {
-                                    Text("Kaufpreis in €")
-                                },
-                                placeholder = {
-                                    Text("z. B. 12500")
-                                },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Decimal
-                                ),
-                                visualTransformation =
-                                    if (purchasePriceVisible) {
-                                        VisualTransformation.None
-                                    } else {
-                                        AsteriskVisualTransformation
-                                    },
-                                trailingIcon = {
-
-                                    EyeIcon(
-                                        visible = purchasePriceVisible,
-                                        onClick = {
-                                            purchasePriceVisible =
-                                                !purchasePriceVisible
-                                        }
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            /*
-                             * FAHRZEUGBILD
-                             */
-
-                            OutlinedButton(
-                                onClick = {
-
-                                    launcher.launch(
-                                        arrayOf("image/*")
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-
-                                Text("Fahrzeugbild aus Galerie wählen")
-                            }
-
-                            if (imageUploadError.isNotBlank()) {
-
-                                Text(
-                                    text = imageUploadError,
-                                    color = Color(0xFFFF7777)
-                                )
-                            }
-
-                            if (imageUri.isNotBlank()) {
-
-                                VehicleImage(
-                                    uri = imageUri,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(160.dp)
-                                )
-                            }
-
-                            /*
-                             * SPEICHERN / ABBRECHEN
-                             */
-
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-
-                                Button(
-                                    enabled =
-                                        vehicleType.isNotBlank() &&
-                                            make.isNotBlank() &&
-                                            model.isNotBlank() &&
-                                            !imageUploading,
-
-                                    onClick = {
-
-                                        val generatedName =
-                                            listOf(
-                                                vehicleType,
-                                                make.trim(),
-                                                model.trim(),
-                                                year.trim()
-                                            )
-                                                .filter {
-                                                    it.isNotBlank()
-                                                }
-                                                .joinToString(" ")
-
-                                        val vehicleToSave =
-
-                                            if (editingVehicleId.isNotBlank()) {
-
-                                                Vehicle(
-                                                    id = editingVehicleId,
-                                                    name = generatedName,
-                                                    vehicleType = vehicleType,
-                                                    make = make.trim(),
-                                                    model = model.trim(),
-                                                    motorization = motorization.trim(),
-                                                    power = power.trim(),
-                                                    year = year.trim(),
-                                                    plate = plate.trim(),
-                                                    vin = vin.trim(),
-                                                    imageUri = imageUri,
-                                                    purchasePrice = purchasePrice.trim()
-                                                )
-
-                                            } else {
-
-                                                Vehicle(
-                                                    name = generatedName,
-                                                    vehicleType = vehicleType,
-                                                    make = make.trim(),
-                                                    model = model.trim(),
-                                                    motorization = motorization.trim(),
-                                                    power = power.trim(),
-                                                    year = year.trim(),
-                                                    plate = plate.trim(),
-                                                    vin = vin.trim(),
-                                                    imageUri = imageUri,
-                                                    purchasePrice = purchasePrice.trim()
-                                                )
-                                            }
-
-                                        saveVehicleWithImage(vehicleToSave)
-                                    }
-                                ) {
-
-                                    Text(
-                                        if (imageUploading) {
-                                            "Bild wird hochgeladen …"
-                                        } else {
-                                            "Speichern"
-                                        }
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    enabled = !imageUploading,
-                                    onClick = {
-                                        resetVehicleForm()
-                                    }
-                                ) {
-
-                                    Text("Abbrechen")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        /*
-         * NEUES FAHRZEUG
-         */
-
-        if (!adding) {
-
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-
-                    if (currentPlan.canAddVehicle(vehicles.size)) {
-
-                        resetVehicleForm()
-                        adding = true
-
-                    } else {
-
-                        showVehicleLimitDialog = true
-                    }
-                }
-            ) {
-
-                Text("Fahrzeug hinzufügen")
-            }
-        }
-    }
-
-    /*
-     * ============================================================
-     * CARLOCA-FAHRZEUGLIMIT
-     * ============================================================
-     */
-
-    if (showVehicleLimitDialog) {
-
-        val limitMessage =
-            when (currentPlan) {
-
-                CarLocaPlan.FREE ->
-                    "Mit CARLOCA Free kannst du ein Fahrzeug speichern. " +
-                        "Mit CARLOCA Premium sind bis zu 10 Fahrzeuge möglich. " +
-                        "CARLOCA Big-Premium bietet unbegrenzt viele Fahrzeuge."
-
-                CarLocaPlan.PREMIUM ->
-                    "Du hast die Grenze von 10 Fahrzeugen erreicht. " +
-                        "Mit CARLOCA Big-Premium kannst du unbegrenzt viele Fahrzeuge speichern."
-
-                CarLocaPlan.BIG_PREMIUM ->
-                    "Du kannst unbegrenzt viele Fahrzeuge speichern."
-            }
-
-        AlertDialog(
-            onDismissRequest = {
-                showVehicleLimitDialog = false
-            },
-            title = {
-                Text("Fahrzeuglimit erreicht")
-            },
-            text = {
-                Text(limitMessage)
-            },
-            confirmButton = {
-
-                TextButton(
-                    onClick = {
-                        showVehicleLimitDialog = false
-                    }
-                ) {
-
-                    Text("OK")
-                }
-            }
-        )
-    }
-
-    /*
-     * ============================================================
-     * LÖSCH-BESTÄTIGUNG
-     * ============================================================
-     */
-
-    if (vehicleToDelete != null) {
-
-        val vehicle = vehicleToDelete!!
-
-        AlertDialog(
-            onDismissRequest = {
-                vehicleToDelete = null
-            },
-            title = {
-                Text("Fahrzeug löschen?")
-            },
-            text = {
-                Text(
-                    "Möchtest du das Fahrzeug „${vehicle.name}“ wirklich löschen? Alle gespeicherten Daten dieses Fahrzeugs werden entfernt."
-                )
-            },
-            confirmButton = {
-
-                TextButton(
-                    onClick = {
-
-                        onDelete(vehicle)
-
-                        revealedPurchasePriceIds =
-                            revealedPurchasePriceIds - vehicle.id
-
-                        vehicleToDelete = null
-                    }
-                ) {
-
-                    Text("Löschen")
-                }
-            },
-            dismissButton = {
-
-                TextButton(
-                    onClick = {
-                        vehicleToDelete = null
-                    }
-                ) {
-
-                    Text("Abbrechen")
-                }
-            }
-        )
-    }
-}
-
-/*
- * ================================================================
- * EIGENES AUGEN-SYMBOL
- * ================================================================
- */
-
-@Composable
-private fun EyeIcon(
-    visible: Boolean,
-    onClick: () -> Unit
-) {
-
-    Canvas(
-        modifier = Modifier
-            .size(34.dp)
-            .clickable {
-                onClick()
-            }
-    ) {
-
-        val eyeColor = Color(0xFFB8BEC8)
-        val strokeWidth = 2.dp.toPx()
-
-        drawOval(
-            color = eyeColor,
-            style = Stroke(
-                width = strokeWidth
-            )
-        )
-
-        drawCircle(
-            color = eyeColor,
-            radius = 4.dp.toPx()
-        )
-
-        if (visible) {
-
-            drawLine(
-                color = eyeColor,
-                start = androidx.compose.ui.geometry.Offset(
-                    x = 4.dp.toPx(),
-                    y = 4.dp.toPx()
-                ),
-                end = androidx.compose.ui.geometry.Offset(
-                    x = size.width - 4.dp.toPx(),
-                    y = size.height - 4.dp.toPx()
-                ),
-                strokeWidth = strokeWidth,
-                cap = StrokeCap.Round
+            Icon(
+                imageVector = Icons.Filled.DirectionsCar,
+                contentDescription = "Kein Fahrzeugbild",
+                tint = Color.White,
+                modifier = Modifier.size(36.dp)
             )
         }
-    }
-}
-
-/*
- * ================================================================
- * STERNCHEN-MASKIERUNG
- * ================================================================
- */
-
-private object AsteriskVisualTransformation :
-    VisualTransformation {
-
-    override fun filter(
-        text: AnnotatedString
-    ): TransformedText {
-
-        val maskedText = AnnotatedString(
-            "*".repeat(text.text.length)
-        )
-
-        return TransformedText(
-            maskedText,
-            OffsetMapping.Identity
-        )
     }
 }
