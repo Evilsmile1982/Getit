@@ -8,6 +8,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.time.Instant
 import java.util.concurrent.Executors
 
 class SupabaseBackup(context: Context) {
@@ -66,11 +67,7 @@ class SupabaseBackup(context: Context) {
 
                 executor.execute {
                     try {
-                        restoreOrUpload(
-                            user.uid,
-                            token
-                        )
-
+                        restoreOrUpload(user.uid, token)
                         registerListener(user.uid)
 
                         started = true
@@ -104,24 +101,12 @@ class SupabaseBackup(context: Context) {
         connection.connectTimeout = 20000
         connection.readTimeout = 20000
 
-        connection.setRequestProperty(
-            "apikey",
-            SUPABASE_KEY
-        )
-
-        connection.setRequestProperty(
-            "Authorization",
-            "Bearer $token"
-        )
-
-        connection.setRequestProperty(
-            "Accept",
-            "application/json"
-        )
+        connection.setRequestProperty("apikey", SUPABASE_KEY)
+        connection.setRequestProperty("Authorization", "Bearer $token")
+        connection.setRequestProperty("Accept", "application/json")
 
         try {
-            val responseCode =
-                connection.responseCode
+            val responseCode = connection.responseCode
 
             val response =
                 if (responseCode in 200..299) {
@@ -146,7 +131,6 @@ class SupabaseBackup(context: Context) {
                         .getJSONObject("data")
 
                 val editor = preferences.edit()
-
                 val keys = data.keys()
 
                 while (keys.hasNext()) {
@@ -154,23 +138,11 @@ class SupabaseBackup(context: Context) {
                     val value = data.get(key)
 
                     when (value) {
-                        is String ->
-                            editor.putString(key, value)
-
-                        is Boolean ->
-                            editor.putBoolean(key, value)
-
-                        is Int ->
-                            editor.putInt(key, value)
-
-                        is Long ->
-                            editor.putLong(key, value)
-
-                        is Number ->
-                            editor.putFloat(
-                                key,
-                                value.toFloat()
-                            )
+                        is String -> editor.putString(key, value)
+                        is Boolean -> editor.putBoolean(key, value)
+                        is Int -> editor.putInt(key, value)
+                        is Long -> editor.putLong(key, value)
+                        is Number -> editor.putFloat(key, value.toFloat())
                     }
                 }
 
@@ -192,27 +164,20 @@ class SupabaseBackup(context: Context) {
 
         preferences.all.forEach { (key, value) ->
             when (value) {
-                is String ->
-                    data.put(key, value)
-
-                is Boolean ->
-                    data.put(key, value)
-
-                is Int ->
-                    data.put(key, value)
-
-                is Long ->
-                    data.put(key, value)
-
-                is Float ->
-                    data.put(key, value.toDouble())
+                is String -> data.put(key, value)
+                is Boolean -> data.put(key, value)
+                is Int -> data.put(key, value)
+                is Long -> data.put(key, value)
+                is Float -> data.put(key, value.toDouble())
             }
         }
 
         val body = JSONObject().apply {
             put("user_id", userId)
             put("data", data)
-            put("updated_at", System.currentTimeMillis())
+
+            // ISO-8601-Zeitstempel statt Millisekunden-Zahl
+            put("updated_at", Instant.now().toString())
         }
 
         val connection =
@@ -224,21 +189,9 @@ class SupabaseBackup(context: Context) {
         connection.connectTimeout = 20000
         connection.readTimeout = 20000
 
-        connection.setRequestProperty(
-            "apikey",
-            SUPABASE_KEY
-        )
-
-        connection.setRequestProperty(
-            "Authorization",
-            "Bearer $token"
-        )
-
-        connection.setRequestProperty(
-            "Content-Type",
-            "application/json"
-        )
-
+        connection.setRequestProperty("apikey", SUPABASE_KEY)
+        connection.setRequestProperty("Authorization", "Bearer $token")
+        connection.setRequestProperty("Content-Type", "application/json")
         connection.setRequestProperty(
             "Prefer",
             "resolution=merge-duplicates"
@@ -260,6 +213,7 @@ class SupabaseBackup(context: Context) {
 
                 throw IllegalStateException(error)
             }
+
         } finally {
             connection.disconnect()
         }
@@ -270,7 +224,7 @@ class SupabaseBackup(context: Context) {
 
         val newListener =
             SharedPreferences.OnSharedPreferenceChangeListener {
-                    prefs, _ ->
+                    _, _ ->
 
                 auth.currentUser?.getIdToken(false)
                     ?.addOnSuccessListener { result ->
