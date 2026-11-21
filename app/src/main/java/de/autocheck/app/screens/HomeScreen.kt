@@ -1,6 +1,14 @@
 
 package de.autocheck.app
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -32,19 +40,20 @@ import androidx.compose.material.icons.filled.CarRepair
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.TireRepair
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,15 +63,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 private val PremiumGold = Color(0xFFD4AF37)
+
+private const val PROFILE_PREFS = "autocheck"
+private const val PROFILE_NAME_KEY = "profile_name"
+private const val PROFILE_IMAGE_KEY = "profile_image_path"
 
 @Composable
 fun HomeScreen(
@@ -118,14 +136,6 @@ fun HomeScreen(
         )
     )
 
-    var profileMenuExpanded by remember {
-        mutableStateOf(false)
-    }
-
-    var profileDialog by remember {
-        mutableStateOf<ProfileDialog?>(null)
-    }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -162,6 +172,7 @@ fun HomeScreen(
                     )
                 }
 
+                // Intro-Schalter links
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
@@ -212,7 +223,11 @@ fun HomeScreen(
                             )
 
                             Text(
-                                text = if (introEnabled) "INTRO AN" else "INTRO AUS",
+                                text = if (introEnabled) {
+                                    "INTRO AN"
+                                } else {
+                                    "INTRO AUS"
+                                },
                                 color = if (introEnabled) {
                                     Color.Black
                                 } else {
@@ -227,6 +242,7 @@ fun HomeScreen(
                     }
                 }
 
+                // Neues persönliches Profil rechts
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInHorizontally(
@@ -237,79 +253,7 @@ fun HomeScreen(
                         .align(Alignment.CenterEnd)
                         .padding(end = 2.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(
-                                brush = Brush.linearGradient(
-                                    listOf(
-                                        Color(0xFF5A5A5A),
-                                        Color(0xFFE8E8E8),
-                                        Color.White,
-                                        Color(0xFF8A8A8A),
-                                        Color(0xFF4A4A4A)
-                                    )
-                                )
-                            )
-                            .padding(3.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .background(PremiumGold)
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    profileMenuExpanded = !profileMenuExpanded
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Person,
-                                    contentDescription = "Profil",
-                                    tint = Color.Black,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
-                        }
-
-                        DropdownMenu(
-                            expanded = profileMenuExpanded,
-                            onDismissRequest = {
-                                profileMenuExpanded = false
-                            }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Anmelden") },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Filled.Person,
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    profileMenuExpanded = false
-                                    profileDialog = ProfileDialog.LOGIN
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text("Profil erstellen") },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Filled.Person,
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    profileMenuExpanded = false
-                                    profileDialog = ProfileDialog.REGISTER
-                                }
-                            )
-                        }
-                    }
+                    CarLocaProfileButton()
                 }
             }
         }
@@ -387,27 +331,404 @@ fun HomeScreen(
             }
         }
     }
+}
 
-    when (profileDialog) {
-        ProfileDialog.LOGIN -> {
-            LoginDialog(
-                onDismiss = {
-                    profileDialog = null
+/* ============================================================
+   PROFILBUTTON UND PROFILVERWALTUNG
+   ============================================================ */
+
+@Composable
+private fun CarLocaProfileButton() {
+    val context = LocalContext.current
+    val mainHandler = remember {
+        Handler(Looper.getMainLooper())
+    }
+
+    val preferences = remember(context) {
+        context.getSharedPreferences(
+            PROFILE_PREFS,
+            Context.MODE_PRIVATE
+        )
+    }
+
+    val storage = remember(context) {
+        SupabaseStorage(context)
+    }
+
+    var profileName by remember {
+        mutableStateOf(
+            preferences.getString(PROFILE_NAME_KEY, "") ?: ""
+        )
+    }
+
+    var imagePath by remember {
+        mutableStateOf(
+            preferences.getString(PROFILE_IMAGE_KEY, "") ?: ""
+        )
+    }
+
+    var profileBitmap by remember {
+        mutableStateOf<android.graphics.Bitmap?>(null)
+    }
+
+    var selectedImage by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    var selectedBitmap by remember {
+        mutableStateOf<android.graphics.Bitmap?>(null)
+    }
+
+    var editName by remember {
+        mutableStateOf(profileName)
+    }
+
+    var showDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var uploading by remember {
+        mutableStateOf(false)
+    }
+
+    var errorMessage by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            selectedImage = uri
+            errorMessage = null
+        }
+    }
+
+    // Gewähltes Bild für die Vorschau laden.
+    LaunchedEffect(selectedImage) {
+        val uri = selectedImage
+
+        selectedBitmap = if (uri != null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    context.contentResolver
+                        .openInputStream(uri)
+                        ?.use { input ->
+                            BitmapFactory.decodeStream(input)
+                        }
+                } catch (_: Exception) {
+                    null
                 }
-            )
+            }
+        } else {
+            null
+        }
+    }
+
+    // Bereits gespeichertes Profilbild aus Supabase laden.
+    LaunchedEffect(imagePath) {
+        val path = imagePath
+
+        if (path.isBlank()) {
+            profileBitmap = null
+            return@LaunchedEffect
         }
 
-        ProfileDialog.REGISTER -> {
-            RegisterDialog(
-                onDismiss = {
-                    profileDialog = null
+        storage.download(
+            path,
+            object : SupabaseStorage.DownloadCallback {
+                override fun onSuccess(localUri: Uri) {
+                    mainHandler.post {
+                        try {
+                            val bitmap =
+                                context.contentResolver
+                                    .openInputStream(localUri)
+                                    ?.use { input ->
+                                        BitmapFactory.decodeStream(input)
+                                    }
+
+                            profileBitmap = bitmap
+                        } catch (_: Exception) {
+                            profileBitmap = null
+                        }
+                    }
                 }
-            )
+
+                override fun onError(error: Exception) {
+                    mainHandler.post {
+                        profileBitmap = null
+                    }
+                }
+            }
+        )
+    }
+
+    fun saveProfile() {
+        val cleanName = editName.trim()
+
+        if (cleanName.isBlank()) {
+            errorMessage = "Bitte gib deinen Namen ein."
+            return
         }
 
-        null -> Unit
+        val user = FirebaseAuth.getInstance().currentUser
+
+        if (user == null) {
+            errorMessage = "Bitte zuerst anmelden."
+            return
+        }
+
+        // Nur den Namen speichern, wenn kein neues Bild ausgewählt wurde.
+        if (selectedImage == null) {
+            preferences.edit()
+                .putString(PROFILE_NAME_KEY, cleanName)
+                .apply()
+
+            profileName = cleanName
+            showDialog = false
+            errorMessage = null
+            return
+        }
+
+        val imageUri = selectedImage ?: return
+
+        uploading = true
+        errorMessage = null
+
+        storage.upload(
+            sourceUri = imageUri,
+            category = "profiles",
+            vehicleId = user.uid,
+            recordId = "avatar",
+            callback = object : SupabaseStorage.UploadCallback {
+
+                override fun onSuccess(storagePath: String) {
+                    mainHandler.post {
+                        preferences.edit()
+                            .putString(PROFILE_NAME_KEY, cleanName)
+                            .putString(PROFILE_IMAGE_KEY, storagePath)
+                            .apply()
+
+                        profileName = cleanName
+                        imagePath = storagePath
+                        selectedImage = null
+                        selectedBitmap = null
+                        uploading = false
+                        showDialog = false
+                    }
+                }
+
+                override fun onError(error: Exception) {
+                    mainHandler.post {
+                        uploading = false
+                        errorMessage =
+                            error.localizedMessage
+                                ?: "Das Profilbild konnte nicht hochgeladen werden."
+                    }
+                }
+            }
+        )
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.widthIn(max = 110.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(54.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFF5A5A5A),
+                            Color(0xFFE8E8E8),
+                            Color.White,
+                            Color(0xFF8A8A8A),
+                            Color(0xFF4A4A4A)
+                        )
+                    )
+                )
+                .padding(3.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(PremiumGold)
+                    .clickable {
+                        editName = profileName
+                        selectedImage = null
+                        selectedBitmap = null
+                        errorMessage = null
+                        showDialog = true
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    profileBitmap != null -> {
+                        Image(
+                            bitmap = profileBitmap!!.asImageBitmap(),
+                            contentDescription = "Profilbild",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = "Profil erstellen",
+                            tint = Color.Black,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (profileName.isNotBlank()) {
+            Text(
+                text = profileName,
+                color = Color.White,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!uploading) {
+                    showDialog = false
+                }
+            },
+            title = {
+                Text("Mein CARLOCA-Profil")
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(112.dp)
+                            .clip(CircleShape)
+                            .background(PremiumGold)
+                            .clickable {
+                                if (!uploading) {
+                                    imagePicker.launch("image/*")
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when {
+                            selectedBitmap != null -> {
+                                Image(
+                                    bitmap = selectedBitmap!!.asImageBitmap(),
+                                    contentDescription = "Ausgewähltes Profilbild",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+
+                            profileBitmap != null -> {
+                                Image(
+                                    bitmap = profileBitmap!!.asImageBitmap(),
+                                    contentDescription = "Aktuelles Profilbild",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+
+                            else -> {
+                                Icon(
+                                    imageVector = Icons.Filled.PhotoCamera,
+                                    contentDescription = "Bild auswählen",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(42.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            if (!uploading) {
+                                imagePicker.launch("image/*")
+                            }
+                        },
+                        enabled = !uploading
+                    ) {
+                        Text("Profilbild auswählen")
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = {
+                            editName = it
+                        },
+                        label = {
+                            Text("Dein Name")
+                        },
+                        singleLine = true,
+                        enabled = !uploading,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (uploading) {
+                        Spacer(Modifier.height(16.dp))
+
+                        CircularProgressIndicator()
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text("Profilbild wird hochgeladen …")
+                    }
+
+                    if (errorMessage != null) {
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color.Red
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        saveProfile()
+                    },
+                    enabled = !uploading
+                ) {
+                    Text("Speichern")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        if (!uploading) {
+                            showDialog = false
+                        }
+                    },
+                    enabled = !uploading
+                ) {
+                    Text("Abbrechen")
+                }
+            }
+        )
     }
 }
+
+/* ============================================================
+   PREMIUM-BUTTON
+   ============================================================ */
 
 @Composable
 private fun PremiumHomeButton(
@@ -529,164 +850,4 @@ private fun PremiumHomeButton(
             )
         }
     }
-}
-
-private enum class ProfileDialog {
-    LOGIN,
-    REGISTER
-}
-
-@Composable
-private fun LoginDialog(
-    onDismiss: () -> Unit
-) {
-    var email by remember {
-        mutableStateOf("")
-    }
-
-    var password by remember {
-        mutableStateOf("")
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("Bei CARLOCA anmelden")
-        },
-        text = {
-            Column {
-                Text(
-                    "Melde dich später mit deinem CARLOCA-Konto an, " +
-                        "um deine persönlichen Fahrzeugdaten auf " +
-                        "verschiedenen Geräten wieder abzurufen.",
-                    fontSize = 14.sp
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("E-Mail-Adresse") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Passwort") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                Text(
-                    "Die echte Anmeldung und E-Mail-Verifizierung " +
-                        "werden im nächsten Ausbauschritt sicher angebunden.",
-                    fontSize = 12.sp,
-                    color = Muted
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Abbrechen")
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) {
-                Text("Weiter")
-            }
-        }
-    )
-}
-
-@Composable
-private fun RegisterDialog(
-    onDismiss: () -> Unit
-) {
-    var name by remember {
-        mutableStateOf("")
-    }
-
-    var email by remember {
-        mutableStateOf("")
-    }
-
-    var password by remember {
-        mutableStateOf("")
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("CARLOCA-Profil erstellen")
-        },
-        text = {
-            Column {
-                Text(
-                    "Dein persönliches Profil wird später mit deinen " +
-                        "Fahrzeugdaten verknüpft. Nach der echten " +
-                        "Registrierung wird die E-Mail-Adresse verifiziert.",
-                    fontSize = 14.sp
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("E-Mail-Adresse") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Passwort") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                Text(
-                    "Die sichere Kontoerstellung, E-Mail-Verifizierung " +
-                        "und Cloud-Synchronisierung werden im nächsten " +
-                        "Ausbauschritt angeschlossen.",
-                    fontSize = 12.sp,
-                    color = Muted
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Abbrechen")
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) {
-                Text("Weiter")
-            }
-        }
-    )
 }
