@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,7 +51,6 @@ import com.google.firebase.auth.FirebaseAuth
 
 private val CarLocaGold = Color(0xFFD9B536)
 private val CarLocaPurple = Color(0xFF38216F)
-private val CarLocaBackground = Color(0xFF080A0E)
 private val CarLocaCard = Color(0xFF12151C)
 private val CarLocaText = Color(0xFFF4F4F6)
 private val CarLocaMuted = Color(0xFFB9BAC3)
@@ -85,52 +84,55 @@ fun FirebaseAuthScreen(
                     )
                 )
             )
-            .navigationBarsPadding()
+            // Sicherheitsabstand zu Status- und Navigationsleiste
+            .safeDrawingPadding()
+            // Platz schaffen, wenn die Tastatur erscheint
             .imePadding()
+            // Inhalt bei Bedarf scrollbar machen
             .verticalScroll(scrollState)
-            .padding(horizontal = 22.dp),
+            .padding(horizontal = 20.dp)
+            .padding(top = 8.dp, bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-
+        // CARLOCA Logo
         CarLocaLogo()
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(7.dp))
 
         Text(
             text = "Dein Auto. Deine Geschichte.",
             color = CarLocaText,
-            fontSize = 25.sp,
+            fontSize = 23.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(5.dp))
 
         Text(
             text = "Alle Fahrzeuge, Reparaturen und Dokumente\nan einem sicheren Ort.",
             color = CarLocaMuted,
-            fontSize = 15.sp,
-            lineHeight = 22.sp,
+            fontSize = 14.sp,
+            lineHeight = 19.sp,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Neues CARLOCA-Fahrzeugbild
+        // Original CARLOCA-Fahrzeugbild
         Image(
             painter = painterResource(
                 id = R.drawable.carloca_login_car
             ),
-            contentDescription = "Schwarzes CARLOCA-Fahrzeug mit goldener Beleuchtung",
+            contentDescription = "Schwarzes Fahrzeug mit goldener Beleuchtung",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(165.dp),
+                .height(112.dp),
             contentScale = ContentScale.Fit
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Anmeldekarte
         Column(
@@ -138,9 +140,9 @@ fun FirebaseAuthScreen(
                 .fillMaxWidth()
                 .background(
                     color = CarLocaCard,
-                    shape = RoundedCornerShape(25.dp)
+                    shape = RoundedCornerShape(22.dp)
                 )
-                .padding(18.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -150,12 +152,12 @@ fun FirebaseAuthScreen(
                     "Bitte melde dich an"
                 },
                 color = CarLocaText,
-                fontSize = 25.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             Text(
                 text = if (isRegistering) {
@@ -164,12 +166,12 @@ fun FirebaseAuthScreen(
                     "Damit deine persönlichen Fahrzeugdaten jederzeit verfügbar sind."
                 },
                 color = CarLocaMuted,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(13.dp))
 
             OutlinedTextField(
                 value = email,
@@ -187,7 +189,7 @@ fun FirebaseAuthScreen(
                 colors = authFieldColors()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(9.dp))
 
             OutlinedTextField(
                 value = password,
@@ -261,7 +263,8 @@ fun FirebaseAuthScreen(
                     Text(
                         text = "Passwort vergessen?",
                         color = CarLocaGold,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
                     )
                 }
             }
@@ -274,14 +277,14 @@ fun FirebaseAuthScreen(
                     } else {
                         Color(0xFFFF8A80)
                     },
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 5.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             Button(
                 onClick = {
@@ -329,7 +332,7 @@ fun FirebaseAuthScreen(
                 enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp),
+                    .height(50.dp),
                 shape = RoundedCornerShape(50.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = CarLocaGold,
@@ -339,7 +342,7 @@ fun FirebaseAuthScreen(
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(23.dp),
+                        modifier = Modifier.size(22.dp),
                         color = CarLocaPurple,
                         strokeWidth = 2.dp
                     )
@@ -350,18 +353,18 @@ fun FirebaseAuthScreen(
                         } else {
                             "Anmelden"
                         },
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(7.dp))
 
             Text(
                 text = "oder",
                 color = CarLocaMuted,
-                fontSize = 14.sp
+                fontSize = 13.sp
             )
 
             TextButton(
@@ -380,21 +383,21 @@ fun FirebaseAuthScreen(
                         "Neues Konto erstellen"
                     },
                     color = CarLocaGold,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             text = "CARLOCA – Deine Fahrzeugwelt.",
             color = CarLocaMuted,
-            fontSize = 12.sp
+            fontSize = 11.sp
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
@@ -405,8 +408,8 @@ private fun CarLocaLogo() {
     ) {
         Canvas(
             modifier = Modifier
-                .fillMaxWidth(0.78f)
-                .height(42.dp)
+                .fillMaxWidth(0.72f)
+                .height(34.dp)
         ) {
             val path = Path().apply {
                 moveTo(size.width * 0.05f, size.height * 0.82f)
@@ -432,7 +435,7 @@ private fun CarLocaLogo() {
                     )
                 ),
                 style = Stroke(
-                    width = 4.dp.toPx(),
+                    width = 3.5.dp.toPx(),
                     cap = StrokeCap.Round
                 )
             )
@@ -440,7 +443,7 @@ private fun CarLocaLogo() {
 
         Text(
             text = "CARLOCA",
-            fontSize = 39.sp,
+            fontSize = 35.sp,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = 2.sp,
             color = Color.White
