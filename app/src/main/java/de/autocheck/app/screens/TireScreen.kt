@@ -42,14 +42,32 @@ import de.autocheck.app.utils.areWinterTireRemindersEnabled
 import de.autocheck.app.utils.cancelWinterTireReminders
 import de.autocheck.app.utils.scheduleWinterTireReminders
 
-private val tireMonths =
-    (1..12).map { it.toString() }
+private val tireMonths = (1..12).map { it.toString() }
 
 private val tireSeasons =
     listOf("Sommer", "Winter", "Allwetter")
 
 private val tireRimTypes =
     listOf("Alufelgen", "Stahlfelgen")
+
+// Trennt die beiden Reifengrößen.
+// Alte gespeicherte Einträge mit nur einer Größe
+// werden automatisch als Vorderachsgröße übernommen.
+private fun splitTireDimensions(value: String): Pair<String, String> {
+    val separator = "\u001F"
+
+    return if (value.contains(separator)) {
+        val parts = value.split(separator, limit = 2)
+        parts[0] to parts.getOrElse(1) { "" }
+    } else {
+        value to ""
+    }
+}
+
+// Speichert VA und HA gemeinsam im bisherigen Speicherfeld.
+private fun joinTireDimensions(va: String, ha: String): String {
+    return "${va.trim()}\u001F${ha.trim()}"
+}
 
 @Composable
 fun TireScreen(
@@ -81,12 +99,10 @@ fun TireScreen(
         mutableStateOf<Long?>(null)
     }
 
-    var season by remember {
-        mutableStateOf("Sommer")
-    }
-
+    var season by remember { mutableStateOf("Sommer") }
     var rimType by remember { mutableStateOf("") }
-    var dimension by remember { mutableStateOf("") }
+    var dimensionVA by remember { mutableStateOf("") }
+    var dimensionHA by remember { mutableStateOf("") }
     var brand by remember { mutableStateOf("") }
     var dot by remember { mutableStateOf("") }
     var boltPattern by remember { mutableStateOf("") }
@@ -120,7 +136,8 @@ fun TireScreen(
         editingId = null
         season = "Sommer"
         rimType = ""
-        dimension = ""
+        dimensionVA = ""
+        dimensionHA = ""
         brand = ""
         dot = ""
         boltPattern = ""
@@ -137,7 +154,8 @@ fun TireScreen(
         editingId = null
         season = selectedSeason
         rimType = ""
-        dimension = ""
+        dimensionVA = ""
+        dimensionHA = ""
         brand = ""
         dot = ""
         boltPattern = ""
@@ -166,7 +184,11 @@ fun TireScreen(
         }
 
         rimType = tire.rimType
-        dimension = tire.dimension
+
+        val dimensions = splitTireDimensions(tire.dimension)
+        dimensionVA = dimensions.first
+        dimensionHA = dimensions.second
+
         brand = tire.brand
         dot = tire.dot
         boltPattern = tire.boltPattern
@@ -196,7 +218,7 @@ fun TireScreen(
             vehicle = activeVehicle,
             season = season.trim(),
             rimType = rimType.trim(),
-            dimension = dimension.trim(),
+            dimension = joinTireDimensions(dimensionVA, dimensionHA),
             brand = brand.trim(),
             dot = dot.trim(),
             tread = tread.trim(),
@@ -213,14 +235,10 @@ fun TireScreen(
             return when {
                 value.equals("Allwetterreifen", ignoreCase = true) ->
                     "allwetter"
-
                 else -> value.trim().lowercase()
             }
         }
 
-        // Den bearbeiteten Eintrag entfernen und bei diesem Fahrzeug
-        // vorhandene Duplikate derselben Ziel-Reifenart bereinigen.
-        // Danach wird der aktuelle Datensatz genau einmal hinzugefügt.
         val updated = tires.filterNot { existing ->
             val isEditedEntry =
                 editingId != null && existing.id == editingId
@@ -264,12 +282,8 @@ fun TireScreen(
                         tire = summerTire,
                         imageRes = R.drawable.sommerreifen,
                         onAdd = { startNewTire("Sommer") },
-                        onEdit = {
-                            summerTire?.let { editTire(it) }
-                        },
-                        onDelete = {
-                            summerTire?.let { deleteTire(it) }
-                        }
+                        onEdit = { summerTire?.let { editTire(it) } },
+                        onDelete = { summerTire?.let { deleteTire(it) } }
                     )
                 }
 
@@ -279,12 +293,8 @@ fun TireScreen(
                         tire = winterTire,
                         imageRes = R.drawable.winterreifen,
                         onAdd = { startNewTire("Winter") },
-                        onEdit = {
-                            winterTire?.let { editTire(it) }
-                        },
-                        onDelete = {
-                            winterTire?.let { deleteTire(it) }
-                        }
+                        onEdit = { winterTire?.let { editTire(it) } },
+                        onDelete = { winterTire?.let { deleteTire(it) } }
                     )
                 }
 
@@ -294,16 +304,11 @@ fun TireScreen(
                         tire = allWeatherTire,
                         imageRes = R.drawable.allwetterreifen,
                         onAdd = { startNewTire("Allwetter") },
-                        onEdit = {
-                            allWeatherTire?.let { editTire(it) }
-                        },
-                        onDelete = {
-                            allWeatherTire?.let { deleteTire(it) }
-                        }
+                        onEdit = { allWeatherTire?.let { editTire(it) } },
+                        onDelete = { allWeatherTire?.let { deleteTire(it) } }
                     )
                 }
 
-                // Saisonale Reifen-Erinnerungen
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -361,8 +366,10 @@ fun TireScreen(
                         onSeasonChanged = { season = it },
                         rimType = rimType,
                         onRimTypeChanged = { rimType = it },
-                        dimension = dimension,
-                        onDimensionChanged = { dimension = it },
+                        dimensionVA = dimensionVA,
+                        onDimensionVAChanged = { dimensionVA = it },
+                        dimensionHA = dimensionHA,
+                        onDimensionHAChanged = { dimensionHA = it },
                         brand = brand,
                         onBrandChanged = { brand = it },
                         dot = dot,
@@ -396,9 +403,7 @@ fun TireScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
-                onClick = {
-                    startNewTire("Sommer")
-                }
+                onClick = { startNewTire("Sommer") }
             ) {
                 Text("Reifen bearbeiten / hinzufügen")
             }
@@ -476,11 +481,15 @@ private fun TireSetCard(
                         Text("Daten hinzufügen")
                     }
                 } else {
+                    val dimensions = splitTireDimensions(tire.dimension)
+
                     TireDataLine("Felgenart", tire.rimType)
-                    TireDataLine("Größe", tire.dimension)
+                    TireDataLine("Größe VA", dimensions.first)
+                    TireDataLine("Größe HA", dimensions.second)
                     TireDataLine("DOT", tire.dot)
                     TireDataLine("Lochkreis", tire.boltPattern)
                     TireDataLine("Einpresstiefe", tire.offset)
+
                     TireDataLine(
                         "Gekauft",
                         purchaseDisplay(
@@ -488,6 +497,7 @@ private fun TireSetCard(
                             tire.purchaseYear
                         )
                     )
+
                     TireDataLine("Preis", tire.price)
 
                     if (tire.brand.isNotBlank()) {
@@ -586,8 +596,10 @@ private fun TireFormCard(
     onSeasonChanged: (String) -> Unit,
     rimType: String,
     onRimTypeChanged: (String) -> Unit,
-    dimension: String,
-    onDimensionChanged: (String) -> Unit,
+    dimensionVA: String,
+    onDimensionVAChanged: (String) -> Unit,
+    dimensionHA: String,
+    onDimensionHAChanged: (String) -> Unit,
     brand: String,
     onBrandChanged: (String) -> Unit,
     dot: String,
@@ -643,10 +655,17 @@ private fun TireFormCard(
             )
 
             TireTextField(
-                label = "Größe",
-                value = dimension,
-                placeholder = "205/55 R16",
-                onValueChanged = onDimensionChanged
+                label = "Größe VA",
+                value = dimensionVA,
+                placeholder = "z. B. 225/45 R17",
+                onValueChanged = onDimensionVAChanged
+            )
+
+            TireTextField(
+                label = "Größe HA",
+                value = dimensionHA,
+                placeholder = "z. B. 255/40 R17",
+                onValueChanged = onDimensionHAChanged
             )
 
             TireTextField(
