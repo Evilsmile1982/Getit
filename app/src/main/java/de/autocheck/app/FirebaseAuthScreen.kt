@@ -2,9 +2,9 @@
 package de.autocheck.app
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +25,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -33,18 +32,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
@@ -94,7 +94,6 @@ fun FirebaseAuthScreen(
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        // CARLOCA-Schriftzug und goldene Fahrzeugkontur
         CarLocaLogo()
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -104,7 +103,7 @@ fun FirebaseAuthScreen(
             color = CarLocaText,
             fontSize = 25.sp,
             fontWeight = FontWeight.Bold,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -114,19 +113,24 @@ fun FirebaseAuthScreen(
             color = CarLocaMuted,
             fontSize = 15.sp,
             lineHeight = 22.sp,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(22.dp))
-
-        // Stilisiertes Fahrzeug ohne Markenemblem
-        CarLocaCarIllustration(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(125.dp)
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(18.dp))
+
+        // Neues CARLOCA-Fahrzeugbild
+        Image(
+            painter = painterResource(
+                id = R.drawable.carloca_login_car
+            ),
+            contentDescription = "Schwarzes CARLOCA-Fahrzeug mit goldener Beleuchtung",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(165.dp),
+            contentScale = ContentScale.Fit
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Anmeldekarte
         Column(
@@ -148,7 +152,7 @@ fun FirebaseAuthScreen(
                 color = CarLocaText,
                 fontSize = 25.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -162,7 +166,7 @@ fun FirebaseAuthScreen(
                 color = CarLocaMuted,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -233,7 +237,8 @@ fun FirebaseAuthScreen(
                         message = ""
 
                         if (email.isBlank()) {
-                            message = "Bitte zuerst deine E-Mail-Adresse eingeben."
+                            message =
+                                "Bitte zuerst deine E-Mail-Adresse eingeben."
                         } else {
                             isLoading = true
 
@@ -264,9 +269,7 @@ fun FirebaseAuthScreen(
             if (message.isNotBlank()) {
                 Text(
                     text = message,
-                    color = if (
-                        message.startsWith("Wir haben dir")
-                    ) {
+                    color = if (message.startsWith("Wir haben dir")) {
                         CarLocaGold
                     } else {
                         Color(0xFFFF8A80)
@@ -391,7 +394,7 @@ fun FirebaseAuthScreen(
             fontSize = 12.sp
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -441,144 +444,6 @@ private fun CarLocaLogo() {
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = 2.sp,
             color = Color.White
-        )
-    }
-}
-
-@Composable
-private fun CarLocaCarIllustration(
-    modifier: Modifier = Modifier
-) {
-    Canvas(modifier = modifier) {
-        val gold = CarLocaGold
-
-        // Dezentes Licht hinter dem Fahrzeug
-        drawOval(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    Color(0x66D9B536),
-                    Color.Transparent
-                ),
-                center = Offset(
-                    size.width / 2f,
-                    size.height * 0.7f
-                ),
-                radius = size.width * 0.48f
-            ),
-            topLeft = Offset(
-                size.width * 0.08f,
-                size.height * 0.05f
-            ),
-            size = Size(
-                size.width * 0.84f,
-                size.height * 0.95f
-            )
-        )
-
-        // Karosserie-Silhouette
-        val body = Path().apply {
-            moveTo(size.width * 0.08f, size.height * 0.78f)
-            lineTo(size.width * 0.14f, size.height * 0.53f)
-            lineTo(size.width * 0.29f, size.height * 0.42f)
-            lineTo(size.width * 0.39f, size.height * 0.15f)
-            quadraticTo(
-                size.width * 0.50f, size.height * 0.07f,
-                size.width * 0.61f, size.height * 0.15f
-            )
-            lineTo(size.width * 0.71f, size.height * 0.42f)
-            lineTo(size.width * 0.86f, size.height * 0.53f)
-            lineTo(size.width * 0.92f, size.height * 0.78f)
-            quadraticTo(
-                size.width * 0.50f, size.height * 0.98f,
-                size.width * 0.08f, size.height * 0.78f
-            )
-            close()
-        }
-
-        drawPath(
-            path = body,
-            color = Color(0xFF080A0E),
-            style = Stroke(
-                width = 3.dp.toPx()
-            )
-        )
-
-        drawPath(
-            path = body,
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    Color(0xFF33343A),
-                    Color(0xFF090A0D),
-                    Color.Black
-                )
-            )
-        )
-
-        // Windschutzscheibe
-        val windshield = Path().apply {
-            moveTo(size.width * 0.34f, size.height * 0.43f)
-            lineTo(size.width * 0.42f, size.height * 0.20f)
-            quadraticTo(
-                size.width * 0.50f, size.height * 0.15f,
-                size.width * 0.58f, size.height * 0.20f
-            )
-            lineTo(size.width * 0.66f, size.height * 0.43f)
-            close()
-        }
-
-        drawPath(
-            path = windshield,
-            color = Color(0xFF10141A)
-        )
-
-        drawPath(
-            path = windshield,
-            color = gold.copy(alpha = 0.65f),
-            style = Stroke(width = 2.dp.toPx())
-        )
-
-        // Scheinwerfer links und rechts
-        drawLine(
-            color = Color(0xFFFFE9A0),
-            start = Offset(
-                size.width * 0.13f,
-                size.height * 0.65f
-            ),
-            end = Offset(
-                size.width * 0.29f,
-                size.height * 0.62f
-            ),
-            strokeWidth = 5.dp.toPx(),
-            cap = StrokeCap.Round
-        )
-
-        drawLine(
-            color = Color(0xFFFFE9A0),
-            start = Offset(
-                size.width * 0.71f,
-                size.height * 0.62f
-            ),
-            end = Offset(
-                size.width * 0.87f,
-                size.height * 0.65f
-            ),
-            strokeWidth = 5.dp.toPx(),
-            cap = StrokeCap.Round
-        )
-
-        // Dezente goldene Kontur
-        drawLine(
-            color = gold.copy(alpha = 0.8f),
-            start = Offset(
-                size.width * 0.08f,
-                size.height * 0.79f
-            ),
-            end = Offset(
-                size.width * 0.92f,
-                size.height * 0.79f
-            ),
-            strokeWidth = 2.dp.toPx(),
-            cap = StrokeCap.Round
         )
     }
 }
