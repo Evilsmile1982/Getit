@@ -538,90 +538,16 @@ private fun ServiceVehicleDataLine(
  * FAHRZEUGBILD
  * ================================================================
  */
+
 @Composable
 private fun VehicleServiceImage(
     imageUri: String
 ) {
-
-    val context =
-        LocalContext.current
-
-    val bitmap =
-        remember(
-            imageUri
-        ) {
-
-            try {
-
-                context
-                    .contentResolver
-                    .openInputStream(
-                        Uri.parse(
-                            imageUri
-                        )
-                    )
-                    ?.use {
-                        BitmapFactory
-                            .decodeStream(
-                                it
-                            )
-                    }
-
-            } catch (
-                _: Exception
-            ) {
-
-                null
-            }
-        }
-
-    if (
-        bitmap != null
-    ) {
-
-        Image(
-            bitmap =
-                bitmap.asImageBitmap(),
-
-            contentDescription =
-                "Fahrzeugbild",
-
-            modifier =
-                Modifier.fillMaxSize(),
-
-            contentScale =
-                ContentScale.Crop
-        )
-
-    } else {
-
-        Column(
-            horizontalAlignment =
-                Alignment.CenterHorizontally
-        ) {
-
-            Text(
-                text =
-                    "🚗",
-
-                fontSize =
-                    52.sp
-            )
-
-            Text(
-                text =
-                    "Bild konnte nicht geladen werden",
-
-                color =
-                    Color.LightGray,
-
-                fontSize =
-                    12.sp
-            )
-        }
-    }
+    VehicleImage(
+        uri = imageUri,
+        modifier = Modifier.fillMaxSize()
+    )
 }
-
 
 /*
  * ================================================================
