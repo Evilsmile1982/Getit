@@ -973,20 +973,20 @@ fun VehicleScreen(
     if (showVehicleLimitDialog) {
 
         val limitMessage =
-            when (currentPlan) {
+    when (currentPlan) {
+        CarLocaPlan.FREE ->
+            "Mit CARLOCA Free kannst du ein Fahrzeug speichern. " +
+                "Mit CARLOCA Premium sind bis zu 10 Fahrzeuge möglich. " +
+                "CARLOCA Big-Premium bietet bis zu 30 Fahrzeuge."
 
-                CarLocaPlan.FREE ->
-                    "Mit CARLOCA Free kannst du ein Fahrzeug speichern. " +
-                        "Mit CARLOCA Premium sind bis zu 10 Fahrzeuge möglich. " +
-                        "CARLOCA Big-Premium bietet unbegrenzt viele Fahrzeuge."
+        CarLocaPlan.PREMIUM ->
+            "Du hast die Grenze von 10 Fahrzeugen erreicht. " +
+                "Mit CARLOCA Big-Premium kannst du bis zu 30 Fahrzeuge speichern."
 
-                CarLocaPlan.PREMIUM ->
-                    "Du hast die Grenze von 10 Fahrzeugen erreicht. " +
-                        "Mit CARLOCA Big-Premium kannst du unbegrenzt viele Fahrzeuge speichern."
-
-                CarLocaPlan.BIG_PREMIUM ->
-                    "Du kannst unbegrenzt viele Fahrzeuge speichern."
-            }
+        CarLocaPlan.BIG_PREMIUM ->
+            "Du hast die Grenze von 30 Fahrzeugen erreicht."
+    }
+        
 
         AlertDialog(
             onDismissRequest = {
