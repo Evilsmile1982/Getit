@@ -3,12 +3,10 @@ package de.autocheck.app
 
 /**
  * Die drei CARLOCA-Tarife.
- *
- * null bedeutet: unbegrenzt viele Fahrzeuge.
  */
 enum class CarLocaPlan(
     val displayName: String,
-    val maxVehicles: Int?
+    val maxVehicles: Int
 ) {
     FREE(
         displayName = "CARLOCA Free",
@@ -22,24 +20,23 @@ enum class CarLocaPlan(
 
     BIG_PREMIUM(
         displayName = "CARLOCA Big-Premium",
-        maxVehicles = null
+        maxVehicles = 30
     );
 
     fun canAddVehicle(currentCount: Int): Boolean {
-        return maxVehicles == null || currentCount < maxVehicles
+        return currentCount < maxVehicles
     }
 
     fun vehicleLimitText(): String {
-        return maxVehicles?.let { "bis zu $it Fahrzeuge" }
-            ?: "unbegrenzt viele Fahrzeuge"
+        return "bis zu $maxVehicles Fahrzeuge"
     }
 }
 
 /**
  * Vorläufiger Tarifstatus.
  *
- * Bis Google Play Billing eingebaut ist, bleibt der Tarif FREE.
- * Später wird dieser Wert durch den verifizierten Abo-Status ersetzt.
+ * Bis Google Play Billing eingebaut ist,
+ * bleibt der Tarif FREE.
  */
 object CarLocaSubscription {
     var currentPlan: CarLocaPlan = CarLocaPlan.FREE
