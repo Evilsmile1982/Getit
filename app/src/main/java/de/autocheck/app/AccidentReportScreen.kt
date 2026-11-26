@@ -278,7 +278,9 @@ fun AccidentReportScreen(
     var photoMessage by remember { mutableStateOf("") }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var pendingCameraFile by remember { mutableStateOf<File?>(null) }
-
+    var showAccidentWelcomeDialog by remember {
+    mutableStateOf(true)
+}
     fun savePhotos() {
         val json = JSONObject()
 
@@ -439,7 +441,68 @@ fun AccidentReportScreen(
                 (exception.message ?: "Unbekannter Fehler")
         }
     }
+    if (showAccidentWelcomeDialog) {
+    AlertDialog(
+        onDismissRequest = {
+            showAccidentWelcomeDialog = false
+        },
+        containerColor = Color(0xFF1D1D1D),
+        title = {
+            Text(
+                text = "Wichtiger Hinweis",
+                color = AccidentGold,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Mit CARLOCA kannst du einen Unfall vollständig dokumentieren. Erfasse Beteiligte, Unfallhergang und Schäden. Du kannst auch Fotos hinzufügen.",
+                    color = Color.White
+                )
 
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "DEIN FERTIGER UNFALLBERICHT",
+                    color = AccidentGold,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "• PDF mit allen Angaben\n" +
+                        "• Unfallfotos im PDF\n" +
+                        "• Versand über WhatsApp\n" +
+                        "• Versand per E-Mail",
+                    color = Color.White
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Bei Verletzten oder Gefahr zuerst Rettung und Polizei verständigen. Der CARLOCA-Bericht ersetzt kein amtliches Unfallformular.",
+                    color = Color.LightGray,
+                    fontSize = 12.sp
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    showAccidentWelcomeDialog = false
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccidentGold,
+                    contentColor = Color.Black
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Unfallbericht starten")
+            }
+        }
+    )
+}
     if (showPhotoSourceDialog) {
         AlertDialog(
             onDismissRequest = {
