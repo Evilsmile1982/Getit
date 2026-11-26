@@ -311,9 +311,7 @@ fun VehicleScreen(
     ) {
 
         Text(
-            text = currentPlan.maxVehicles?.let {
-                "${vehicles.size}/$it Fahrzeuge"
-            } ?: "${vehicles.size} Fahrzeuge – unbegrenzt",
+            text = "${vehicles.size}/${currentPlan.maxVehicles} Fahrzeuge",
             color = Color(0xFFB8BEC8),
             modifier = Modifier.padding(bottom = 4.dp)
         )
