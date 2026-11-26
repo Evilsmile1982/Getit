@@ -86,7 +86,6 @@ fun AutoCheckApp() {
 
     // Zentraler Tarifstatus.
     val currentPlan = CarLocaSubscription.currentPlan
-    val vehicleLimit = currentPlan.maxVehicles
 
     var showVehicleLimitDialog by remember {
         mutableStateOf(false)
@@ -420,8 +419,8 @@ fun AutoCheckApp() {
                     "Dein aktueller Tarif ${currentPlan.displayName} " +
                         "erlaubt ${currentPlan.vehicleLimitText()}. " +
                         "Mit CARLOCA Premium kannst du bis zu 10 Fahrzeuge " +
-                        "verwalten. CARLOCA Big-Premium bietet unbegrenzt " +
-                        "viele Fahrzeuge."
+                        "verwalten. CARLOCA Big-Premium bietet bis zu 30 " +
+                        "Fahrzeuge."
                 )
             },
             confirmButton = {
